@@ -10,7 +10,7 @@ map_col, chat_col = st.columns([2, 1])
 
 with chat_col:
     # Create a text input widget for the city name
-    city_name = st.text_input("Enter a U.S. city name", "Knoxville")
+    city_name = st.text_input("Enter a U.S. Address, Zip Code or City:", "Knoxville")
     
     # Create a slider for the buffer radius in miles
     buffer_radius_miles = st.slider("Select buffer radius (miles)", min_value=0.1, max_value=10.0, value=0.5, step=0.1)
@@ -21,10 +21,10 @@ def main():
     
     if city_name:
         gdf = walkability.load_geodataframe(filepath)
-        location = walkability.get_city_location(city_name)
+        location = walkability.get_location(city_name)
         
         if location:
-            city_gdf = walkability.filter_geodataframe_by_city(gdf, location, buffer_radius_miles)
+            city_gdf = walkability.filter_geodataframe_by_location(gdf, location, buffer_radius_miles)
             city_gdf = walkability.simplify_geometries(city_gdf)
             walkability.display_walkability_index(city_gdf)
             walkability.calculate_memory_usage(city_gdf)

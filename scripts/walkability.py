@@ -17,26 +17,29 @@ logging.basicConfig(
 
 Location = namedtuple('Location', ['longitude', 'latitude'])
 
+# GG 8/2/2024: There are areas that are entirely water (ex: in NYC). We should filter these out.
 def load_geodataframe(filepath):
     gdf = gpd.read_file(filepath)
     logging.info(f"Loaded {len(gdf)} records from {filepath}")
     return gdf.to_crs(epsg=3857)
 
-def get_city_location(city_name, user_agent="city_walkability_app"):
+def get_location(location_string, user_agent="location_walkability_app"):
     geolocator = Nominatim(user_agent=user_agent)
-    location = geolocator.geocode(city_name)
+    location = geolocator.geocode(location_string, country_codes='us')
+    
     if location:
         transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
         lon_3857, lat_3857 = transformer.transform(location.longitude, location.latitude)
         return Location(longitude=lon_3857, latitude=lat_3857)
+    
     logging.warning("Location not found")
     return None
 
-def filter_geodataframe_by_city(gdf, location, buffer_radius_miles=0.1):
+def filter_geodataframe_by_location(gdf, location, buffer_radius_miles=0.1):
     buffer_radius_meters = buffer_radius_miles * 1609.34  # Convert miles to meters
-    city_point = Point(location.longitude, location.latitude)
-    city_buffer = gpd.GeoDataFrame([{'geometry': city_point}], crs=gdf.crs).buffer(buffer_radius_meters).iloc[0]
-    filtered_gdf = gdf[gdf.geometry.intersects(city_buffer)]
+    location_point = Point(location.longitude, location.latitude)
+    location_buffer = gpd.GeoDataFrame([{'geometry': location_point}], crs=gdf.crs).buffer(buffer_radius_meters).iloc[0]
+    filtered_gdf = gdf[gdf.geometry.intersects(location_buffer)]
     logging.info(f"Filtered GeoDataFrame to {len(filtered_gdf)} records within {buffer_radius_miles} miles radius")
     return filtered_gdf
 
@@ -50,7 +53,6 @@ def display_walkability_index(gdf):
 def calculate_memory_usage(gdf):
     memory_usage_mb = gdf.memory_usage(deep=True).sum() / (1024 ** 2)
     logging.info(f"GeoDataFrame size: {memory_usage_mb:.2f} MB")
-
 
 def create_map(gdf, location, buffer_size):
     transformer = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
