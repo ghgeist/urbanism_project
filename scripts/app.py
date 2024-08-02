@@ -1,43 +1,35 @@
 import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import requests
-import io
+import folium
+from streamlit.components.v1 import html
+from geopy.geocoders import Nominatim
 
-# Goal: Map the walkability scores by zip code
-# To Do:
-# Figure out how to speed up the API call for the walkability scores
-# Figure out how to map the block data to zip codes. 
-# Figure out how to visualize the data
+# Set the page configuration to wide mode
+st.set_page_config(layout="wide")
 
-#NatWalkInd ( type: esriFieldTypeDouble, alias: Walkability Index )
-#GEOID20 ( type: esriFieldTypeString, alias: Census block group 12-digit FIPS code (2018), length: 50 )#
+# Create a two-column layout
+map, chat = st.columns([2, 1])
 
+with chat:
+    # Create a text input widget for the city name
+    city = st.text_input("Enter a city name", "Istanbul")
 
+# Initialize the geolocator
+geolocator = Nominatim(user_agent="streamlit_app")
 
-# Function to fetch data from the API
-@st.cache_data
-def fetch_data(api_url):
-    response = requests.get(api_url)
-    response.raise_for_status()  # Raise an error for bad status codes
-    return response.content
+# Get the location of the entered city
+location = geolocator.geocode(city)
 
-# API URL
-api_url = 'https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv'
+# Create the Folium map with the new location
+m = folium.Map(
+    location=[location.latitude, location.longitude],
+    width="100%",
+    height="100%",
+    zoom_start=10
+)
 
-# Fetch the data
-data_content = fetch_data(api_url)
+# Convert the map to HTML
+map_html = m._repr_html_()
 
-# Load only necessary columns
-columns_to_load = ['GEOID20', 'NatWalkInd']
-dtype = {
-    'GEOID20': 'string',
-    'NatWalkInd': 'float64'
-}
-data = pd.read_csv(io.StringIO(data_content.decode('utf-8')), usecols=columns_to_load, dtype=dtype)
-
-# Streamlit app
-st.title("Walkability Scores Visualization")
-
-# Display the data
-st.write("### Walkability Scores Data", data.head())
+with map:
+    # Display the map in Streamlit
+    st.components.v1.html(map_html, height=500)
