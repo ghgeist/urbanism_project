@@ -4,3 +4,5 @@ __pycache__
 .streamlite/secrets.toml
 notes
 walkability.log
+.env
+archive/postgres_test.ipynb

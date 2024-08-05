@@ -1,14 +1,11 @@
-import psycopg2
-from sqlalchemy import create_engine
-import pandas as pd
-import streamlit as st
-import os
-import logging
-from collections import namedtuple
-from geopy.geocoders import Nominatim
-from pyproj import CRS, Transformer
-from shapely.geometry import Point
 import geopandas as gpd
+from geopy.geocoders import Nominatim
+from shapely.geometry import Point
+import folium
+from collections import namedtuple
+from pyproj import CRS, Transformer
+import logging
+import math
 
 # Configure logging to output to a file
 logging.basicConfig(
@@ -20,18 +17,20 @@ logging.basicConfig(
 
 Location = namedtuple('Location', ['longitude', 'latitude'])
 
-# Get database connection details from Streamlit secrets
-db_username = st.secrets["DB_USERNAME"]
-db_password = st.secrets["DB_PASSWORD"]
-db_host = st.secrets["DB_HOST"]
-db_name = st.secrets["DB_NAME"]
+# GG 8/2/2024: There are areas that are entirely water (ex: in NYC). We should filter these out.
+def load_geodataframe(filepath):
+    """
+    Load a geospatial file into a GeoDataFrame and convert its coordinate reference system (CRS) to EPSG:3857.
 
-def get_db_connection():
+    Parameters:
+    filepath (str): The path to the geospatial file to be loaded.
+
+    Returns:
+    GeoDataFrame: A GeoDataFrame with the data from the file, with coordinates transformed to EPSG:3857.
     """
-    Create a connection to the PostgreSQL database.
-    """
-    engine = create_engine(f'postgresql://{db_username}:{db_password}@{db_host}/{db_name}')
-    return engine
+    gdf = gpd.read_file(filepath)
+    logging.info("Loaded %s records from %s", len(gdf), filepath)
+    return gdf.to_crs(epsg=3857)
 
 def get_location(location_string, user_agent="location_walkability_app"):
     """
@@ -56,40 +55,13 @@ def get_location(location_string, user_agent="location_walkability_app"):
     logging.warning("Location not found")
     return None
 
-def filter_geodataframe_by_location(engine, table_name, location, buffer_radius_miles=0.1):
-    """
-    Filter the GeoDataFrame by location using SQL.
-
-    Parameters:
-    engine (Engine): SQLAlchemy engine object.
-    table_name (str): The name of the table to query.
-    location (Location): The location to filter by.
-    buffer_radius_miles (float): The buffer radius in miles. Default is 0.1 miles.
-
-    Returns:
-    GeoDataFrame: A GeoDataFrame filtered by the specified location and buffer radius.
-    """
+def filter_geodataframe_by_location(gdf, location, buffer_radius_miles=0.1):
     buffer_radius_meters = buffer_radius_miles * 1609.34  # Convert miles to meters
-
-    # Create a point geometry for the location
     location_point = Point(location.longitude, location.latitude)
-
-    # SQL query to filter data by location and buffer radius
-    query = f"""
-    SELECT *
-    FROM {table_name}
-    WHERE ST_DWithin(
-        ST_Transform(ST_SetSRID(ST_MakePoint({location.longitude}, {location.latitude}), 3857), 4326),
-        ST_Transform(geometry, 4326),
-        {buffer_radius_meters}
-    );
-    """
-
-    # Execute the query and load the result into a GeoDataFrame
-    gdf = gpd.read_postgis(query, engine, geom_col='geometry')
-
-    logging.info("Filtered GeoDataFrame to %s records within %s miles radius", len(gdf), buffer_radius_miles)
-    return gdf
+    location_buffer = gpd.GeoDataFrame([{'geometry': location_point}], crs=gdf.crs).buffer(buffer_radius_meters).iloc[0]
+    filtered_gdf = gdf[gdf.geometry.intersects(location_buffer)]
+    logging.info("Filtered GeoDataFrame to %s records within %s miles radius", len(filtered_gdf), buffer_radius_miles)
+    return filtered_gdf
 
 def simplify_geometries(gdf, tolerance=0.01):
     return gdf.copy().assign(geometry=lambda df: df.geometry.simplify(tolerance, preserve_topology=True))
