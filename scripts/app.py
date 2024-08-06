@@ -14,15 +14,17 @@ with chat_col:
     
     # Create a slider for the buffer radius in miles
     buffer_radius_miles = st.slider("Select buffer radius (miles)", min_value=0.1, max_value=10.0, value=0.5, step=0.1)
+
 def main():
-    # Database connection
-    engine = walkability.get_db_connection()
+    # Hardcoded file path for the GeoDataFrame
+    filepath = r'data\WalkabilityIndex\Natl_WI.gdb'
     
     if city_name:
+        gdf = walkability.load_geodataframe(filepath)
         location = walkability.get_location(city_name)
         
         if location:
-            city_gdf = walkability.filter_geodataframe_by_location(engine, 'national_walkability_index', location, buffer_radius_miles)
+            city_gdf = walkability.filter_geodataframe_by_location(gdf, location, buffer_radius_miles)
             city_gdf = walkability.simplify_geometries(city_gdf)
             walkability.display_walkability_index(city_gdf)
             walkability.calculate_memory_usage(city_gdf)
