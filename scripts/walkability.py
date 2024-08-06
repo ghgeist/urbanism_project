@@ -105,7 +105,7 @@ def display_walkability_index(gdf):
 
 def create_map(gdf, location, buffer_size):
     """
-    Create a folium map with a choropleth layer based on walkability data.
+    Create a folium map with a choropleth layer based on walkability data and add markers for each location.
 
     Parameters:
     gdf (GeoDataFrame): The GeoDataFrame containing walkability data.
@@ -151,6 +151,21 @@ def create_map(gdf, location, buffer_size):
         }
     ).add_to(m)
 
+    # Add markers for each location
+    for _, row in gdf.iterrows():
+        # Get the centroid of the geometry
+        centroid = row.geometry.centroid
+        lon, lat = transformer.transform(centroid.x, centroid.y)
+        folium.CircleMarker(
+            location=[lat, lon],
+            radius=5,  # Adjust the radius as needed
+            color='blue',
+            fill=True,
+            fill_color='blue',
+            fill_opacity=0.6,
+            popup=f"Block Group ID: {row['geoid20']}<br>NatWalkInd: {round(row['natwalkind'], 1)}"  # Round to one decimal place
+        ).add_to(m)
+        
     folium.LayerControl().add_to(m)
 
     return m

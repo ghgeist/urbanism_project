@@ -23,13 +23,42 @@ def main():
             conn = st.connection("postgresql", type="sql")
             longitude = location.longitude
             latitude = location.latitude
-            
+
             gdf = walkability.get_walkability_data(longitude, latitude, buffer_radius_miles, conn)
             city_gdf = walkability.simplify_geometries(gdf)
             walkability.display_walkability_index(city_gdf)
+
             with map_col:
                 m = walkability.create_map(city_gdf, location, buffer_radius_miles)
                 folium_static(m)
+
+            # Add table to the app
+            # Rename columns
+            columns={
+                    'geoid20': 'Block Group ID',
+                    'd3b':'Intersection Density',
+                    'd4a':'Proximity to Transit Stops',
+                    'd2b_e8mixa':'Employment Mix',
+                    'd2a_ephhm':'Employment and Household Mix',
+                    'natwalkind':'National Walkability Index Score'}
+
+            gdf.rename(columns=columns, inplace=True)
+
+            # Round 'natwalkind' to 1 decimal place
+            gdf['National Walkability Index Score'] = gdf['National Walkability Index Score'].round(1)
+
+            df_factors = gdf[[
+                'Block Group ID','National Walkability Index Score',
+                'Intersection Density', 'Proximity to Transit Stops',
+                'Employment Mix', 'Employment and Household Mix']]
+
+            # Pivot the table
+            df_pivot = df_factors.set_index('Block Group ID').T
+
+            with chat_col:
+                st.write(df_pivot)
+
+
         else:
             st.write("City not found. Please enter a valid city name.")
 
