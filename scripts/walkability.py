@@ -3,9 +3,9 @@ from geopy.geocoders import Nominatim
 from shapely.geometry import Point
 import folium
 from collections import namedtuple
-from pyproj import CRS, Transformer
+from pyproj import Transformer
 import logging
-import math
+from shapely import wkb
 
 # Configure logging to output to a file
 logging.basicConfig(
@@ -16,21 +16,6 @@ logging.basicConfig(
 )
 
 Location = namedtuple('Location', ['longitude', 'latitude'])
-
-# GG 8/2/2024: There are areas that are entirely water (ex: in NYC). We should filter these out.
-def load_geodataframe(filepath):
-    """
-    Load a geospatial file into a GeoDataFrame and convert its coordinate reference system (CRS) to EPSG:3857.
-
-    Parameters:
-    filepath (str): The path to the geospatial file to be loaded.
-
-    Returns:
-    GeoDataFrame: A GeoDataFrame with the data from the file, with coordinates transformed to EPSG:3857.
-    """
-    gdf = gpd.read_file(filepath)
-    logging.info("Loaded %s records from %s", len(gdf), filepath)
-    return gdf.to_crs(epsg=3857)
 
 def get_location(location_string, user_agent="location_walkability_app"):
     """
@@ -55,26 +40,78 @@ def get_location(location_string, user_agent="location_walkability_app"):
     logging.warning("Location not found")
     return None
 
-def filter_geodataframe_by_location(gdf, location, buffer_radius_miles=0.1):
+def get_walkability_data(longitude, latitude, buffer_radius_miles, conn):
+    """
+    Retrieve walkability data from the database within a specified buffer radius.
+
+    Parameters:
+    longitude (float): Longitude in EPSG:3857 coordinates.
+    latitude (float): Latitude in EPSG:3857 coordinates.
+    buffer_radius_miles (float): Buffer radius in miles.
+    conn (object): Database connection object.
+
+    Returns:
+    GeoDataFrame: A GeoDataFrame containing the walkability data.
+    """
     buffer_radius_meters = buffer_radius_miles * 1609.34  # Convert miles to meters
-    location_point = Point(location.longitude, location.latitude)
-    location_buffer = gpd.GeoDataFrame([{'geometry': location_point}], crs=gdf.crs).buffer(buffer_radius_meters).iloc[0]
-    filtered_gdf = gdf[gdf.geometry.intersects(location_buffer)]
-    logging.info("Filtered GeoDataFrame to %s records within %s miles radius", len(filtered_gdf), buffer_radius_miles)
-    return filtered_gdf
+    df = conn.query(
+        """
+        SELECT *
+        FROM national_walkability_index
+        WHERE ST_DWithin(
+            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 3857),
+            geometry,
+            :buffer_radius_meters
+        );
+        """,
+        ttl="10m", # CAche the result for 10 minutes
+        params={"longitude": longitude, "latitude": latitude, "buffer_radius_meters": buffer_radius_meters}
+    )
+    
+    # Convert the geometry column to Shapely geometry objects
+    df['geometry'] = df['geometry'].apply(wkb.loads)
+    
+    # Convert DataFrame to GeoDataFrame
+    gdf = gpd.GeoDataFrame(df, geometry='geometry')
+    gdf.set_crs(epsg=3857, inplace=True)
+    
+    return gdf
 
 def simplify_geometries(gdf, tolerance=0.01):
+    """
+    Simplify the geometries in a GeoDataFrame.
+
+    Parameters:
+    gdf (GeoDataFrame): The GeoDataFrame to simplify.
+    tolerance (float): The tolerance for simplification. Default is 0.01.
+
+    Returns:
+    GeoDataFrame: A new GeoDataFrame with simplified geometries.
+    """
     return gdf.copy().assign(geometry=lambda df: df.geometry.simplify(tolerance, preserve_topology=True))
 
 def display_walkability_index(gdf):
-    for _, row in gdf.iterrows():
-        logging.info("Geometry: %s, NatWalkInd: %s", row['geometry'], row['NatWalkInd'])
+    """
+    Log the geometry and National Walkability Index for each row in a GeoDataFrame.
 
-def calculate_memory_usage(gdf):
-    memory_usage_mb = gdf.memory_usage(deep=True).sum() / (1024 ** 2)
-    logging.info(f"GeoDataFrame size: {memory_usage_mb:.2f} MB")
+    Parameters:
+    gdf (GeoDataFrame): The GeoDataFrame to log.
+    """
+    for _, row in gdf.iterrows():
+        logging.info("Geometry: %s, NatWalkInd: %s", row['geometry'], row['natwalkind'])
 
 def create_map(gdf, location, buffer_size):
+    """
+    Create a folium map with a choropleth layer based on walkability data.
+
+    Parameters:
+    gdf (GeoDataFrame): The GeoDataFrame containing walkability data.
+    location (Location): The central location for the map.
+    buffer_size (float): The buffer size for the map.
+
+    Returns:
+    folium.Map: A folium map object.
+    """
     transformer = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
     lon_4326, lat_4326 = transformer.transform(location.longitude, location.latitude)
 
@@ -88,8 +125,8 @@ def create_map(gdf, location, buffer_size):
         geo_data=gdf,
         name='choropleth',
         data=gdf,
-        columns=['GEOID20', 'NatWalkInd'],  # Use 'GEOID20' as the unique identifier
-        key_on='feature.properties.GEOID20',  # Match the unique identifier in the GeoJSON
+        columns=['geoid20', 'natwalkind'],  # Use 'GEOID20' as the unique identifier
+        key_on='feature.properties.geoid20',  # Match the unique identifier in the GeoJSON
         fill_color='RdYlBu',
         fill_opacity=0.5,
         line_opacity=0.2,
