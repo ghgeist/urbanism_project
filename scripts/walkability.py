@@ -3,6 +3,8 @@ from collections import namedtuple
 import folium
 import geopandas as gpd
 from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderUnavailable
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from pyproj import Transformer
 from shapely import wkb
 
@@ -16,7 +18,8 @@ logging.basicConfig(
 
 Location = namedtuple('Location', ['longitude', 'latitude'])
 
-# 8/6/24: To Do: This call tends to time out. I'm not 100% why. 
+# Retry configuration: 3 attempts with exponential backoff starting at 1 second
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), retry=retry_if_exception_type(GeocoderUnavailable))
 def get_location(location_string, user_agent="location_walkability_app"):
     """
     Get the geographic coordinates of a location string and convert them to EPSG:3857.
@@ -120,6 +123,9 @@ def create_map(gdf, location, buffer_size):
     # Create the map and set the bounds
     m = folium.Map(location=[lat_4326, lon_4326], zoom_start=zoom_level, width="100%", height="100%")
 
+    # Define the fixed scale
+    scale = [1, 5, 10, 15, 20]
+
     # Create a choropleth map
     folium.Choropleth(
         geo_data=gdf,
@@ -130,7 +136,8 @@ def create_map(gdf, location, buffer_size):
         fill_color='RdYlBu',
         fill_opacity=0.5,
         line_opacity=0.2,
-        legend_name='National Walkability Index'
+        legend_name='National Walkability Index',
+        threshold_scale=scale  # Set the fixed scale
     ).add_to(m)
 
     # Add GeoJson layer to show boundaries

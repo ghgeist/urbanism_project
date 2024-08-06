@@ -21,8 +21,8 @@ def main():
 
         if location:
             conn = st.connection("postgresql", type="sql")
-            longitude = location.longitude  # Assuming location has longitude attribute
-            latitude = location.latitude    # Assuming location has latitude attribute
+            longitude = location.longitude
+            latitude = location.latitude
             
             gdf = walkability.get_walkability_data(longitude, latitude, buffer_radius_miles, conn)
             city_gdf = walkability.simplify_geometries(gdf)
