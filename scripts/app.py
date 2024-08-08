@@ -1,6 +1,6 @@
 import streamlit as st
 from utils import write_message
-from chatbot import generate_response
+from scripts.manage_agents import generate_response
 import openai
 
 # Page Config for "CityBot"

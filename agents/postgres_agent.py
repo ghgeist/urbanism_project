@@ -148,7 +148,7 @@ pg_agent_executor = create_sql_agent(
     verbose=True,
 )
 
-# Invoke the agent
-pg_agent_executor.invoke(
-    "How many block groups are there in the Knoxville area?"
-)
+## Use this code to test the agent
+# pg_agent_executor.invoke(
+#     "How many block groups are there in the Knoxville area?"
+# )

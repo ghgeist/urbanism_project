@@ -43,3 +43,8 @@ urbanism_agent_executor = AgentExecutor(
     verbose=True,
     handle_parsing_errors=True
 )
+
+## Use this code to test the agent
+# urbanism_agent_executor.invoke(
+#     "Tell me about urbanism in Knoxville, Tennessee."
+# )
