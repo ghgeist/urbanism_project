@@ -3,7 +3,7 @@ import asyncio
 import streamlit as st
 from langchain_community.utilities import SQLDatabase
 from langchain.chat_models import ChatOpenAI
-from langchain_community.agent_toolkits import create_sql_agent
+from langchain_community.agent_toolkits import create_sql_agent #This is an agent. We need a tool.
 from dotenv import load_dotenv
 
 # Load environment variables from a .env file
@@ -11,6 +11,7 @@ load_dotenv()
 
 # Set the OpenAI API key from Streamlit secrets
 os.environ["OPENAI_API_KEY"] = st.secrets["openai"]["openai_api_key"]
+model = st.secrets["openai"]["openai_model"]
 
 # Read database connection details from Streamlit secrets
 db_secrets = st.secrets["connections"]["postgresql"]
@@ -34,7 +35,7 @@ if "db" not in st.session_state:
 async def get_answer_by_sql_query(db, input):
     try:
         # Initialize the OpenAI chat model
-        llm = ChatOpenAI(model="gpt-4", temperature=0)
+        llm = ChatOpenAI(model=model, temperature=0)
         # Create an SQL agent with the model and database
         agent_executor = create_sql_agent(llm, db=db, verbose=True)
         

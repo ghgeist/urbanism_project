@@ -1,0 +1,11 @@
+[
+    {
+        "input": "How many CBSAs are there?",
+        "query": "SELECT COUNT(DISTINCT cbsa_name) FROM national_walkability_index;"
+    },
+    {
+        "input": "How many block groups are there in the Dallas-Fort Worth area?",
+        "query": "SELECT COUNT(DISTINCT geoid20) FROM national_walkability_index WHERE cbsa_name LIKE '%Dallas-Fort Worth%';"
+    }
+
+]

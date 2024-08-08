@@ -1,4 +1,3 @@
-import asyncio
 import streamlit as st
 from utils import write_message
 from chatbot import generate_response
@@ -24,11 +23,11 @@ if "messages" not in st.session_state:
     ]
 
 # Submit handler
-async def handle_submit(message):
+def handle_submit(message):
     # Handle the response
     with st.spinner('Thinking...'):
         # Call the agent
-        response = await generate_response(message)
+        response = generate_response(message)
         write_message('assistant', response)
 
 # Display messages in Session State
@@ -41,4 +40,4 @@ if question := st.chat_input("Let's build strong towns!"):
     write_message('user', question)
 
     # Generate a response
-    asyncio.run(handle_submit(question))
+    handle_submit(question)
