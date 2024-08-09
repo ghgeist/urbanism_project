@@ -6,6 +6,10 @@ from langchain.schema import StrOutputParser
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.tools import Tool
 
+# I need to leverage LangGraph to manage the agents here
+# https://blog.langchain.dev/langgraph/
+# https://blog.langchain.dev/langgraph-multi-agent-workflows/
+
 # Import urbanism_agent_executor and postgres_agent_executor
 from agents.urbanism_agent import urbanism_agent_executor
 from agents.postgres_agent import pg_agent_executor
