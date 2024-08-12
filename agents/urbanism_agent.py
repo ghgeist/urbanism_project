@@ -24,6 +24,7 @@ urbanism_chat_prompt = ChatPromptTemplate.from_messages(
 # Create the urbanism chat pipeline
 urbanism_chat = urbanism_chat_prompt | llm | StrOutputParser()
 
+# Create the tools to be used by the urbanism agent
 urbanism_tools = [
     Tool.from_function(
         name="General Chat",
