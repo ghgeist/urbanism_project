@@ -34,26 +34,25 @@ def main():
 
             # Add table to the app
             # Rename columns
-            columns={
-                    'geoid20': 'Block Group ID',
-                    'd3b':'Intersection Density',
-                    'd4a':'Proximity to Transit Stops',
-                    'd2b_e8mixa':'Employment Mix',
-                    'd2a_ephhm':'Employment and Household Mix',
-                    'natwalkind':'National Walkability Index Score'}
+            columns = {
+                'geoid20': 'Block Group ID',
+                'd3b': 'Intersection Density',
+                'd4a': 'Proximity to Transit Stops',
+                'd2b_e8mixa': 'Employment Mix',
+                'd2a_ephhm': 'Employment and Household Mix',
+                'natwalkind': 'National Walkability Index Score'
+            }
 
             gdf.rename(columns=columns, inplace=True)
 
             # Round 'natwalkind' to 1 decimal place
             gdf['National Walkability Index Score'] = gdf['National Walkability Index Score'].round(1)
 
-            df_factors = gdf[[
-                'Block Group ID','National Walkability Index Score',
-                'Intersection Density', 'Proximity to Transit Stops',
-                'Employment Mix', 'Employment and Household Mix']]
+            # Select only 'Block Group ID' and 'National Walkability Index Score'
+            df_factors = gdf[['Block Group ID', 'National Walkability Index Score']]
 
             # Pivot the table
-            df_pivot = df_factors.set_index('Block Group ID').T
+            df_pivot = df_factors.set_index('Block Group ID').sort_values('National Walkability Index Score', ascending=False)
 
             with chat_col:
                 st.write(df_pivot)
