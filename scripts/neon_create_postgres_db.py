@@ -11,7 +11,7 @@ import streamlit as st
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 # Get database connection details from Streamlit secrets
-db_secrets = st.secrets["connections"]["neon"]
+db_secrets = st.secrets["connections"]["postgresql"]
 db_username = db_secrets["username"]
 db_password = db_secrets["password"]
 db_host = db_secrets["host"]
@@ -33,6 +33,9 @@ try:
     logging.info("Creating GeoDataFrame...")
     # Create a GeoDataFrame with the initial CRS-> EPSG:4326
     gdf = gpd.GeoDataFrame(df, geometry='geometry', crs='EPSG:4326')
+    
+    # Verify the CRS is set to EPSG:4326
+    assert gdf.crs.to_string() == 'EPSG:4326', "CRS is not set to EPSG:4326"
     
     logging.info("Selecting specific columns...")
     # Select only the required columns -> Making a decision here based upon the database size limitations
@@ -63,7 +66,7 @@ try:
     cursor.execute("""
             CREATE TABLE IF NOT EXISTS national_walkability_index (
                 geoid20 VARCHAR(12) PRIMARY KEY,
-                 natwalkind NUMERIC(4, 2),
+                natwalkind NUMERIC(4, 2),
                 geometry GEOMETRY(Geometry, 4326)
             );
         """)
