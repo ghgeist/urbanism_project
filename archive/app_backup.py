@@ -25,21 +25,16 @@ def main():
             latitude = location.latitude
 
             gdf = walkability.get_walkability_data(longitude, latitude, buffer_radius_miles, conn)
-            city_gdf = walkability.simplify_geometries(gdf)
-            walkability.display_walkability_index(city_gdf)
+            walkability.display_walkability_index(gdf)
 
             with map_col:
-                m = walkability.create_map(city_gdf, location, buffer_radius_miles)
+                m = walkability.create_map(gdf, location, buffer_radius_miles)
                 folium_static(m)
 
             # Add table to the app
             # Rename columns
             columns = {
                 'geoid20': 'Block Group ID',
-                'd3b': 'Intersection Density',
-                'd4a': 'Proximity to Transit Stops',
-                'd2b_e8mixa': 'Employment Mix',
-                'd2a_ephhm': 'Employment and Household Mix',
                 'natwalkind': 'National Walkability Index Score'
             }
 
