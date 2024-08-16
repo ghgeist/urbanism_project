@@ -5,7 +5,7 @@
 # Exploring the National Walkability Index
 
 # Project Overview
-This project explores the National Walkability Index, a dataset developed by the U.S. Environmental Protection Agency (EPA) to measure the walkability of neighborhoods across the United States. The index ranges from 1 to 20, with higher values indicating greater walkability. The dataset includes the walkability index for each census block group in the United States, as well as the corresponding Federal Information Processing System (FIPS) code for each block group.
+This project explores the National Walkability Index, a dataset developed by the U.S. Environmental Protection Agency (EPA) to measure the walkability of neighborhoods across the United States. The index ranges from 1 to 20, with higher values indicating greater walkability.
 
 # Link to Web App
 [Exploring the U.S. National Walkability Index](https://citybot.streamlit.app/)
