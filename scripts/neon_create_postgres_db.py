@@ -39,7 +39,7 @@ try:
     
     logging.info("Selecting specific columns...")
     # Select only the required columns -> Making a decision here based upon the database size limitations
-    gdf = gdf[['geoid20', 'natwalkind', 'geometry']]
+    gdf = gdf[['geoid20',"d2a_ranked","d2b_ranked", "d3b_ranked", "d4a_ranked", 'natwalkind', 'geometry']]
 
     logging.info("Creating connection to PostgreSQL database...")
     # Create a connection to the PostgreSQL database
@@ -66,6 +66,10 @@ try:
     cursor.execute("""
             CREATE TABLE IF NOT EXISTS national_walkability_index (
                 geoid20 VARCHAR(12) PRIMARY KEY,
+                d2a_ranked NUMERIC(4, 2),
+                d2b_ranked NUMERIC(4, 2),
+                d3b_ranked NUMERIC(4, 2),
+                d4a_ranked NUMERIC(4, 2),
                 natwalkind NUMERIC(4, 2),
                 geometry GEOMETRY(Geometry, 4326)
             );
@@ -74,10 +78,11 @@ try:
 
     logging.info("Writing GeoDataFrame to PostgreSQL database...")
     # Write the GeoDataFrame to the PostgreSQL database with progress bar
-    total_chunks = (len(gdf) // 1000) + 1
+    chunk_size = 1000
+    total_chunks = (len(gdf) + chunk_size - 1) // chunk_size  # Correct chunk calculation
     with tqdm(total=total_chunks, desc="Writing to PostgreSQL", unit="chunk") as pbar:
         for i in range(total_chunks):
-            chunk = gdf.iloc[i*1000:(i+1)*1000]
+            chunk = gdf.iloc[i*chunk_size:(i+1)*chunk_size]
             chunk.to_postgis('national_walkability_index', engine, if_exists='append', index=False)
             pbar.update(1)
 

@@ -41,7 +41,14 @@ def get_walkability_data(location_string, buffer_size, conn):
     buffer_radius_degrees = max(degrees_latitude, degrees_longitude)
 
     query = """
-        SELECT geoid20, natwalkind, geometry
+        SELECT 
+            geoid20,
+            d2a_ranked,
+            d2b_ranked, 
+            d3b_ranked, 
+            d4a_ranked,
+            natwalkind, 
+            geometry
         FROM national_walkability_index
         WHERE ST_DWithin(
             st_setsrid(st_makepoint(:longitude, :latitude), 4326),
@@ -58,12 +65,21 @@ def get_walkability_data(location_string, buffer_size, conn):
     gdf.set_crs(epsg=4326, inplace=True)
     return gdf
 
-def create_map(location, gdf):
+def calculate_zoom_level(buffer_size):
+    """Calculate an appropriate zoom level based on the buffer size in miles."""
+    # This formula is a rough approximation. Adjust the constants as needed.
+    return int(14 - math.log(buffer_size + 1, 2))
+
+def create_map(location, gdf, buffer_size):
     """Create a folium map with a choropleth layer based on walkability data and add markers for each location."""
     if not location or gdf.empty:
         return None
     longitude, latitude = location
-    m = folium.Map(location=[latitude, longitude], zoom_start=13, width="100%", height="100%")
+    
+    # Calculate the zoom level based on the buffer size
+    zoom_level = calculate_zoom_level(buffer_size)
+    
+    m = folium.Map(location=[latitude, longitude], zoom_start=zoom_level, width="100%", height="100%")
 
     folium.Choropleth(
         geo_data=gdf,
@@ -86,9 +102,9 @@ def create_map(location, gdf):
 
     for _, row in gdf.iterrows():
         centroid = row.geometry.centroid
-        folium.CircleMarker(
+        folium.Circle(
             location=[centroid.y, centroid.x],
-            radius=5,
+            radius=40,  # Adjust the radius as needed
             color='blue',
             fill=True,
             fill_color='blue',
