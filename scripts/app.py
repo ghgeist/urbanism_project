@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'About': "https://github.com/ghgeist/urbanism_project"
+        'About': "https://www.linkedin.com/in/grantgeist/"
     }
 )
 
