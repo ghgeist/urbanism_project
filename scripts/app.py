@@ -3,9 +3,19 @@ from streamlit_folium import folium_static
 from walkability import get_location, get_walkability_data, create_map
 
 # Set the page configuration to wide mode
-st.set_page_config(layout="wide")
+st.set_page_config(
+    page_title="Exploring the U.S. National Walkability Index",
+    page_icon="🏙️",
+    layout="wide",
+    initial_sidebar_state="auto",
+    menu_items={
+        'About': "https://github.com/ghgeist/urbanism_project"
+    }
+)
 
 def main():
+    st.title("Exploring the U.S. National Walkability Index")
+    
     map_col, control_col = st.columns([2, 1])
 
     with control_col:
