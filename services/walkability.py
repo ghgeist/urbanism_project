@@ -14,25 +14,34 @@ logging.basicConfig(
     filemode='w'
 )
 
-# Retry configuration: 3 attempts with exponential backoff starting at 1 second
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), retry=retry_if_exception_type(GeocoderUnavailable))
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=1, min=1, max=10), 
+    retry=retry_if_exception_type(GeocoderUnavailable)
+)
 def get_location(location_string, user_agent="location_walkability_app"):
-    """Get the longitude and latitude of a location string."""
+    """
+    Geocode the location string using Nominatim and return (longitude, latitude).
+    """
     geolocator = Nominatim(user_agent=user_agent)
     location = geolocator.geocode(location_string, country_codes='us')
     if location:
         return location.longitude, location.latitude
-    logging.warning("Location not found")
+    logging.warning("Location not found for: %s", location_string)
     return None
 
 def miles_to_degrees(miles, latitude):
-    """Convert miles to degrees of latitude and longitude."""
+    """
+    Convert a distance (miles) to degrees (latitude & longitude).
+    """
     degrees_latitude = miles / 69.0
     degrees_longitude = miles / (69.0 * math.cos(math.radians(latitude)))
     return degrees_latitude, degrees_longitude
 
 def get_walkability_data(location_string, buffer_size, conn):
-    """Fetch walkability data within a buffer radius around a location."""
+    """
+    Fetch walkability data within a given buffer radius around the stated location.
+    """
     location = get_location(location_string)
     if not location:
         return None
@@ -66,21 +75,24 @@ def get_walkability_data(location_string, buffer_size, conn):
     return gdf
 
 def calculate_zoom_level(buffer_size):
-    """Calculate an appropriate zoom level based on the buffer size in miles."""
-    # This formula is a rough approximation. Adjust the constants as needed.
+    """
+    Calculate an appropriate zoom level for the map based on the buffer size (in miles).
+    """
     return int(14 - math.log(buffer_size + 1, 2))
 
 def create_map(location, gdf, buffer_size):
-    """Create a folium map with a choropleth layer based on walkability data and add markers for each location."""
+    """
+    Create a Folium map with a choropleth layer overlaying walkability data.
+    """
     if not location or gdf.empty:
         return None
     longitude, latitude = location
-    
-    # Calculate the zoom level based on the buffer size
     zoom_level = calculate_zoom_level(buffer_size)
-    
+
+    # Create the base Folium map
     m = folium.Map(location=[latitude, longitude], zoom_start=zoom_level, width="100%", height="100%")
 
+    # Add choropleth layer
     folium.Choropleth(
         geo_data=gdf,
         name='choropleth',
@@ -94,17 +106,19 @@ def create_map(location, gdf, buffer_size):
         threshold_scale=[1, 5, 10, 15, 20]
     ).add_to(m)
 
+    # Add detailed GeoJSON layer
     folium.GeoJson(
         gdf,
         name='geojson',
         style_function=lambda feature: {'color': 'black', 'weight': 1, 'fillOpacity': 0}
     ).add_to(m)
 
+    # Add markers for each block group
     for _, row in gdf.iterrows():
         centroid = row.geometry.centroid
         folium.Circle(
             location=[centroid.y, centroid.x],
-            radius=40,  # Adjust the radius as needed
+            radius=40,  # Customize as needed
             color='blue',
             fill=True,
             fill_color='blue',
@@ -113,4 +127,4 @@ def create_map(location, gdf, buffer_size):
         ).add_to(m)
 
     folium.LayerControl().add_to(m)
-    return m
+    return m 
