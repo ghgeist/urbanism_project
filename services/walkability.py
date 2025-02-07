@@ -128,4 +128,4 @@ def create_map(location, gdf, buffer_size):
         ).add_to(m)
 
     folium.LayerControl().add_to(m)
-    return m
+    return m 
