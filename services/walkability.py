@@ -65,7 +65,6 @@ def get_walkability_data(location_string, buffer_size, conn):
             :buffer_radius_degrees
         );
     """
-    # Consider using a context manager for connection handling in production code.
     df = conn.query(
         query,
         ttl="10m",
