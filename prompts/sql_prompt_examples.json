@@ -1,0 +1,12 @@
+[
+    {
+        "input": "How many CBSAs are there?",
+        "query": "SELECT COUNT(DISTINCT cbsa_name) FROM national_walkability_index;",
+        "answer": "There are 384 CBSAs."
+    },
+    {
+        "input": "How many block groups are there in the Dallas-Fort Worth area?",
+        "query": "SELECT COUNT(DISTINCT geoid20) FROM national_walkability_index WHERE cbsa_name LIKE '%Dallas-Fort Worth%';",
+        "answer": "There are 1,234 block groups in the Dallas-Fort Worth area."
+    }
+]

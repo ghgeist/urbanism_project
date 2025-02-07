@@ -3,19 +3,24 @@ import streamlit as st
 def render_sidebar():
     with st.sidebar:
         st.title("Exploring the U.S. National Walkability Index")
-        city_name = st.text_input("Enter a U.S. Address, Zip Code or City:", "Knoxville, TN")
-        buffer_radius_miles = st.slider(
-            "Select buffer radius (miles)",
-            min_value=0.1,
-            max_value=10.0,
-            value=0.5,
-            step=0.1
-        )
+        
         st.write(
-            """The U.S. National Walkability Index (NWI) is a metric developed by the U.S. Environmental Protection Agency (EPA)
-            to evaluate the walkability of neighborhoods. The index ranges from 1 to 20, with higher values indicating greater walkability.
-            The map displays the NWI per neighborhood within a buffer radius around the selected location.
-            More information can be found [here](https://www.epa.gov/smartgrowth/national-walkability-index-user-guide-and-methodology)
+            """
+            This app visualizes the U.S. National Walkability Index and allows you to
+            perform natural language queries to explore the underlying data.
+            
+            **To use the Natural Language Query feature:**
+            - Enter your OpenAI API key below.
+            - Select the OpenAI model you prefer.
+            
+            You can obtain an API key from [OpenAI Account API Keys](https://platform.openai.com/account/api-keys).
             """
         )
-    return city_name, buffer_radius_miles 
+        
+        # Prompt the user for OpenAI credentials
+        openai_key = st.text_input("Enter your OpenAI API key:", type="password")
+        model_choice = st.selectbox("Select OpenAI model", ["text-davinci-003", "gpt-3.5-turbo"], index=0)
+        
+        # Save these in session state for use in NL query service
+        st.session_state["openai_api_key"] = openai_key
+        st.session_state["openai_model"] = model_choice
