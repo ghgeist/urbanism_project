@@ -1,123 +1,189 @@
+import argparse
 import os
+import re  # Used to strip markdown code fences
+import json  # For processing JSON prompt templates
+from pathlib import Path  # To check file extensions
+from dotenv import load_dotenv  # Load environment variables from a .env file
 import openai
 import pandas as pd
+import psycopg2
+from psycopg2 import sql
+from psycopg2.pool import SimpleConnectionPool
+from openai import OpenAIError
 
-# TODO: Here I want to make sure that the user can query the underlying database in natural language.
-# I want to make sure that this script is following best practices for this process.
+# Load environment variables from .env file
+load_dotenv()
+
+# Database Connection Pool (adjust minconn/maxconn as needed)
+DB_POOL = SimpleConnectionPool(
+    minconn=1,
+    maxconn=5,
+    dsn=os.getenv("NEONDB_URI")
+)
 
 def get_api_key(provided_api_key: str = None) -> str:
     """
-    Returns the API key from the provided parameter or from the environment.
+    Returns the OpenAI API key from a provided parameter or from the environment.
     """
     if provided_api_key:
         return provided_api_key
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("OpenAI API key is missing. Please provide it or set it in the environment.")
+        raise ValueError("Missing OpenAI API key.")
     return api_key
 
-def translate_nl_to_sql(
-    nl_query: str,
-    api_key: str,
-    model: str = "gpt-3.5-turbo",
-    prompt_header: str = "Translate the following natural language query to SQL. Only output the SQL query with no additional commentary.",
-    max_tokens: int = 150,
-    temperature: float = 0,
-    stop: list = None
-) -> str:
+def load_prompt_template(filepath: str) -> str:
     """
-    Translates a natural language query to SQL using a specified model and prompt.
-    """
-    if stop is None:
-        stop = ["\n"]
-    openai.api_key = api_key
-
-    # Create messages including a system message that instructs the model to not hallucinate
-    messages = [
-        {"role": "system", "content": "You are a SQL assistant. Generate only valid SQL based on the provided natural language query. Do not add any extra commentary or speculation."},
-        {"role": "user", "content": f"{prompt_header}\n\nQuery: {nl_query}"}
-    ]
-
-    response = openai.ChatCompletion.create(
-        model=model,
-        messages=messages,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        top_p=1,
-        n=1,
-        stop=stop
-    )
-    sql_query = response["choices"][0]["message"]["content"].strip()
-    return sql_query
-
-def execute_sql_query(sql_query: str, conn) -> pd.DataFrame:
-    """
-    Executes the provided SQL query using a database connection and returns the results as a DataFrame.
-    """
-    results = pd.read_sql_query(sql_query, conn)
-    return results
-
-def generate_natural_language_summary(
-    results: pd.DataFrame,
-    api_key: str,
-    engine: str = "text-davinci-003",
-    prompt_header: str = "Please summarize the following SQL query results in natural language. Use only information from the data provided and do not introduce any unverified details:",
-    max_tokens: int = 150,
-    temperature: float = 0.7
-) -> str:
-    """
-    Generates a natural language summary from SQL query results using the specified engine and prompt.
-    """
-    results_str = results.to_string()
-    prompt = f"{prompt_header}\n\n{results_str}"
+    Loads a prompt template from a file.
+    Supports plain text and JSON formats.
     
-    openai.api_key = api_key
-    response = openai.Completion.create(
-        engine=engine,
-        prompt=prompt,
-        max_tokens=max_tokens,
-        temperature=temperature
-    )
-    summary = response.choices[0].text.strip()
-    return summary
-
-def process_nl_query(
-    nl_query: str,
-    conn,
-    provided_api_key: str = None,
-    query_model: str = "gpt-3.5-turbo",
-    query_prompt: str = "Translate the following natural language query to SQL. Only output the SQL query.",
-    query_max_tokens: int = 150,
-    query_temperature: float = 0,
-    summarization_engine: str = "text-davinci-003",
-    summarization_prompt: str = "Please summarize the following SQL query results in natural language. Use only the provided data:",
-    summarization_max_tokens: int = 150,
-    summarization_temperature: float = 0.7
-) -> str:
+    For JSON files, the JSON is expected to contain a "prompt" field and optionally an "examples" array.
+    Each example in the array can have "name", "description" and "query" keys.
     """
-    End-to-end processing:
-      1. Translates a natural language query to SQL.
-      2. Executes the SQL query.
-      3. Generates and returns a natural language summary of the results.
-      
-    The parameters for query_model, summarization_engine, and the associated prompts can be controlled via the UI.
+    path = Path(filepath)
+    if path.suffix.lower() == ".json":
+        with open(filepath, "r", encoding="utf-8") as file:
+            data = json.load(file)
+        prompt = data.get("prompt", "")
+        examples = data.get("examples", [])
+        if examples:
+            prompt += "\n\nExamples:\n"
+            for ex in examples:
+                name = ex.get("name", "")
+                description = ex.get("description", "")
+                query = ex.get("query", "")
+                prompt += f"- {name}: {description}\n  SQL: {query}\n"
+        return prompt
+    else:
+        with open(filepath, "r", encoding="utf-8") as file:
+            return file.read()
+
+def translate_nl_to_sql(client, nl_query: str, model: str = "gpt-4-turbo",
+                         max_tokens: int = 150, temperature: float = 0) -> str:
+    """
+    Translates natural language to SQL using the prompt template
+    """
+    prompt_template = load_prompt_template("prompts\sql_prompt_examples.json")
+    user_content = f"{prompt_template}\n\nQuery: {nl_query}"
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a PostgreSQL SQL expert. Generate only valid SQL queries for PostgreSQL. Do not include any additional comments or explanations."
+        },
+        {"role": "user", "content": user_content}
+    ]
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stop=[";"]  # Ensures single-query output
+        )
+        sql_query = response.choices[0].message.content.strip()
+        # Remove markdown code block fences if present
+        sql_query = re.sub(r"^```(?:sql)?\s*", "", sql_query)
+        sql_query = re.sub(r"\s*```$", "", sql_query)
+        return sql_query
+    except OpenAIError as e:
+        return f"Error generating SQL: {str(e)}"
+
+def generate_sql_query(client, nl_query: str, model: str = "gpt-4-turbo",
+                       max_tokens: int = 150, temperature: float = 0) -> str:
+    """
+    Generates a SQL query using an alternate prompt template from:
+    """
+    prompt_template = load_prompt_template("prompts\sql_prompt_examples.json")
+    user_content = f"{prompt_template}\n\nQuery: {nl_query}"
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a PostgreSQL SQL expert. Generate only valid SQL queries for PostgreSQL. Do not include any additional comments or explanations."
+        },
+        {"role": "user", "content": user_content}
+    ]
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stop=[";"]
+        )
+        sql_query = response.choices[0].message.content.strip()
+        sql_query = re.sub(r"^```(?:sql)?\s*", "", sql_query)
+        sql_query = re.sub(r"\s*```$", "", sql_query)
+        return sql_query
+    except OpenAIError as e:
+        return f"Error generating SQL: {str(e)}"
+
+def execute_sql_query(sql_query: str) -> pd.DataFrame:
+    """
+    Safely executes a SQL query on NeonDB and returns results as a DataFrame.
+    """
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        with conn.cursor() as cur:
+            cur.execute(sql.SQL(sql_query))
+            columns = [desc[0] for desc in cur.description]
+            data = cur.fetchall()
+        return pd.DataFrame(data, columns=columns)
+    except psycopg2.Error as e:
+        return pd.DataFrame({"error": [str(e)]})
+    finally:
+        if conn:
+            DB_POOL.putconn(conn)
+
+def generate_natural_language_summary(client, results: pd.DataFrame, model: str = "gpt-4-turbo",
+                                      prompt_header: str = "Summarize the SQL query results in natural language:",
+                                      max_tokens: int = 150, temperature: float = 0.7) -> str:
+    """
+    Generates a natural language summary of SQL query results using the provided OpenAI client.
+    """
+    if results.empty:
+        return "No results found."
+    results_str = results.to_string(index=False)
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": f"{prompt_header}\n\n{results_str}"}],
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+        summary = response.choices[0].message.content.strip()
+        return summary
+    except OpenAIError as e:
+        return f"Error generating summary: {str(e)}"
+
+def process_nl_query(nl_query: str, provided_api_key: str = None, use_alternate: bool = False) -> str:
+    """
+    Full pipeline:
+    - Initialize API client.
+    - Translate NL to SQL using either the default or alternate prompt template.
+    - Execute the SQL query.
+    - Generate a natural language summary of the results.
     """
     api_key = get_api_key(provided_api_key)
-    sql_query = translate_nl_to_sql(
-        nl_query, 
-        api_key,
-        model=query_model,
-        prompt_header=query_prompt,
-        max_tokens=query_max_tokens,
-        temperature=query_temperature
-    )
-    results = execute_sql_query(sql_query, conn)
-    nl_summary = generate_natural_language_summary(
-        results,
-        api_key,
-        engine=summarization_engine,
-        prompt_header=summarization_prompt,
-        max_tokens=summarization_max_tokens,
-        temperature=summarization_temperature
-    )
-    return nl_summary
+    client = openai.OpenAI(api_key=api_key)
+    if use_alternate:
+        sql_query = generate_sql_query(client, nl_query)
+    else:
+        sql_query = translate_nl_to_sql(client, nl_query)
+    if "Error generating SQL" in sql_query:
+        return sql_query
+    results = execute_sql_query(sql_query)
+    if "error" in results.columns:
+        return f"SQL Execution Error: {results['error'][0]}"
+    return generate_natural_language_summary(client, results)
+
+def main():
+    parser = argparse.ArgumentParser(description="Process a natural language query.")
+    parser.add_argument("query", type=str, help="The natural language query to process")
+    parser.add_argument("--alternate", action="store_true", help="Use alternate SQL generation prompt")
+    args = parser.parse_args()
+    output = process_nl_query(args.query, use_alternate=args.alternate)
+    print(output)
+
+if __name__ == "__main__":
+    main()
