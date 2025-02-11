@@ -2,6 +2,9 @@ import os
 import openai
 import pandas as pd
 
+# TODO: Here I want to make sure that the user can query the underlying database in natural language.
+# I want to make sure that this script is following best practices for this process.
+
 def get_api_key(provided_api_key: str = None) -> str:
     """
     Returns the API key from the provided parameter or from the environment.

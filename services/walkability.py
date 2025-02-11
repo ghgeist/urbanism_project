@@ -49,6 +49,7 @@ def get_walkability_data(location_string, buffer_size, conn):
     degrees_latitude, degrees_longitude = miles_to_degrees(buffer_size, latitude)
     buffer_radius_degrees = max(degrees_latitude, degrees_longitude)
 
+    # I can remove the d2a_ranked, d2b_ranked, d3b_ranked, d4a_ranked columns if I don't want to show them in the popup
     query = """
         SELECT 
             geoid20,
