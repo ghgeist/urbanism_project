@@ -1,0 +1,7 @@
+---
+description: interacting with neondb
+globs: 
+---
+- Always consult the latest NeonDB documentation for guidance on managing databases and executing queries. [NeonDB Documentation](https://neon.tech/docs/)
+
+- For any implementation details related to databases, ensure they follow the best practices outlined in the NeonDB documentation.

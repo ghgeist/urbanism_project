@@ -1,0 +1,7 @@
+---
+description: creating and updating langchain functionality
+globs: 
+---
+- Always refer to the latest documentation for LangChain to ensure you are following the most current guidelines. LangChain Documentation
+
+- When suggesting code implementations, make sure they align with the best practices outlined in the LangChain documentation.
