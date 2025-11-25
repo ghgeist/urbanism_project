@@ -7,3 +7,4 @@ walkability.log
 archive/postgres_test.ipynb
 .streamlit/secrets.toml
 example_results/austin_example_results.csv
+.cursor

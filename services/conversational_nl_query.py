@@ -2,7 +2,7 @@ from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.tools import tool # Correct import for the decorator
+from langchain.tools import tool 
 from nl_query import process_nl_query
 
 # Use the new decorator for tools
