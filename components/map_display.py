@@ -39,8 +39,9 @@ def render_main_content(city_name, buffer_radius_miles):
         except RetryError:
             st.error("Geocoding service is currently unavailable. Please try again later.")
             return
-        except ValueError as e:
-            st.error(str(e))
+
+        if not location:
+            st.error("Could not geocode that location. Try a more specific query (e.g., 'Cambridge, MA').")
             return
 
         if location:
