@@ -31,7 +31,7 @@ if not all([db_host, db_port, db_name, db_username, db_password]):
         raise Exception(f"Could not find database credentials. Set Replit PostgreSQL env vars or Streamlit secrets. Error: {e}")
 
 # Path to your CSV file (cross-platform)
-filepath = os.path.join('data', 'WalkabilityIndex', 'Natl_WI_simplified_drop_cols.csv')
+filepath = os.path.join('data', 'walkability_index_geospatial.csv')
 
 try:
     logging.info("Loading DataFrame from CSV file...")
