@@ -5,21 +5,33 @@ import geopandas as gpd
 from shapely import wkt
 from sqlalchemy import create_engine
 from tqdm import tqdm
-import streamlit as st
+import os
 
 # Configure logging to output to the terminal
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-# Get database connection details from Streamlit secrets
-db_secrets = st.secrets["connections"]["postgresql"]
-db_username = db_secrets["username"]
-db_password = db_secrets["password"]
-db_host = db_secrets["host"]
-db_port = db_secrets["port"]
-db_name = db_secrets["database"]
+# Get database connection details - try Replit PostgreSQL first, fallback to Streamlit secrets
+db_host = os.environ.get('REPLIT_POSTGRES_HOST')
+db_port = os.environ.get('REPLIT_POSTGRES_PORT')
+db_name = os.environ.get('REPLIT_POSTGRES_DATABASE')
+db_username = os.environ.get('REPLIT_POSTGRES_USER')
+db_password = os.environ.get('REPLIT_POSTGRES_PASSWORD')
 
-# Path to your CSV file
-filepath = r'data\WalkabilityIndex\Natl_WI_simplified_drop_cols.csv'
+if not all([db_host, db_port, db_name, db_username, db_password]):
+    # Fallback to Streamlit secrets
+    try:
+        import streamlit as st
+        db_secrets = st.secrets["connections"]["postgresql"]
+        db_username = db_secrets["username"]
+        db_password = db_secrets["password"]
+        db_host = db_secrets["host"]
+        db_port = db_secrets["port"]
+        db_name = db_secrets["database"]
+    except Exception as e:
+        raise Exception(f"Could not find database credentials. Set Replit PostgreSQL env vars or Streamlit secrets. Error: {e}")
+
+# Path to your CSV file (cross-platform)
+filepath = os.path.join('data', 'WalkabilityIndex', 'Natl_WI_simplified_drop_cols.csv')
 
 try:
     logging.info("Loading DataFrame from CSV file...")
@@ -43,7 +55,8 @@ try:
 
     logging.info("Creating connection to PostgreSQL database...")
     # Create a connection to the PostgreSQL database
-    engine = create_engine(f'postgresql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}')
+    db_port_int = int(db_port) if isinstance(db_port, str) else db_port
+    engine = create_engine(f'postgresql://{db_username}:{db_password}@{db_host}:{db_port_int}/{db_name}')
 
     logging.info("Connecting to PostgreSQL database using psycopg2...")
     # Initialize connection to None
@@ -51,7 +64,7 @@ try:
         user=db_username,
         password=db_password,
         host=db_host,
-        port=db_port,
+        port=int(db_port) if isinstance(db_port, str) else db_port,
         database=db_name
     )
     cursor = connection.cursor()

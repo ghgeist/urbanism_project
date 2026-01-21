@@ -1,15 +1,26 @@
 import streamlit as st
 from streamlit_folium import folium_static
-from services.walkability import get_location, get_walkability_data, create_map
+from services.walkability import get_location, get_walkability_data, create_map, get_db_connection
 from tenacity import RetryError
+import os
 
 @st.cache_data
 def cached_get_location(city_name):
     return get_location(city_name)
 
 @st.cache_data
-def cached_get_walkability_data(city_name, buffer_radius_miles, _conn):
-    return get_walkability_data(city_name, buffer_radius_miles, _conn)
+def cached_get_walkability_data(city_name, buffer_radius_miles):
+    # Get connection - try Replit PostgreSQL first, fallback to Streamlit connection
+    if os.environ.get('REPLIT_POSTGRES_HOST'):
+        conn = get_db_connection()
+    else:
+        try:
+            conn = st.connection("postgresql", type="sql")
+        except:
+            # If Streamlit connection fails, try direct connection
+            conn = get_db_connection()
+    
+    return get_walkability_data(city_name, buffer_radius_miles, conn)
 
 def render_main_content(city_name, buffer_radius_miles):
     if city_name:
@@ -20,9 +31,7 @@ def render_main_content(city_name, buffer_radius_miles):
             return
 
         if location:
-            # Consider using a context manager for connection handling in production
-            conn = st.connection("postgresql", type="sql")
-            gdf = cached_get_walkability_data(city_name, buffer_radius_miles, conn)
+            gdf = cached_get_walkability_data(city_name, buffer_radius_miles)
             m = create_map(location, gdf, buffer_size=buffer_radius_miles)
             if m:
                 folium_static(m)

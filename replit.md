@@ -44,4 +44,37 @@ To populate the database, you need the EPA National Walkability Index dataset:
 3. Load using `scripts/create_neo_postgres_db.py`
 
 ## Configuration
-Database connection is configured via `.streamlit/secrets.toml` which uses environment variables from Replit's PostgreSQL database.
+
+### Database Setup (Replit PostgreSQL)
+
+The app now supports Replit's built-in PostgreSQL database. Follow these steps:
+
+1. **Enable PostgreSQL in Replit:**
+   - Open the Secrets tab (🔒 icon in sidebar)
+   - Replit will auto-generate PostgreSQL credentials
+   - Environment variables will be automatically set:
+     - `REPLIT_POSTGRES_HOST`
+     - `REPLIT_POSTGRES_PORT`
+     - `REPLIT_POSTGRES_DATABASE`
+     - `REPLIT_POSTGRES_USER`
+     - `REPLIT_POSTGRES_PASSWORD`
+
+2. **Enable PostGIS extension:**
+   ```bash
+   python scripts/enable_postgis.py
+   ```
+   Or run via Streamlit:
+   ```bash
+   streamlit run scripts/enable_postgis.py
+   ```
+
+3. **Load the walkability data:**
+   ```bash
+   streamlit run scripts/create_neo_postgres_db.py
+   ```
+
+### Backward Compatibility
+
+The app still supports Streamlit secrets configuration (`.streamlit/secrets.toml`) for local development or other hosting platforms. The code will automatically:
+- Try Replit PostgreSQL environment variables first
+- Fall back to Streamlit secrets if Replit env vars are not available

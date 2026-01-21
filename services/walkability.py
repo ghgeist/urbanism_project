@@ -1,10 +1,13 @@
 import logging
 import folium
 import geopandas as gpd
+import pandas as pd
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderUnavailable
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import math
+import psycopg2
+import os
 
 # Configure logging to output to a file
 logging.basicConfig(
@@ -38,9 +41,53 @@ def miles_to_degrees(miles, latitude):
     degrees_longitude = miles / (69.0 * math.cos(math.radians(latitude)))
     return degrees_latitude, degrees_longitude
 
-def get_walkability_data(location_string, buffer_size, conn):
+def get_db_connection():
+    """
+    Create a PostgreSQL connection using Replit's environment variables.
+    Falls back to Streamlit secrets if Replit env vars are not available.
+    """
+    try:
+        # Try Replit PostgreSQL environment variables first
+        db_host = os.environ.get('REPLIT_POSTGRES_HOST')
+        db_port = os.environ.get('REPLIT_POSTGRES_PORT')
+        db_name = os.environ.get('REPLIT_POSTGRES_DATABASE')
+        db_user = os.environ.get('REPLIT_POSTGRES_USER')
+        db_password = os.environ.get('REPLIT_POSTGRES_PASSWORD')
+        
+        if all([db_host, db_port, db_name, db_user, db_password]):
+            return psycopg2.connect(
+                host=db_host,
+                port=int(db_port) if isinstance(db_port, str) else db_port,
+                database=db_name,
+                user=db_user,
+                password=db_password
+            )
+    except (TypeError, psycopg2.OperationalError) as e:
+        logging.warning(f"Could not connect using Replit env vars: {e}")
+    
+    # Fallback: try to import streamlit and use secrets
+    try:
+        import streamlit as st
+        db_secrets = st.secrets["connections"]["postgresql"]
+        return psycopg2.connect(
+            host=db_secrets["host"],
+            port=db_secrets["port"],
+            database=db_secrets["database"],
+            user=db_secrets["username"],
+            password=db_secrets["password"]
+        )
+    except Exception as e:
+        raise Exception(f"Could not connect to database. Check Replit PostgreSQL env vars or Streamlit secrets. Error: {e}")
+
+def get_walkability_data(location_string, buffer_size, conn=None):
     """
     Fetch walkability data within a given buffer radius around the stated location.
+    
+    Args:
+        location_string: Address, ZIP code, or city name
+        buffer_size: Buffer radius in miles
+        conn: Database connection (psycopg2 connection object or Streamlit SQL connection)
+              If None, will attempt to create a connection using Replit env vars or Streamlit secrets
     """
     location = get_location(location_string)
     if not location:
@@ -49,28 +96,62 @@ def get_walkability_data(location_string, buffer_size, conn):
     degrees_latitude, degrees_longitude = miles_to_degrees(buffer_size, latitude)
     buffer_radius_degrees = max(degrees_latitude, degrees_longitude)
 
-    query = """
-        SELECT 
-            geoid20,
-            d2a_ranked,
-            d2b_ranked, 
-            d3b_ranked, 
-            d4a_ranked,
-            natwalkind, 
-            geometry
-        FROM national_walkability_index
-        WHERE ST_DWithin(
-            st_setsrid(st_makepoint(:longitude, :latitude), 4326),
-            geometry,
-            :buffer_radius_degrees
-        );
-    """
-    df = conn.query(
-        query,
-        ttl="10m",
-        params={"longitude": longitude, "latitude": latitude, "buffer_radius_degrees": buffer_radius_degrees}
-    )
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(df['geometry']))
+    # Handle both Streamlit SQL connection and direct psycopg2 connection
+    if conn and hasattr(conn, 'query'):
+        # Streamlit SQL connection (backward compatibility)
+        query = """
+            SELECT 
+                geoid20,
+                d2a_ranked,
+                d2b_ranked, 
+                d3b_ranked, 
+                d4a_ranked,
+                natwalkind, 
+                geometry
+            FROM national_walkability_index
+            WHERE ST_DWithin(
+                st_setsrid(st_makepoint(:longitude, :latitude), 4326),
+                geometry,
+                :buffer_radius_degrees
+            );
+        """
+        df = conn.query(
+            query,
+            ttl="10m",
+            params={"longitude": longitude, "latitude": latitude, "buffer_radius_degrees": buffer_radius_degrees}
+        )
+        gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(df['geometry']))
+    else:
+        # Direct psycopg2 connection (Replit PostgreSQL)
+        if conn is None:
+            conn = get_db_connection()
+        
+        query = """
+            SELECT 
+                geoid20,
+                d2a_ranked,
+                d2b_ranked, 
+                d3b_ranked, 
+                d4a_ranked,
+                natwalkind, 
+                ST_AsBinary(geometry) as geometry
+            FROM national_walkability_index
+            WHERE ST_DWithin(
+                st_setsrid(st_makepoint(%s, %s), 4326),
+                geometry,
+                %s
+            );
+        """
+        
+        with conn.cursor() as cursor:
+            cursor.execute(query, (longitude, latitude, buffer_radius_degrees))
+            columns = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
+            df = pd.DataFrame(rows, columns=columns)
+        
+        # Convert geometry bytes to GeoSeries
+        gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(df['geometry']))
+    
     gdf.set_crs(epsg=4326, inplace=True)
     return gdf
 
