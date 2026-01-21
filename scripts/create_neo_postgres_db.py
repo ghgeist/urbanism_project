@@ -31,12 +31,15 @@ if not csv_source:
 try:
     # Initialize filepath to None for cleanup tracking
     filepath = None
+    # Track whether we created a temporary file (not just if path is in temp dir)
+    is_temp_file = False
     
     if csv_source.startswith('http://') or csv_source.startswith('https://'):
         # Download from URL
         logging.info(f"Downloading CSV from {csv_source}...")
         tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
         filepath = tmp_file.name
+        is_temp_file = True  # Mark that we created this temp file
         tmp_file.close()  # Close the file handle before downloading
         try:
             urllib.request.urlretrieve(csv_source, filepath)
@@ -140,8 +143,8 @@ finally:
     if 'connection' in locals():
         connection.close()
         logging.info("PostgreSQL connection is closed")
-    # Clean up temporary file if we downloaded from URL
-    if 'filepath' in locals() and filepath is not None and filepath.startswith(tempfile.gettempdir()):
+    # Clean up temporary file only if we created it (not if user provided a path in temp dir)
+    if 'is_temp_file' in locals() and is_temp_file and 'filepath' in locals() and filepath is not None:
         try:
             os.unlink(filepath)
             logging.info("Temporary file cleaned up.")

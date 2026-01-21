@@ -15,7 +15,7 @@ def get_cached_db_connection():
     else:
         try:
             return st.connection("postgresql", type="sql")
-        except:
+        except Exception:
             # If Streamlit connection fails, try direct connection
             return get_db_connection()
 
@@ -39,9 +39,17 @@ def render_main_content(city_name, buffer_radius_miles):
         except RetryError:
             st.error("Geocoding service is currently unavailable. Please try again later.")
             return
+        except ValueError as e:
+            st.error(str(e))
+            return
 
         if location:
-            gdf = cached_get_walkability_data(city_name, buffer_radius_miles)
+            try:
+                gdf = cached_get_walkability_data(city_name, buffer_radius_miles)
+            except ValueError as e:
+                st.error(str(e))
+                return
+            
             m = create_map(location, gdf, buffer_size=buffer_radius_miles)
             if m:
                 folium_static(m)
