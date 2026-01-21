@@ -4,22 +4,32 @@ from services.walkability import get_location, get_walkability_data, create_map,
 from tenacity import RetryError
 import os
 
+@st.cache_resource
+def get_cached_db_connection():
+    """
+    Get a cached database connection that persists across reruns.
+    Uses @st.cache_resource to ensure the connection is reused efficiently.
+    """
+    if os.environ.get('REPLIT_POSTGRES_HOST'):
+        return get_db_connection()
+    else:
+        try:
+            return st.connection("postgresql", type="sql")
+        except:
+            # If Streamlit connection fails, try direct connection
+            return get_db_connection()
+
 @st.cache_data
 def cached_get_location(city_name):
     return get_location(city_name)
 
 @st.cache_data
 def cached_get_walkability_data(city_name, buffer_radius_miles):
-    # Get connection - try Replit PostgreSQL first, fallback to Streamlit connection
-    if os.environ.get('REPLIT_POSTGRES_HOST'):
-        conn = get_db_connection()
-    else:
-        try:
-            conn = st.connection("postgresql", type="sql")
-        except:
-            # If Streamlit connection fails, try direct connection
-            conn = get_db_connection()
-    
+    """
+    Get walkability data using a cached database connection.
+    Query results are cached separately from the connection.
+    """
+    conn = get_cached_db_connection()
     return get_walkability_data(city_name, buffer_radius_miles, conn)
 
 def render_main_content(city_name, buffer_radius_miles):

@@ -87,7 +87,11 @@ def get_walkability_data(location_string, buffer_size, conn=None):
         location_string: Address, ZIP code, or city name
         buffer_size: Buffer radius in miles
         conn: Database connection (psycopg2 connection object or Streamlit SQL connection)
-              If None, will attempt to create a connection using Replit env vars or Streamlit secrets
+              If None, will attempt to create a connection using Replit env vars or Streamlit secrets.
+              Note: For best performance, pass a cached connection from @st.cache_resource.
+    
+    Returns:
+        GeoDataFrame with walkability data, or None if location not found
     """
     location = get_location(location_string)
     if not location:
@@ -123,34 +127,43 @@ def get_walkability_data(location_string, buffer_size, conn=None):
         gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(df['geometry']))
     else:
         # Direct psycopg2 connection (Replit PostgreSQL)
+        # Note: If conn is provided, we use it (assumed to be cached/managed externally)
+        # If None, we create a new one (for backward compatibility)
+        should_close_conn = False
         if conn is None:
             conn = get_db_connection()
+            should_close_conn = True
         
-        query = """
-            SELECT 
-                geoid20,
-                d2a_ranked,
-                d2b_ranked, 
-                d3b_ranked, 
-                d4a_ranked,
-                natwalkind, 
-                ST_AsBinary(geometry) as geometry
-            FROM national_walkability_index
-            WHERE ST_DWithin(
-                st_setsrid(st_makepoint(%s, %s), 4326),
-                geometry,
-                %s
-            );
-        """
-        
-        with conn.cursor() as cursor:
-            cursor.execute(query, (longitude, latitude, buffer_radius_degrees))
-            columns = [desc[0] for desc in cursor.description]
-            rows = cursor.fetchall()
-            df = pd.DataFrame(rows, columns=columns)
-        
-        # Convert geometry bytes to GeoSeries
-        gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(df['geometry']))
+        try:
+            query = """
+                SELECT 
+                    geoid20,
+                    d2a_ranked,
+                    d2b_ranked, 
+                    d3b_ranked, 
+                    d4a_ranked,
+                    natwalkind, 
+                    ST_AsBinary(geometry) as geometry
+                FROM national_walkability_index
+                WHERE ST_DWithin(
+                    st_setsrid(st_makepoint(%s, %s), 4326),
+                    geometry,
+                    %s
+                );
+            """
+            
+            with conn.cursor() as cursor:
+                cursor.execute(query, (longitude, latitude, buffer_radius_degrees))
+                columns = [desc[0] for desc in cursor.description]
+                rows = cursor.fetchall()
+                df = pd.DataFrame(rows, columns=columns)
+            
+            # Convert geometry bytes to GeoSeries
+            gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(df['geometry']))
+        finally:
+            # Only close if we created the connection ourselves
+            if should_close_conn and conn:
+                conn.close()
     
     gdf.set_crs(epsg=4326, inplace=True)
     return gdf
