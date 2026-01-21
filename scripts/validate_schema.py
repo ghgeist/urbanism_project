@@ -18,6 +18,8 @@ EXPECTED_COLUMNS = {
 
 def validate_schema():
     """Check that national_walkability_index table has expected structure."""
+    conn = None
+    cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -65,13 +67,16 @@ def validate_schema():
             return False
         
         print("✅ Schema validation passed")
-        cursor.close()
-        conn.close()
         return True
         
     except Exception as e:
         print(f"❌ ERROR: Schema validation failed: {e}")
         return False
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 if __name__ == "__main__":
     success = validate_schema()

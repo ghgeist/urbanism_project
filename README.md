@@ -70,7 +70,7 @@ pip install -r requirements.txt
 
 ### 3. Configure database connection
 The app supports two connection methods:
-- **Replit PostgreSQL:** Set environment variables (`REPLIT_POSTGRES_HOST`, `REPLIT_POSTGRES_PORT`, etc.)
+- **Replit PostgreSQL:** Set environment variables (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`)
 - **Streamlit secrets:** Create `.streamlit/secrets.toml` with your PostgreSQL credentials (replace placeholders):
 ```toml
 [connections.postgresql]
@@ -82,7 +82,9 @@ username = "YOUR_NEON_USER"
 password = "YOUR_NEON_PASSWORD"
 ```
 
-### 4. Load the walkability table (first-time setup)
+### 4. Load the walkability table (one-time setup only)
+> **Important:** The CSV file is only needed for initial database setup. Once the database is populated, you can remove the CSV file. The running application queries PostgreSQL directly and does not use the CSV file.
+
 The repository bundles a simplified CSV produced by `notebooks/compress_walkability_df.ipynb`. To seed the database locally, update the file path in `scripts/create_neo_postgres_db.py` if needed and run:
 ```bash
 streamlit run scripts/create_neo_postgres_db.py
@@ -92,6 +94,8 @@ The script:
 - Creates the `national_walkability_index` table.
 - Loads ranked component scores plus geometries.
 - Builds a GIST spatial index to accelerate `ST_DWithin` queries.
+
+After successful setup, you can safely delete the CSV file and any `WALKABILITY_CSV_URL` environment variables. The application will continue to work using only the PostgreSQL database.
 
 ### 5. Run the app locally
 ```bash

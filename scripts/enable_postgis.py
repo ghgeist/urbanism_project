@@ -18,6 +18,8 @@ db_password = os.environ.get('PGPASSWORD')
 if not all([db_host, db_port, db_name, db_username, db_password]):
     raise Exception("Could not find database credentials. Ensure Replit PostgreSQL is provisioned.")
 
+connection = None
+cursor = None
 try:
     logging.info("Connecting to PostgreSQL database...")
     logging.info(f"Host: {db_host}, Port: {db_port}, Database: {db_name}, User: {db_username}")
@@ -40,10 +42,12 @@ try:
     cursor.execute("SELECT PostGIS_version();")
     postgis_version = cursor.fetchone()[0]
     logging.info(f"PostGIS version: {postgis_version}")
-    
-    cursor.close()
-    connection.close()
 
 except Exception as e:
     logging.error(f"Error: {e}")
     raise
+finally:
+    if cursor:
+        cursor.close()
+    if connection:
+        connection.close()

@@ -80,11 +80,11 @@ def get_db_connection():
     """
     try:
         # Try Replit PostgreSQL environment variables first
-        db_host = os.environ.get('REPLIT_POSTGRES_HOST')
-        db_port = os.environ.get('REPLIT_POSTGRES_PORT')
-        db_name = os.environ.get('REPLIT_POSTGRES_DATABASE')
-        db_user = os.environ.get('REPLIT_POSTGRES_USER')
-        db_password = os.environ.get('REPLIT_POSTGRES_PASSWORD')
+        db_host = os.environ.get('PGHOST')
+        db_port = os.environ.get('PGPORT')
+        db_name = os.environ.get('PGDATABASE')
+        db_user = os.environ.get('PGUSER')
+        db_password = os.environ.get('PGPASSWORD')
         
         if all([db_host, db_port, db_name, db_user, db_password]):
             return psycopg2.connect(

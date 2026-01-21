@@ -8,11 +8,11 @@ import sys
 def check_config():
     """Check for required configuration (Replit env vars or Streamlit secrets)."""
     replit_vars = [
-        'REPLIT_POSTGRES_HOST',
-        'REPLIT_POSTGRES_PORT',
-        'REPLIT_POSTGRES_DATABASE',
-        'REPLIT_POSTGRES_USER',
-        'REPLIT_POSTGRES_PASSWORD'
+        'PGHOST',
+        'PGPORT',
+        'PGDATABASE',
+        'PGUSER',
+        'PGPASSWORD'
     ]
     
     has_replit = all(os.environ.get(var) for var in replit_vars)

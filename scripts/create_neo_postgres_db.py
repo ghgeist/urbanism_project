@@ -8,7 +8,6 @@ from tqdm import tqdm
 import os
 import urllib.request
 import tempfile
-import gdown
 
 # Configure logging to output to the terminal
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -30,20 +29,26 @@ if not csv_source:
     csv_source = os.path.join('data', 'walkability_index_geospatial.csv')
 
 try:
-    # Check if source is a Google Drive URL
-    if 'drive.google.com' in csv_source:
-        logging.info(f"Downloading CSV from Google Drive...")
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
-            filepath = tmp_file.name
-        gdown.download(csv_source, filepath, quiet=False, fuzzy=True)
-        logging.info("CSV downloaded successfully.")
-    elif csv_source.startswith('http://') or csv_source.startswith('https://'):
+    # Initialize filepath to None for cleanup tracking
+    filepath = None
+    
+    if csv_source.startswith('http://') or csv_source.startswith('https://'):
         # Download from URL
         logging.info(f"Downloading CSV from {csv_source}...")
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
-            urllib.request.urlretrieve(csv_source, tmp_file.name)
-            filepath = tmp_file.name
-        logging.info("CSV downloaded successfully.")
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+        filepath = tmp_file.name
+        tmp_file.close()  # Close the file handle before downloading
+        try:
+            urllib.request.urlretrieve(csv_source, filepath)
+            logging.info("CSV downloaded successfully.")
+        except Exception as download_error:
+            # Clean up temp file if download fails
+            if filepath and os.path.exists(filepath):
+                try:
+                    os.unlink(filepath)
+                except Exception:
+                    pass
+            raise download_error
     else:
         # Use local file
         filepath = csv_source
@@ -136,7 +141,7 @@ finally:
         connection.close()
         logging.info("PostgreSQL connection is closed")
     # Clean up temporary file if we downloaded from URL
-    if 'filepath' in locals() and filepath.startswith(tempfile.gettempdir()):
+    if 'filepath' in locals() and filepath is not None and filepath.startswith(tempfile.gettempdir()):
         try:
             os.unlink(filepath)
             logging.info("Temporary file cleaned up.")

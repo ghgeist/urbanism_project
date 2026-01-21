@@ -10,7 +10,7 @@ def get_cached_db_connection():
     Get a cached database connection that persists across reruns.
     Uses @st.cache_resource to ensure the connection is reused efficiently.
     """
-    if os.environ.get('REPLIT_POSTGRES_HOST'):
+    if os.environ.get('PGHOST'):
         return get_db_connection()
     else:
         try:
