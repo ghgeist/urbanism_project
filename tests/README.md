@@ -26,6 +26,7 @@ pytest --cov=services --cov-report=html
 - **Geocoding**: Location lookup with mocked Nominatim
 - **Data Fetching**: Database queries with mocked connections
 - **Map Creation**: Folium map generation with various inputs
+- **Connection Caching**: Database connection caching and error recovery (closed connection handling, retry logic)
 
 ## Adding New Tests
 
