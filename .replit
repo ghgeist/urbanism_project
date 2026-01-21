@@ -37,3 +37,8 @@ externalPort = 80
 [deployment]
 deploymentTarget = "autoscale"
 run = ["streamlit", "run", "app.py", "--server.port=5000", "--server.address=0.0.0.0", "--server.headless=true"]
+
+[userenv]
+
+[userenv.shared]
+WALKABILITY_CSV_URL = "https://drive.google.com/file/d/1JGPfTZVJQO6eUaExspiIi_eVOI-WcUDD/view?usp=sharing"
