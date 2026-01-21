@@ -210,6 +210,13 @@ def get_walkability_data(location_string, buffer_size, conn=None):
             if should_close_conn and conn:
                 conn.close()
     
+    # Ensure numeric columns are properly typed (important for Folium Choropleth)
+    # This handles cases where database returns strings or object types
+    numeric_columns = ['d2a_ranked', 'd2b_ranked', 'd3b_ranked', 'd4a_ranked', 'natwalkind']
+    for col in numeric_columns:
+        if col in gdf.columns:
+            gdf[col] = pd.to_numeric(gdf[col], errors='coerce')
+    
     gdf.set_crs(epsg=4326, inplace=True)
     return gdf
 
@@ -228,14 +235,26 @@ def create_map(location, gdf, buffer_size):
     longitude, latitude = location
     zoom_level = calculate_zoom_level(buffer_size)
 
+    # Create a copy to avoid modifying the original
+    gdf_map = gdf.copy()
+    
+    # Ensure natwalkind is numeric and drop rows with NaN values for choropleth
+    # (Folium Choropleth cannot handle NaN values)
+    if 'natwalkind' in gdf_map.columns:
+        gdf_map['natwalkind'] = pd.to_numeric(gdf_map['natwalkind'], errors='coerce')
+        gdf_map = gdf_map.dropna(subset=['natwalkind'])
+    
+    if gdf_map.empty:
+        return None
+
     # Create the base Folium map
     m = folium.Map(location=[latitude, longitude], zoom_start=zoom_level, width="100%", height="100%")
 
     # Add choropleth layer
     folium.Choropleth(
-        geo_data=gdf,
+        geo_data=gdf_map,
         name='choropleth',
-        data=gdf,
+        data=gdf_map,
         columns=['geoid20', 'natwalkind'],
         key_on='feature.properties.geoid20',
         fill_color='RdYlBu',
@@ -247,13 +266,13 @@ def create_map(location, gdf, buffer_size):
 
     # Add detailed GeoJSON layer
     folium.GeoJson(
-        gdf,
+        gdf_map,
         name='geojson',
         style_function=lambda feature: {'color': 'black', 'weight': 1, 'fillOpacity': 0}
     ).add_to(m)
 
     # Add markers for each block group
-    for _, row in gdf.iterrows():
+    for _, row in gdf_map.iterrows():
         centroid = row.geometry.centroid
         folium.Circle(
             location=[centroid.y, centroid.x],

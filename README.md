@@ -41,8 +41,10 @@ Replit PostgreSQL + PostGIS (national_walkability_index table)
 - `app.py` boots Streamlit, renders the sidebar controls, and streams results.
 - `components/sidebar.py` captures address/radius inputs and introduces the dataset.
 - `components/map_display.py` calls cached data services, creates a Folium map, and surfaces a data table.
-- `services/walkability.py` geocodes inputs with Nominatim, queries PostGIS via Streamlit’s SQL connection, and renders Folium layers.
+- `services/walkability.py` geocodes inputs with Nominatim, queries PostGIS via Streamlit's SQL connection, and renders Folium layers.
 - `scripts/create_neo_postgres_db.py` loads the processed CSV into Replit PostgreSQL/PostGIS and maintains the spatial index.
+
+**Note on code organization:** The current `services/walkability.py` module handles multiple responsibilities (geocoding, validation, database connections, data fetching, and map creation) in a single file. This structure is functional and production-ready, but future iterations could benefit from splitting into focused modules (`geocoding.py`, `database.py`, `mapping.py`) for improved maintainability and testability as the codebase grows.
 
 ## Tech Stack
 | Area | Tools |
