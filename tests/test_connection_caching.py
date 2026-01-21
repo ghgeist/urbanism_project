@@ -265,7 +265,7 @@ class TestWalkabilityDataConnectionCheck:
         open_conn.cursor.return_value = mock_cursor
         
         mock_cursor.description = [
-            ('geoid20',), ('d2a_ranked',), ('d2b_ranked'), 
+            ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
             ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',)
         ]
         mock_point = Point(-83.9207, 35.9606).buffer(0.01)

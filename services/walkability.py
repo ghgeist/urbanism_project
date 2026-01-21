@@ -9,32 +9,52 @@ import math
 import psycopg2
 import os
 import json
+import sys
+import time
 
-# #region agent log
-LOG_PATH = "/home/runner/workspace/.cursor/debug.log"
-def log_debug(location, message, data, hypothesis_id):
+DEBUG_LOG_ENV = "WALKABILITY_DEBUG_LOG"
+_DEBUG_LOGGER = logging.getLogger("walkability.debug")
+
+def log_debug(location, message, data=None, hypothesis_id=None):
+    """Emit a structured debug log when WALKABILITY_DEBUG_LOG=1 is set."""
+    if os.environ.get(DEBUG_LOG_ENV) != "1":
+        return
+    if not _DEBUG_LOGGER.handlers:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(message)s",
+            stream=sys.stdout,
+        )
+    payload = {
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp_ms": int(time.time() * 1000),
+        "hypothesis_id": hypothesis_id,
+    }
     try:
-        with open(LOG_PATH, "a") as f:
-            f.write(json.dumps({
-                "location": location,
-                "message": message,
-                "data": data,
-                "timestamp": __import__("time").time() * 1000,
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": hypothesis_id
-            }) + "\n")
-    except:
-        pass
-# #endregion
+        _DEBUG_LOGGER.info(json.dumps(payload, default=str))
+    except (TypeError, ValueError) as exc:
+        fallback = {
+            "location": location,
+            "message": "debug log serialization failed",
+            "error": str(exc),
+        }
+        _DEBUG_LOGGER.info(json.dumps(fallback, default=str))
 
-# Configure logging to output to a file
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='walkability.log',
-    filemode='w'
-)
+def _is_connection_closed(conn):
+    """
+    Check if a database connection is closed.
+    Works with psycopg2 connections and safely ignores non-boolean mocks.
+    """
+    if conn is None:
+        return True
+    closed_value = getattr(conn, "closed", 0)
+    if isinstance(closed_value, bool):
+        return closed_value
+    if isinstance(closed_value, int):
+        return closed_value != 0
+    return False
 
 @retry(
     stop=stop_after_attempt(3), 
@@ -191,26 +211,21 @@ def get_walkability_data(location_string, buffer_size, conn=None):
         # Direct psycopg2 connection (Replit PostgreSQL)
         # Note: If conn is provided, we use it (assumed to be cached/managed externally)
         # If None, we create a new one (for backward compatibility)
-        # #region agent log
         log_debug("walkability.py:172", "get_walkability_data psycopg2 path entry", {
             "conn_provided": conn is not None,
             "conn_id": id(conn) if conn else None,
             "conn_closed": conn.closed if conn and hasattr(conn, 'closed') else None,
             "conn_type": type(conn).__name__ if conn else None
         }, "A")
-        # #endregion
         should_close_conn = False
         if conn is None:
             conn = get_db_connection()
             should_close_conn = True
-            # #region agent log
             log_debug("walkability.py:178", "get_walkability_data created new connection", {
                 "conn_id": id(conn),
                 "conn_closed": conn.closed if hasattr(conn, 'closed') else None
             }, "A")
-            # #endregion
         
-        # #region agent log
         if conn and hasattr(conn, 'closed'):
             if conn.closed:
                 log_debug("walkability.py:185", "get_walkability_data connection CLOSED before cursor", {
@@ -220,7 +235,6 @@ def get_walkability_data(location_string, buffer_size, conn=None):
                 log_debug("walkability.py:189", "get_walkability_data connection OPEN before cursor", {
                     "conn_id": id(conn)
                 }, "A")
-        # #endregion
         
         try:
             query = """
@@ -240,77 +254,61 @@ def get_walkability_data(location_string, buffer_size, conn=None):
                 );
             """
             
-            # #region agent log
             log_debug("walkability.py:198", "get_walkability_data about to create cursor", {
                 "conn_id": id(conn),
                 "conn_closed": conn.closed if hasattr(conn, 'closed') else None
             }, "A")
-            # #endregion
             
             # Check connection health before using it
-            if hasattr(conn, 'closed') and conn.closed:
-                # #region agent log
+            if _is_connection_closed(conn):
                 log_debug("walkability.py:203", "get_walkability_data connection closed before cursor creation", {
                     "conn_id": id(conn)
                 }, "A")
-                # #endregion
                 raise psycopg2.InterfaceError("Connection is closed")
             
             with conn.cursor() as cursor:
-                # #region agent log
                 log_debug("walkability.py:200", "get_walkability_data cursor created successfully", {
                     "conn_id": id(conn),
                     "conn_closed": conn.closed if hasattr(conn, 'closed') else None
                 }, "A")
-                # #endregion
                 cursor.execute(query, (longitude, latitude, buffer_radius_degrees))
-                # #region agent log
                 log_debug("walkability.py:203", "get_walkability_data query executed", {
                     "conn_id": id(conn),
                     "conn_closed": conn.closed if hasattr(conn, 'closed') else None
                 }, "A")
-                # #endregion
                 columns = [desc[0] for desc in cursor.description]
                 rows = cursor.fetchall()
                 df = pd.DataFrame(rows, columns=columns)
-                # #region agent log
                 log_debug("walkability.py:207", "get_walkability_data data fetched", {
                     "conn_id": id(conn),
                     "conn_closed": conn.closed if hasattr(conn, 'closed') else None,
                     "row_count": len(rows)
                 }, "A")
-                # #endregion
             
             # Convert geometry bytes to GeoSeries
             # Handle memoryview objects from psycopg2 by converting to bytes
             geometry_data = df['geometry'].apply(lambda x: bytes(x) if isinstance(x, memoryview) else x)
             gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(geometry_data))
         except Exception as e:
-            # #region agent log
             log_debug("walkability.py:212", "get_walkability_data exception during query", {
                 "conn_id": id(conn) if conn else None,
                 "conn_closed": conn.closed if conn and hasattr(conn, 'closed') else None,
                 "error_type": type(e).__name__,
                 "error_message": str(e)
             }, "A")
-            # #endregion
             raise
         finally:
             # Only close if we created the connection ourselves
             if should_close_conn and conn:
-                # #region agent log
                 log_debug("walkability.py:220", "get_walkability_data closing connection", {
                     "conn_id": id(conn),
                     "conn_closed_before": conn.closed if hasattr(conn, 'closed') else None
                 }, "A")
-                # #endregion
                 conn.close()
-                # #region agent log
                 log_debug("walkability.py:225", "get_walkability_data connection closed", {
                     "conn_id": id(conn),
                     "conn_closed_after": conn.closed if hasattr(conn, 'closed') else None
                 }, "A")
-                # #endregion
     
     # Ensure numeric columns are properly typed (important for Folium Choropleth)
     # This handles cases where database returns strings or object types
