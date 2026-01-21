@@ -1,0 +1,62 @@
+---
+description: creating and updating development logs
+globs: 
+  - dev_log/**/*.md
+---
+
+When creating or updating development logs in the `dev_log/` folder:
+
+## File Naming
+- Use format: `YYYY_MM_DD_N.md` (e.g., `2026_01_21_1.md`)
+- If multiple logs on same day, increment the sequence number
+
+## Structure Requirements
+- Start with `# Development Log` header
+- Use `## YYYY-MM-DD - [Brief Title]` for the main section
+- Include subsections with `### [Feature/Change Name]`
+- Use the Problem/Solution/Changes format:
+  - **Problem:** Clear statement of what was being solved
+  - **Solution:** Brief description of the approach
+  - **Changes:** Bulleted list of specific changes
+
+## Content Guidelines
+- **Be specific:** Include file paths, function names, and concrete changes
+- **Include context:** Explain why decisions were made
+- **Show results:** Include metrics, row counts, performance data when available
+- **Reference code:** Link to specific files/functions using backticks
+- **Keep concise:** Focus on significant changes, not every detail
+
+## When to Create a Log
+Create dev logs for:
+- Major migrations (database, hosting, frameworks)
+- Significant refactoring or architecture changes
+- Data organization or cleanup efforts
+- Performance optimizations with measurable results
+- Infrastructure changes (deployment, CI/CD)
+
+Do NOT create logs for:
+- Small bug fixes
+- Minor UI tweaks
+- Routine maintenance
+- Small documentation updates
+
+## Example Format
+```markdown
+# Development Log
+
+## 2026-01-21 - Replit Migration & Data Organization
+
+### Migration to Replit PostgreSQL
+- **Problem:** Neon PostgreSQL free tier had 500MB limit
+- **Solution:** Migrated to Replit's PostgreSQL with more generous storage
+- **Changes:**
+  - Updated `services/walkability.py` connection logic
+  - Modified `scripts/create_neo_postgres_db.py` for URL downloads
+  - Created `scripts/enable_postgis.py` helper script
+
+### Results
+- Successfully loaded 203,645 rows
+- PostGIS 3.5 enabled with spatial indexing
+```
+
+Always follow this structure and include specific file references when documenting code changes.
