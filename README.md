@@ -35,14 +35,14 @@ Streamlit UI (sidebar + map components)
 Walkability service layer (`services/walkability.py`)
         │
         ▼
-Neon PostgreSQL + PostGIS (national_walkability_index table)
+Replit PostgreSQL + PostGIS (national_walkability_index table)
 ```
 
 - `app.py` boots Streamlit, renders the sidebar controls, and streams results.
 - `components/sidebar.py` captures address/radius inputs and introduces the dataset.
 - `components/map_display.py` calls cached data services, creates a Folium map, and surfaces a data table.
 - `services/walkability.py` geocodes inputs with Nominatim, queries PostGIS via Streamlit’s SQL connection, and renders Folium layers.
-- `scripts/create_neo_postgres_db.py` loads the processed CSV into Neon/PostGIS and maintains the spatial index.
+- `scripts/create_neo_postgres_db.py` loads the processed CSV into Replit PostgreSQL/PostGIS and maintains the spatial index.
 
 ## Tech Stack
 | Area | Tools |
@@ -50,13 +50,14 @@ Neon PostgreSQL + PostGIS (national_walkability_index table)
 | Web UI | Streamlit, streamlit-folium |
 | Geospatial | GeoPandas, Shapely, Folium, Tenacity |
 | Data / Infra | Neon PostgreSQL with PostGIS, SQLAlchemy, psycopg2 |
+| Testing | pytest, pytest-mock |
 | Tooling | Python 3.12, VS Code |
 
 ## Quickstart
 ### 1. Prerequisites
 - Python 3.12+
 - Git
-- Access to a Neon PostgreSQL database with PostGIS enabled (free tier works)
+- Access to a PostgreSQL database with PostGIS enabled (Replit PostgreSQL or Neon free tier works)
 
 ### 2. Clone & install
 ```bash
@@ -67,8 +68,10 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 3. Configure Streamlit secrets
-Create `.streamlit/secrets.toml` with your Neon credentials (replace placeholders):
+### 3. Configure database connection
+The app supports two connection methods:
+- **Replit PostgreSQL:** Set environment variables (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`)
+- **Streamlit secrets:** Create `.streamlit/secrets.toml` with your PostgreSQL credentials (replace placeholders):
 ```toml
 [connections.postgresql]
 dialect = "postgresql"
@@ -79,7 +82,18 @@ username = "YOUR_NEON_USER"
 password = "YOUR_NEON_PASSWORD"
 ```
 
-### 4. Load the walkability table (first-time setup)
+### 4. Load the walkability table (one-time setup only)
+> **Important:** The CSV file is only needed for initial database setup. Once the database is populated, you can remove the CSV file. The running application queries PostgreSQL directly and does not use the CSV file.
+
+**Data authority note:**  
+This repository treats the PostgreSQL/PostGIS database as the authoritative data source for the running application.  
+The original tabular CSV used for seeding (~39 MB) is intentionally not committed to the repository after setup.  
+For this portfolio deployment, the dataset lives in:
+- the hosted PostGIS database (Replit)
+- a separate cold backup (e.g., Google Drive)
+
+The repo contains the ingestion logic, schema, and validation scripts required to reload the data if needed.
+
 The repository bundles a simplified CSV produced by `notebooks/compress_walkability_df.ipynb`. To seed the database locally, update the file path in `scripts/create_neo_postgres_db.py` if needed and run:
 ```bash
 streamlit run scripts/create_neo_postgres_db.py
@@ -89,6 +103,8 @@ The script:
 - Creates the `national_walkability_index` table.
 - Loads ranked component scores plus geometries.
 - Builds a GIST spatial index to accelerate `ST_DWithin` queries.
+
+After successful setup, you can safely delete the CSV file and any `WALKABILITY_CSV_URL` environment variables. The application will continue to work using only the PostgreSQL database.
 
 ### 5. Run the app locally
 ```bash
@@ -102,8 +118,9 @@ streamlit run app.py
 - The accompanying table lists component ranks (`d2a`, `d2b`, `d3b`, `d4a`) plus the composite score to support deeper analysis.
 
 ## Deployment
-- **Streamlit Community Cloud:** Push your fork, configure the same `.streamlit/secrets.toml` via the Streamlit dashboard, and point the app to `app.py`.
-- **Self-managed hosting:** Any container/service capable of running `streamlit run app.py` with access to Neon will work. Ensure HTTPS termination and secure handling of secrets.
+- **Replit:** The app is configured to work with Replit PostgreSQL. Set environment variables for database connection.
+- **Streamlit Community Cloud:** Push your fork, configure `.streamlit/secrets.toml` via the Streamlit dashboard, and point the app to `app.py`.
+- **Self-managed hosting:** Any container/service capable of running `streamlit run app.py` with access to PostgreSQL/PostGIS will work. Ensure HTTPS termination and secure handling of secrets.
 
 ## Data Pipeline
 - Source datasets:
@@ -117,9 +134,11 @@ streamlit run app.py
 - Processed artifacts live in `data/` and feed the ingestion script.
 
 ## Testing & Validation
-- **Manual smoke test:** run `streamlit run app.py`, query “Knoxville, TN”, confirm polygons render and the data table populates.
+- **Automated test suite:** Run `pytest` to execute 20 smoke tests covering input validation, distance conversion, geocoding, data fetching, and map creation. Tests use mocks and don't require a live database connection. See `tests/README.md` for details.
+- **Schema validation:** Run `python scripts/validate_schema.py` to verify database table structure, spatial indexes, and PostGIS extension.
+- **Configuration check:** Run `python scripts/check_config.py` to validate required environment variables are present.
+- **Manual smoke test:** run `streamlit run app.py`, query "Knoxville, TN", confirm polygons render and the data table populates.
 - **Data sanity checks:** inspect `walkability.log` for geocoding errors and verify `national_walkability_index` counts in Postgres (`SELECT COUNT(*) ...`).
-- Automated tests are not yet implemented; contributions that add unit tests (e.g., for geocoding retries or SQL generation) are welcome.
 
 ## Roadmap
 - Enable GenAI/RAG queries across the walkability dataset.

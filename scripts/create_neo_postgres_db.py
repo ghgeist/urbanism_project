@@ -5,26 +5,62 @@ import geopandas as gpd
 from shapely import wkt
 from sqlalchemy import create_engine
 from tqdm import tqdm
-import streamlit as st
+import os
+import urllib.request
+import tempfile
 
 # Configure logging to output to the terminal
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-# Get database connection details from Streamlit secrets
-db_secrets = st.secrets["connections"]["postgresql"]
-db_username = db_secrets["username"]
-db_password = db_secrets["password"]
-db_host = db_secrets["host"]
-db_port = db_secrets["port"]
-db_name = db_secrets["database"]
+# Get database connection details from Replit PostgreSQL environment variables
+db_host = os.environ.get('PGHOST')
+db_port = os.environ.get('PGPORT')
+db_name = os.environ.get('PGDATABASE')
+db_username = os.environ.get('PGUSER')
+db_password = os.environ.get('PGPASSWORD')
 
-# Path to your CSV file
-filepath = r'data\WalkabilityIndex\Natl_WI_simplified_drop_cols.csv'
+if not all([db_host, db_port, db_name, db_username, db_password]):
+    raise Exception("Could not find database credentials. Ensure Replit PostgreSQL is provisioned.")
+
+# Get CSV source - can be URL or local file path
+csv_source = os.environ.get('WALKABILITY_CSV_URL') or os.environ.get('WALKABILITY_CSV_PATH')
+if not csv_source:
+    # Default to local file
+    csv_source = os.path.join('data', 'walkability_index_geospatial.csv')
 
 try:
+    # Initialize filepath to None for cleanup tracking
+    filepath = None
+    # Track whether we created a temporary file (not just if path is in temp dir)
+    is_temp_file = False
+    
+    if csv_source.startswith('http://') or csv_source.startswith('https://'):
+        # Download from URL
+        logging.info(f"Downloading CSV from {csv_source}...")
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+        filepath = tmp_file.name
+        is_temp_file = True  # Mark that we created this temp file
+        tmp_file.close()  # Close the file handle before downloading
+        try:
+            urllib.request.urlretrieve(csv_source, filepath)
+            logging.info("CSV downloaded successfully.")
+        except Exception as download_error:
+            # Clean up temp file if download fails
+            if filepath and os.path.exists(filepath):
+                try:
+                    os.unlink(filepath)
+                except Exception:
+                    pass
+            raise download_error
+    else:
+        # Use local file
+        filepath = csv_source
+        logging.info(f"Using local CSV file: {filepath}")
+    
     logging.info("Loading DataFrame from CSV file...")
     # Load the DataFrame
     df = pd.read_csv(filepath)
+    logging.info(f"Loaded {len(df)} rows from CSV.")
     
     logging.info("Converting WKT geometries to geometries...")
     # Convert WKT geometries to geometries
@@ -43,7 +79,8 @@ try:
 
     logging.info("Creating connection to PostgreSQL database...")
     # Create a connection to the PostgreSQL database
-    engine = create_engine(f'postgresql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}')
+    db_port_int = int(db_port) if isinstance(db_port, str) else db_port
+    engine = create_engine(f'postgresql://{db_username}:{db_password}@{db_host}:{db_port_int}/{db_name}')
 
     logging.info("Connecting to PostgreSQL database using psycopg2...")
     # Initialize connection to None
@@ -51,7 +88,7 @@ try:
         user=db_username,
         password=db_password,
         host=db_host,
-        port=db_port,
+        port=int(db_port) if isinstance(db_port, str) else db_port,
         database=db_name
     )
     cursor = connection.cursor()
@@ -59,6 +96,10 @@ try:
     logging.info("Enabling PostGIS extension...")
     # Enable PostGIS extension
     cursor.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
+    connection.commit()
+
+    logging.info("Dropping existing table if exists...")
+    cursor.execute("DROP TABLE IF EXISTS national_walkability_index;")
     connection.commit()
 
     logging.info("Creating table with geometry column of type Geometry...")
@@ -95,9 +136,17 @@ try:
 
 except Exception as e:
     logging.error("Error: %s", e)
+    raise
 finally:
     if 'cursor' in locals():
         cursor.close()
     if 'connection' in locals():
         connection.close()
         logging.info("PostgreSQL connection is closed")
+    # Clean up temporary file only if we created it (not if user provided a path in temp dir)
+    if 'is_temp_file' in locals() and is_temp_file and 'filepath' in locals() and filepath is not None:
+        try:
+            os.unlink(filepath)
+            logging.info("Temporary file cleaned up.")
+        except Exception as cleanup_error:
+            logging.warning(f"Could not clean up temporary file: {cleanup_error}")
