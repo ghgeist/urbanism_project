@@ -202,7 +202,9 @@ def get_walkability_data(location_string, buffer_size, conn=None):
                 df = pd.DataFrame(rows, columns=columns)
             
             # Convert geometry bytes to GeoSeries
-            gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(df['geometry']))
+            # Handle memoryview objects from psycopg2 by converting to bytes
+            geometry_data = df['geometry'].apply(lambda x: bytes(x) if isinstance(x, memoryview) else x)
+            gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(geometry_data))
         finally:
             # Only close if we created the connection ourselves
             if should_close_conn and conn:

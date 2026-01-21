@@ -189,6 +189,49 @@ class TestWalkabilityData:
                 assert 'geoid20' in result.columns
                 assert 'natwalkind' in result.columns
                 assert result.crs == 'EPSG:4326'
+    
+    def test_get_walkability_data_handles_memoryview(self):
+        """Verify function correctly converts memoryview objects from psycopg2."""
+        # This test ensures we never regress on the memoryview conversion issue
+        # that occurs when using direct psycopg2 connections in production
+        with patch('services.walkability.get_location', return_value=(-83.9207, 35.9606)):
+            with patch('services.walkability.get_db_connection') as mock_db:
+                mock_conn = Mock()
+                mock_cursor = Mock()
+                
+                # Set up context manager for cursor
+                mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+                mock_cursor.__exit__ = Mock(return_value=None)
+                mock_conn.cursor.return_value = mock_cursor
+                
+                # Mock query result with memoryview objects (as psycopg2 returns)
+                mock_cursor.description = [
+                    ('geoid20',), ('d2a_ranked',), ('d2b_ranked',), 
+                    ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',)
+                ]
+                from shapely import wkb
+                mock_point = Point(-83.9207, 35.9606).buffer(0.01)
+                wkb_bytes = wkb.dumps(mock_point)
+                
+                # Simulate psycopg2 returning memoryview objects
+                # (psycopg2 returns memoryview for binary data)
+                memoryview_obj = memoryview(wkb_bytes)
+                mock_cursor.fetchall.return_value = [
+                    ('123456789012', 10, 12, 8, 15, 11.25, memoryview_obj)
+                ]
+                
+                mock_db.return_value = mock_conn
+                
+                # This should not raise TypeError: Expected bytes or string, got memoryview
+                result = get_walkability_data("Knoxville, TN", 1.0, conn=None)
+                
+                assert isinstance(result, gpd.GeoDataFrame)
+                assert 'geoid20' in result.columns
+                assert 'natwalkind' in result.columns
+                assert result.crs == 'EPSG:4326'
+                # Verify geometry was correctly converted
+                assert len(result) == 1
+                assert result.geometry.iloc[0] is not None
 
 
 class TestMapCreation:
