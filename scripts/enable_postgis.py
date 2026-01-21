@@ -8,28 +8,19 @@ import os
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-# Get database connection details - try Replit PostgreSQL first, fallback to Streamlit secrets
-db_host = os.environ.get('REPLIT_POSTGRES_HOST')
-db_port = os.environ.get('REPLIT_POSTGRES_PORT')
-db_name = os.environ.get('REPLIT_POSTGRES_DATABASE')
-db_username = os.environ.get('REPLIT_POSTGRES_USER')
-db_password = os.environ.get('REPLIT_POSTGRES_PASSWORD')
+# Get database connection details from Replit PostgreSQL environment variables
+db_host = os.environ.get('PGHOST')
+db_port = os.environ.get('PGPORT')
+db_name = os.environ.get('PGDATABASE')
+db_username = os.environ.get('PGUSER')
+db_password = os.environ.get('PGPASSWORD')
 
 if not all([db_host, db_port, db_name, db_username, db_password]):
-    # Fallback to Streamlit secrets
-    try:
-        import streamlit as st
-        db_secrets = st.secrets["connections"]["postgresql"]
-        db_username = db_secrets["username"]
-        db_password = db_secrets["password"]
-        db_host = db_secrets["host"]
-        db_port = db_secrets["port"]
-        db_name = db_secrets["database"]
-    except Exception as e:
-        raise Exception(f"Could not find database credentials. Set Replit PostgreSQL env vars or Streamlit secrets. Error: {e}")
+    raise Exception("Could not find database credentials. Ensure Replit PostgreSQL is provisioned.")
 
 try:
     logging.info("Connecting to PostgreSQL database...")
+    logging.info(f"Host: {db_host}, Port: {db_port}, Database: {db_name}, User: {db_username}")
     connection = psycopg2.connect(
         user=db_username,
         password=db_password,
@@ -44,6 +35,11 @@ try:
     connection.commit()
 
     logging.info("PostGIS extension enabled successfully!")
+    
+    # Verify PostGIS version
+    cursor.execute("SELECT PostGIS_version();")
+    postgis_version = cursor.fetchone()[0]
+    logging.info(f"PostGIS version: {postgis_version}")
     
     cursor.close()
     connection.close()

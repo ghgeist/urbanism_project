@@ -8,29 +8,20 @@ from tqdm import tqdm
 import os
 import urllib.request
 import tempfile
+import gdown
 
 # Configure logging to output to the terminal
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-# Get database connection details - try Replit PostgreSQL first, fallback to Streamlit secrets
-db_host = os.environ.get('REPLIT_POSTGRES_HOST')
-db_port = os.environ.get('REPLIT_POSTGRES_PORT')
-db_name = os.environ.get('REPLIT_POSTGRES_DATABASE')
-db_username = os.environ.get('REPLIT_POSTGRES_USER')
-db_password = os.environ.get('REPLIT_POSTGRES_PASSWORD')
+# Get database connection details from Replit PostgreSQL environment variables
+db_host = os.environ.get('PGHOST')
+db_port = os.environ.get('PGPORT')
+db_name = os.environ.get('PGDATABASE')
+db_username = os.environ.get('PGUSER')
+db_password = os.environ.get('PGPASSWORD')
 
 if not all([db_host, db_port, db_name, db_username, db_password]):
-    # Fallback to Streamlit secrets
-    try:
-        import streamlit as st
-        db_secrets = st.secrets["connections"]["postgresql"]
-        db_username = db_secrets["username"]
-        db_password = db_secrets["password"]
-        db_host = db_secrets["host"]
-        db_port = db_secrets["port"]
-        db_name = db_secrets["database"]
-    except Exception as e:
-        raise Exception(f"Could not find database credentials. Set Replit PostgreSQL env vars or Streamlit secrets. Error: {e}")
+    raise Exception("Could not find database credentials. Ensure Replit PostgreSQL is provisioned.")
 
 # Get CSV source - can be URL or local file path
 csv_source = os.environ.get('WALKABILITY_CSV_URL') or os.environ.get('WALKABILITY_CSV_PATH')
@@ -39,8 +30,14 @@ if not csv_source:
     csv_source = os.path.join('data', 'walkability_index_geospatial.csv')
 
 try:
-    # Check if source is a URL or local file
-    if csv_source.startswith('http://') or csv_source.startswith('https://'):
+    # Check if source is a Google Drive URL
+    if 'drive.google.com' in csv_source:
+        logging.info(f"Downloading CSV from Google Drive...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+            filepath = tmp_file.name
+        gdown.download(csv_source, filepath, quiet=False, fuzzy=True)
+        logging.info("CSV downloaded successfully.")
+    elif csv_source.startswith('http://') or csv_source.startswith('https://'):
         # Download from URL
         logging.info(f"Downloading CSV from {csv_source}...")
         with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
@@ -55,6 +52,7 @@ try:
     logging.info("Loading DataFrame from CSV file...")
     # Load the DataFrame
     df = pd.read_csv(filepath)
+    logging.info(f"Loaded {len(df)} rows from CSV.")
     
     logging.info("Converting WKT geometries to geometries...")
     # Convert WKT geometries to geometries
@@ -92,6 +90,10 @@ try:
     cursor.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
     connection.commit()
 
+    logging.info("Dropping existing table if exists...")
+    cursor.execute("DROP TABLE IF EXISTS national_walkability_index;")
+    connection.commit()
+
     logging.info("Creating table with geometry column of type Geometry...")
     # Create table with geometry column of type Geometry
     cursor.execute("""
@@ -126,6 +128,7 @@ try:
 
 except Exception as e:
     logging.error("Error: %s", e)
+    raise
 finally:
     if 'cursor' in locals():
         cursor.close()
