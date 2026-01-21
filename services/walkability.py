@@ -33,6 +33,38 @@ def get_location(location_string, user_agent="location_walkability_app"):
     logging.warning("Location not found for: %s", location_string)
     return None
 
+def validate_location_input(location_string):
+    """
+    Validate location input before geocoding.
+    Returns (is_valid, error_message).
+    """
+    if not location_string or not isinstance(location_string, str):
+        return False, "Location must be a non-empty string"
+    
+    if len(location_string.strip()) == 0:
+        return False, "Location cannot be empty"
+    
+    if len(location_string) > 200:  # Reasonable upper bound
+        return False, "Location string too long (max 200 characters)"
+    
+    return True, None
+
+def validate_buffer_size(buffer_size):
+    """
+    Validate buffer size input.
+    Returns (is_valid, error_message).
+    """
+    if not isinstance(buffer_size, (int, float)):
+        return False, "Buffer size must be a number"
+    
+    if buffer_size <= 0:
+        return False, "Buffer size must be positive"
+    
+    if buffer_size > 50:  # Reasonable upper bound (50 miles)
+        return False, "Buffer size too large (max 50 miles)"
+    
+    return True, None
+
 def miles_to_degrees(miles, latitude):
     """
     Convert a distance (miles) to degrees (latitude & longitude).
@@ -93,6 +125,17 @@ def get_walkability_data(location_string, buffer_size, conn=None):
     Returns:
         GeoDataFrame with walkability data, or None if location not found
     """
+    # Input validation
+    is_valid, error_msg = validate_location_input(location_string)
+    if not is_valid:
+        logging.error(f"Invalid location input: {error_msg}")
+        raise ValueError(f"Invalid location input: {error_msg}")
+    
+    is_valid, error_msg = validate_buffer_size(buffer_size)
+    if not is_valid:
+        logging.error(f"Invalid buffer size: {error_msg}")
+        raise ValueError(f"Invalid buffer size: {error_msg}")
+    
     location = get_location(location_string)
     if not location:
         return None
