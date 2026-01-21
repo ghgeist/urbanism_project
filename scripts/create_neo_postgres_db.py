@@ -6,6 +6,8 @@ from shapely import wkt
 from sqlalchemy import create_engine
 from tqdm import tqdm
 import os
+import urllib.request
+import tempfile
 
 # Configure logging to output to the terminal
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -30,10 +32,26 @@ if not all([db_host, db_port, db_name, db_username, db_password]):
     except Exception as e:
         raise Exception(f"Could not find database credentials. Set Replit PostgreSQL env vars or Streamlit secrets. Error: {e}")
 
-# Path to your CSV file (cross-platform)
-filepath = os.path.join('data', 'walkability_index_geospatial.csv')
+# Get CSV source - can be URL or local file path
+csv_source = os.environ.get('WALKABILITY_CSV_URL') or os.environ.get('WALKABILITY_CSV_PATH')
+if not csv_source:
+    # Default to local file
+    csv_source = os.path.join('data', 'walkability_index_geospatial.csv')
 
 try:
+    # Check if source is a URL or local file
+    if csv_source.startswith('http://') or csv_source.startswith('https://'):
+        # Download from URL
+        logging.info(f"Downloading CSV from {csv_source}...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+            urllib.request.urlretrieve(csv_source, tmp_file.name)
+            filepath = tmp_file.name
+        logging.info("CSV downloaded successfully.")
+    else:
+        # Use local file
+        filepath = csv_source
+        logging.info(f"Using local CSV file: {filepath}")
+    
     logging.info("Loading DataFrame from CSV file...")
     # Load the DataFrame
     df = pd.read_csv(filepath)
@@ -114,3 +132,10 @@ finally:
     if 'connection' in locals():
         connection.close()
         logging.info("PostgreSQL connection is closed")
+    # Clean up temporary file if we downloaded from URL
+    if 'filepath' in locals() and filepath.startswith(tempfile.gettempdir()):
+        try:
+            os.unlink(filepath)
+            logging.info("Temporary file cleaned up.")
+        except Exception as cleanup_error:
+            logging.warning(f"Could not clean up temporary file: {cleanup_error}")

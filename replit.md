@@ -69,9 +69,30 @@ The app now supports Replit's built-in PostgreSQL database. Follow these steps:
    ```
 
 3. **Load the walkability data:**
+
+   **Option A: Download from cloud storage (recommended for large files)**
+   
+   Upload `walkability_index_geospatial.csv` to cloud storage (Google Drive, Dropbox, etc.) and get a direct download link. Then:
+   
+   ```bash
+   # Set the CSV URL as an environment variable in Replit Secrets
+   # Key: WALKABILITY_CSV_URL
+   # Value: https://your-cloud-storage-direct-download-link.csv
+   
+   # Then run the script
+   streamlit run scripts/create_neo_postgres_db.py
+   ```
+   
+   The script will automatically download the CSV and load it into the database.
+   
+   **Option B: Use local file (if uploaded to Replit)**
+   
+   If you've already uploaded the CSV file to Replit:
    ```bash
    streamlit run scripts/create_neo_postgres_db.py
    ```
+   
+   The script defaults to `data/walkability_index_geospatial.csv` if no URL is provided.
 
 ### Backward Compatibility
 
