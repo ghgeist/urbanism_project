@@ -85,6 +85,15 @@ password = "YOUR_NEON_PASSWORD"
 ### 4. Load the walkability table (one-time setup only)
 > **Important:** The CSV file is only needed for initial database setup. Once the database is populated, you can remove the CSV file. The running application queries PostgreSQL directly and does not use the CSV file.
 
+**Data authority note:**  
+This repository treats the PostgreSQL/PostGIS database as the authoritative data source for the running application.  
+The original tabular CSV used for seeding (~39 MB) is intentionally not committed to the repository after setup.  
+For this portfolio deployment, the dataset lives in:
+- the hosted PostGIS database (Replit)
+- a separate cold backup (e.g., Google Drive)
+
+The repo contains the ingestion logic, schema, and validation scripts required to reload the data if needed.
+
 The repository bundles a simplified CSV produced by `notebooks/compress_walkability_df.ipynb`. To seed the database locally, update the file path in `scripts/create_neo_postgres_db.py` if needed and run:
 ```bash
 streamlit run scripts/create_neo_postgres_db.py
