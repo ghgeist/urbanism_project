@@ -94,7 +94,7 @@ def get_db_connection():
                 user=db_user,
                 password=db_password
             )
-    except (TypeError, psycopg2.OperationalError) as e:
+    except (TypeError, ValueError, psycopg2.OperationalError) as e:
         logging.warning(f"Could not connect using Replit env vars: {e}")
     
     # Fallback: try to import streamlit and use secrets
