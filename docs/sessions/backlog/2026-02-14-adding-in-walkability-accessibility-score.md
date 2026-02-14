@@ -4,9 +4,10 @@ sources:
 - https://journals.sagepub.com/doi/10.1177/23998083251377116
 - https://experience.arcgis.com/experience/ce83fc13e21c415ab9e12427da3d53df?draft=true
 - https://github.com/kcredit/Walkable-Accessibility-Score?tab=readme-ov-file
+paper_notes: docs/walkable_accessibility_score_paper_notes.md
 ---
 
-The **Walkable Accessibility Score (WAS)** project provides a critical missing layer to your current "Slack Surface Explorer" model: **Destination Density**. While the EPA National Walkability Index (NWI) focuses on the "bones" of a neighborhood—like street connectivity and land-use mix—the WAS measures the actual presence of 30 urban amenities (grocery stores, cafes, pharmacies, etc.) within a 1600m radius.
+The **Walkable Accessibility Score (WAS)** project provides a critical missing layer to your current "Slack Surface Explorer" model: **Destination Density**. While the EPA National Walkability Index (NWI) focuses on the "bones" of a neighborhood—like street connectivity and land-use mix—the WAS measures the actual presence of **30** urban amenities (grocery stores, cafes, pharmacies, schools, parks, etc.) within the paper’s **optimized distance cap of 800 m** (decay=0.008, k=30). See `docs/walkable_accessibility_score_paper_notes.md` for parameters and citation.
 
 Integrating this data allows you to move from measuring "Built Potential" (NWI) to "Actualized Convenience" (WAS).
 
