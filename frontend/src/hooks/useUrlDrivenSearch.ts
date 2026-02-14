@@ -92,8 +92,11 @@ export function useUrlDrivenSearch<TParams, TResult>(
 
   function updateDraft(next: TParams) {
     weJustSetParamsRef.current = true;
+    const built = optionsRef.current.build(next);
+    const { validationError } = optionsRef.current.parse(built);
     setParams(next);
-    setSearchParams(optionsRef.current.build(next), { replace: true });
+    setValidationMessage(validationError);
+    setSearchParams(built, { replace: true });
   }
 
   async function submit() {
