@@ -60,7 +60,7 @@ externalPort = 8000
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "cd frontend && npx vite preview --host 0.0.0.0 --port 5000 & uvicorn api.main:app --host 0.0.0.0 --port 8000 & wait"]
+run = ["bash", "-c", "cd frontend && npx serve -s dist -l 5000 & uvicorn api.main:app --host 0.0.0.0 --port 8000"]
 build = ["bash", "-c", "cd frontend && npm install && npm run build"]
 
 [userenv]
