@@ -203,11 +203,6 @@ API_CORS_ORIGINS=http://localhost:3000,https://your-frontend.example
 - **Manual smoke test:** start the API and React app (see Quickstart), open the app in the browser, query "Knoxville, TN", and confirm the map and summary table populate.
 - **Data sanity checks:** inspect `walkability.log` for geocoding errors and verify `national_walkability_index` counts in Postgres (`SELECT COUNT(*) ...`).
 
-## Roadmap
-- Enable GenAI/RAG queries across the walkability dataset.
-- Add percentile comparisons versus metro/state averages.
-- Cache frequently requested geometries to reduce query latency.
-
 ---
 
 *This project is part of a portfolio demonstrating geospatial full-stack development with open government data. For more, see [grantgeist.com](https://grantgeist.com/).*
