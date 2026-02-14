@@ -16,16 +16,9 @@ Implemented in Phase 1.1: `exploreParams.ts`, replaceState on edit, pushState on
 
 ---
 
-## 1. Compare page
+## ~~1. Compare page~~ ✅ Done (Phase 2)
 
-**Goal:** Two locations side-by-side with summary panels and highlighted metric differences (product plan §6).
-
-- Route: e.g. `/compare` or `/compare?a=...&b=...`.
-- Two search inputs (or shareable links for A and B).
-- Render two `SummaryCards`-style panels; highlight which metrics improved or worsened for B vs A.
-- No red/green moral framing—neutral difference display.
-
-**Acceptance:** User can compare two addresses and see which metrics differ and by how much.
+Implemented on branch `feature/react-explore-phase2`: `/compare` with `a`, `b`, `radius` URL params; two panels; B shows neutral deltas vs A (e.g. "+0.5 vs A"). See `docs/sessions/active/2026-02-14-execute-react-explore-phase2.md`.
 
 ---
 

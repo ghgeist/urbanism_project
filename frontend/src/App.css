@@ -195,6 +195,20 @@
   color: #374151;
 }
 
+.method-page__section a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.method-page__section a:hover {
+  text-decoration: underline;
+}
+
+.method-page__section a:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .method-page__section ul {
   padding-left: 1.25rem;
 }
@@ -482,4 +496,127 @@
 .explore__nearby th {
   background: #f0f0f0;
   font-weight: 600;
+}
+
+/* Compare page: two panels side-by-side, shared controls. */
+
+.compare {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.compare__header {
+  margin-bottom: 1.5rem;
+}
+
+.compare__header h1 {
+  font-size: 1.75rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.compare__tagline {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.compare__controls {
+  margin-bottom: 1.5rem;
+}
+
+.compare__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.compare__form label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.compare__input-group input[type="text"] {
+  padding: 0.5rem 0.75rem;
+  min-width: 200px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #fff;
+  color: #111;
+}
+
+.compare__radius {
+  min-width: 200px;
+}
+
+.compare__radius input[type="range"] {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.compare__form button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #374151;
+  background: #374151;
+  color: #fff;
+  cursor: pointer;
+}
+
+.compare__form button:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.compare__form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.compare__error {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: #f8d7da;
+  color: #721c24;
+  border-radius: 6px;
+}
+
+.compare__panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.compare__panel {
+  padding: 1rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.compare__panel-title {
+  font-size: 1.1rem;
+  margin: 0 1rem 0.75rem;
+  color: #374151;
+}
+
+.compare__panel .summary-cards {
+  margin: 0 1rem 1rem;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.compare__panel-empty {
+  margin: 0 1rem 1rem;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  .compare__panels {
+    grid-template-columns: 1fr;
+  }
 }

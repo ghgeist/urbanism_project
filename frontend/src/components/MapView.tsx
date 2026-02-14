@@ -30,10 +30,20 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
 
-  // Create or update map when lat/lon/label change. Teardown only on unmount
-  // so the update path (mapRef.current set) is reachable when deps change.
+  // Create or update map when lat/lon/label change.
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const existingMap = mapRef.current;
+    const container = containerRef.current;
+
+    // If we have a map but it's no longer in our container (e.g. DOM node was replaced by React),
+    // remove the orphan so we don't leak and create a fresh map in the current container.
+    if (existingMap && existingMap.getContainer() !== container) {
+      existingMap.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    }
 
     if (mapRef.current) {
       mapRef.current.setView([lat, lon], mapRef.current.getZoom());
@@ -47,7 +57,7 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
       return;
     }
 
-    const map = L.map(containerRef.current).setView([lat, lon], 13);
+    const map = L.map(container).setView([lat, lon], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
@@ -56,14 +66,12 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
     marker.addTo(map);
     if (label) marker.bindTooltip(label, { permanent: false });
     markerRef.current = marker;
-
     mapRef.current = map;
-    return () => {
-      /* no teardown here: preserve map/refs so next run takes update path */
-    };
+    // No cleanup here: reuse map on prop changes (update path above). Unmount cleanup is in the effect below.
   }, [lat, lon, label]);
 
-  // Teardown map only on unmount.
+  // Teardown map on unmount so the Leaflet instance and listeners are always removed.
+  // (The effect above does not return a cleanup when it creates or updates the map.)
   useEffect(() => {
     return () => {
       if (mapRef.current) {
