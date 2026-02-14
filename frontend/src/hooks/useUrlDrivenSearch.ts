@@ -63,6 +63,8 @@ export function useUrlDrivenSearch<TParams, TResult>(
     setValidationMessage(validationError);
     submitVersionRef.current += 1;
     if (validationError || !canFetch(nextParams)) {
+      setResult(null);
+      setError(null);
       setLoading(false);
       return;
     }
