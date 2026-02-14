@@ -12,6 +12,10 @@ Priority order when instructions conflict:
 3. This file
 4. Referenced docs
 
+## Agent boundaries (do not override)
+
+- **Do not merge branches or PRs.** Create branches, commit, push, and open or update PRs as requested. The human merges. Do not run `git merge` (or equivalent) to merge into main or any target branch unless the user explicitly instructs you to perform that specific merge.
+
 ## Project Snapshot
 
 - App type: React + FastAPI geospatial app for EPA National Walkability Index exploration
