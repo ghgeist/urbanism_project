@@ -1,14 +1,10 @@
 import React from "react";
 import type { NwiSummaryResponse } from "../types/api";
+import { formatMetricValue, METRICS_CONFIG } from "../config/metrics";
 
 interface CompareTableProps {
   summaryA: NwiSummaryResponse | null;
   summaryB: NwiSummaryResponse | null;
-}
-
-function formatValue(val: number | null | undefined): string {
-  if (val == null) return "—";
-  return val.toFixed(2);
 }
 
 /** Neutral framing: no moral color coding (no red/green) per product plan. */
@@ -25,8 +21,6 @@ function formatDiff(valA: number | null | undefined, valB: number | null | undef
   );
 }
 
-import { METRICS_CONFIG } from "../config/metrics";
-
 export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
   if (!summaryA || !summaryB) {
     return null;
@@ -38,7 +32,8 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
     if (upgrade_potential?.found && upgrade_potential.candidates?.length) {
         const best = upgrade_potential.candidates[0];
         if (best.delta_nwi != null) {
-            return `+${best.delta_nwi.toFixed(1)} available`;
+            const d = best.delta_nwi;
+            return `${d > 0 ? '+' : ''}${d.toFixed(1)} available`;
         }
         return "Found";
     }
@@ -84,8 +79,8 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
                 </div>
                 <div className="metric-desc">{row.desc}</div>
               </td>
-              <td className="cell-val-a">{formatValue(row.valA)}</td>
-              <td className="cell-val-b">{formatValue(row.valB)}</td>
+              <td className="cell-val-a">{formatMetricValue(row.valA)}</td>
+              <td className="cell-val-b">{formatMetricValue(row.valB)}</td>
               <td className="cell-diff">{formatDiff(row.valA, row.valB)}</td>
             </tr>
           ))}

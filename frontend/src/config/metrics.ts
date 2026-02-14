@@ -1,9 +1,15 @@
 /**
  * Centralized configuration for NWI metrics.
- * Ensures consistent labels, descriptions, and tooltips across SummaryCards and CompareTable.
+ * Ensures consistent labels, descriptions, tooltips, and number formatting across SummaryCards and CompareTable.
  */
 
 import type { Metrics } from "../types/api";
+
+/** Format a metric value for display; null/undefined → "—", otherwise 2 decimal places. */
+export function formatMetricValue(val: number | null | undefined): string {
+  if (val == null) return "—";
+  return val.toFixed(2);
+}
 
 export interface MetricConfig {
   key: keyof Metrics;

@@ -4,12 +4,7 @@
  */
 
 import type { NwiSummaryResponse } from "../types/api";
-import { METRICS_CONFIG } from "../config/metrics";
-
-function formatMetric(value: number | null | undefined): string {
-  if (value == null) return "—";
-  return value.toFixed(2);
-}
+import { formatMetricValue, METRICS_CONFIG } from "../config/metrics";
 
 interface SummaryCardsProps {
   summary: NwiSummaryResponse;
@@ -43,7 +38,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
         const val = metrics?.[config.key] ?? null;
         return (
           <div key={config.key} className="summary-card" title={config.tooltip}>
-            <div className="summary-card__value">{formatMetric(val)}</div>
+            <div className="summary-card__value">{formatMetricValue(val)}</div>
             <div className="summary-card__label">{config.label}</div>
             <div className="summary-card__hint">{config.description}</div>
           </div>
