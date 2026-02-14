@@ -11,7 +11,7 @@ export interface UseUrlDrivenSearchOptions<TParams, TResult> {
   parse: (searchParams: URLSearchParams) => { params: TParams; validationError: string | null };
   build: (params: TParams) => URLSearchParams;
   canFetch: (params: TParams) => boolean;
-  fetch: (params: TParams) => Promise<TResult>;
+  fetch: (params: TParams, signal: AbortSignal) => Promise<TResult>;
   /** Message to show when user submits but canFetch is false (e.g. empty location). */
   emptyFetchMessage?: string;
   /** Normalize params before submit (e.g. trim query strings). Used for fetch and pushState. */
@@ -51,6 +51,8 @@ export function useUrlDrivenSearch<TParams, TResult>(
   const weJustSetParamsRef = useRef(false);
   /** Tracks submit version so stale async work does not update state. */
   const submitVersionRef = useRef(0);
+  /** AbortController for the current submit; aborted when a newer submit starts. */
+  const submitControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (weJustSetParamsRef.current) {
@@ -69,24 +71,23 @@ export function useUrlDrivenSearch<TParams, TResult>(
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
     setError(null);
     setLoading(true);
-    doFetch(nextParams)
+    doFetch(nextParams, controller.signal)
       .then((data) => {
-        if (!cancelled) setResult(data);
+        if (!controller.signal.aborted) setResult(data);
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Request failed");
-          setResult(null);
-        }
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : "Request failed");
+        setResult(null);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [searchParams]);
 
@@ -114,15 +115,19 @@ export function useUrlDrivenSearch<TParams, TResult>(
     setValidationMessage(null);
     setError(null);
     setLoading(true);
+    submitControllerRef.current?.abort();
+    const controller = new AbortController();
+    submitControllerRef.current = controller;
     const version = ++submitVersionRef.current;
     try {
-      const data = await doFetch(toSubmit);
+      const data = await doFetch(toSubmit, controller.signal);
       if (submitVersionRef.current !== version) return;
       setResult(data);
       weJustSetParamsRef.current = true;
       setParams(toSubmit);
       setSearchParams(build(toSubmit), { replace: false });
     } catch (err) {
+      if (controller.signal.aborted) return;
       if (submitVersionRef.current !== version) return;
       setError(err instanceof Error ? err.message : "Request failed");
       setResult(null);

@@ -32,7 +32,7 @@ pytest
 pytest -v
 
 # Run Python lint checks
-python -m ruff check api services scripts tests
+python -m ruff check --no-cache api services scripts tests
 
 # Run a specific test class
 pytest tests/test_walkability.py::TestInputValidation
@@ -75,7 +75,7 @@ Tests use `unittest.mock` throughout — no live database connection needed. Two
 - `tests/test_db.py` — env var validation, port parsing, connection factory, connection-closed detection
 - `tests/test_walkability.py` — input validation, coordinate math, geocoding, data queries, connection checks, map creation
 
-When changing Python files, run `python -m ruff check api services scripts tests` and fix lint errors before marking work complete.
+When changing Python files, run `python -m ruff check --no-cache api services scripts tests` and fix lint errors before marking work complete.
 
 ## Configuration
 

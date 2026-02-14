@@ -24,13 +24,17 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   http_422: "Invalid parameters. Check your input and try again.",
 };
 
-async function get<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
+async function get<T>(
+  path: string,
+  params: Record<string, string | number | undefined> = {},
+  signal?: AbortSignal,
+): Promise<T> {
   const search = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== "") search.set(k, String(v));
   }
   const url = `${getApiBase()}${path}${search.toString() ? `?${search}` : ""}`;
-  const res = await fetch(url);
+  const res = await fetch(url, signal ? { signal } : undefined);
   const text = await res.text();
   let data: unknown;
   try {
@@ -52,8 +56,8 @@ async function get<T>(path: string, params: Record<string, string | number | und
 }
 
 /** Resolve address/ZIP/city to coordinates. */
-export async function geocode(q: string): Promise<GeocodeResponse> {
-  return get<GeocodeResponse>("/geocode", { q });
+export async function geocode(q: string, signal?: AbortSignal): Promise<GeocodeResponse> {
+  return get<GeocodeResponse>("/geocode", { q }, signal);
 }
 
 /** Get NWI summary by location query (address, ZIP, or city). */
@@ -64,6 +68,7 @@ export async function nwiSummaryByQuery(
     search_radius_miles?: number;
     min_delta?: number;
     top_n?: number;
+    signal?: AbortSignal;
   }
 ): Promise<NwiSummaryResponse> {
   return get<NwiSummaryResponse>("/nwi/summary/by-query", {
@@ -72,7 +77,7 @@ export async function nwiSummaryByQuery(
     search_radius_miles: options?.search_radius_miles,
     min_delta: options?.min_delta ?? 2,
     top_n: options?.top_n ?? 3,
-  });
+  }, options?.signal);
 }
 
 /** Health check. */

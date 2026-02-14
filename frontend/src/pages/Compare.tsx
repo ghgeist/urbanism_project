@@ -31,10 +31,10 @@ export function Compare() {
     parse: parseCompareParams,
     build: buildCompareSearchParams,
     canFetch: canFetchCompare,
-    fetch: (p) =>
+    fetch: (p, signal) =>
       Promise.all([
-        nwiSummaryByQuery(p.a, p.radius),
-        nwiSummaryByQuery(p.b, p.radius),
+        nwiSummaryByQuery(p.a, p.radius, { signal }),
+        nwiSummaryByQuery(p.b, p.radius, { signal }),
       ]),
     emptyFetchMessage: "Enter both locations to compare.",
     trimParams: (p) => ({ ...p, a: p.a.trim(), b: p.b.trim() }),
