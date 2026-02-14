@@ -46,7 +46,6 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
     tooltip: config.tooltip,
     valA: summaryA.metrics[config.key],
     valB: summaryB.metrics[config.key],
-    isNumeric: true,
   }));
 
   const upgradeA = getUpgradeText(summaryA);
