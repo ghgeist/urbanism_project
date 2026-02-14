@@ -78,6 +78,12 @@ Tests use `unittest.mock` throughout — no live database connection needed. Thr
 - `PG*` env vars (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) — required by all services and scripts
 - `.streamlit/config.toml` — server runs headless on port 5000
 - `.env` (gitignored) — environment variables for local/Replit
+- **PIP_NO_INDEX**: If the environment has `PIP_NO_INDEX=1` (pip config `:env:.no-index='1'`), pip will not contact PyPI and installs will fail with "No matching distribution found." To install from PyPI for a session, unset the variable then install:
+  ```powershell
+  Remove-Item Env:PIP_NO_INDEX -ErrorAction SilentlyContinue
+  .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+  ```
+  Alternatively configure an explicit index URL if your environment requires a private/internal index.
 - Deployment target: Replit (autoscale)
 
 ## Workflow
