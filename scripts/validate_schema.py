@@ -4,7 +4,7 @@ Run this after migrations or before deployment to catch schema drift.
 """
 import sys
 import psycopg2
-from services.walkability import get_db_connection
+from services.db import get_db_connection
 
 EXPECTED_COLUMNS = {
     'geoid20': 'character varying',

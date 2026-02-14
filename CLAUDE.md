@@ -47,7 +47,9 @@ streamlit run scripts/create_neo_postgres_db.py
 app.py                          # Entry point: page config + orchestrates sidebar/map
 ├── components/sidebar.py       # User inputs (address, buffer radius slider)
 ├── components/map_display.py   # Connection caching, data fetching, map rendering
-└── services/walkability.py     # Core logic: geocoding, DB queries, map creation
+└── services/
+    ├── db.py                   # Framework-agnostic DB connection factory (env vars only)
+    └── walkability.py          # Core logic: geocoding, DB queries, map creation
 ```
 
 **Request flow**: User enters address in sidebar → `map_display.py` calls geocoding and DB query (with `@st.cache_resource` caching) → `walkability.py` geocodes via Nominatim, runs PostGIS spatial query with buffer → returns GeoDataFrame → `map_display.py` renders Folium choropleth + data table.
@@ -58,24 +60,25 @@ app.py                          # Entry point: page config + orchestrates sideba
 
 ## Key Implementation Details
 
-- `walkability.py:get_db_connection()` tries Replit env vars first (`REPLIT_DB_URL`, `PGHOST`, etc.), then falls back to `.streamlit/secrets.toml`
-- `walkability.py:get_walkability_data()` handles both Streamlit SQL connections and direct psycopg2 connections, including memoryview-to-bytes conversion for geometry data
+- `db.py:get_db_connection()` reads `PG*` env vars exclusively (no Streamlit dependency). `validate_pg_env()` and `get_pg_env()` are reusable validators shared by scripts
+- `walkability.py:get_walkability_data()` accepts psycopg2 connections; if `conn=None` it creates and closes its own. Handles memoryview-to-bytes conversion for geometry data
 - `walkability.py:miles_to_degrees()` is latitude-aware (accounts for Earth curvature)
 - Buffer radius spatial queries use `ST_DWithin` against the PostGIS geometry column
 - Geocoding uses tenacity for retries on transient failures
 
 ## Testing
 
-Tests use `unittest.mock` throughout — no live database connection needed. Two test files:
+Tests use `unittest.mock` throughout — no live database connection needed. Three test files:
+- `tests/test_db.py` — env var validation, port parsing, connection factory, connection-closed detection
 - `tests/test_walkability.py` — input validation, coordinate math, geocoding, data queries, map creation
 - `tests/test_connection_caching.py` — connection lifecycle, cache clearing, closed connection recovery
 
 ## Configuration
 
+- `PG*` env vars (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) — required by all services and scripts
 - `.streamlit/config.toml` — server runs headless on port 5000
-- `.streamlit/secrets.toml` (gitignored) — database credentials for Streamlit Cloud
 - `.env` (gitignored) — environment variables for local/Replit
-- Deployment targets: Replit (autoscale) and Streamlit Community Cloud
+- Deployment target: Replit (autoscale)
 
 ## Workflow
 

@@ -41,10 +41,9 @@ Replit PostgreSQL + PostGIS (national_walkability_index table)
 - `app.py` boots Streamlit, renders the sidebar controls, and streams results.
 - `components/sidebar.py` captures address/radius inputs and introduces the dataset.
 - `components/map_display.py` calls cached data services, creates a Folium map, and surfaces a data table.
-- `services/walkability.py` geocodes inputs with Nominatim, queries PostGIS via Streamlit's SQL connection, and renders Folium layers.
+- `services/db.py` provides the framework-agnostic database connection factory (env-var-based, no Streamlit dependency).
+- `services/walkability.py` geocodes inputs with Nominatim, queries PostGIS via psycopg2, and renders Folium layers.
 - `scripts/create_neo_postgres_db.py` loads the processed CSV into Replit PostgreSQL/PostGIS and maintains the spatial index.
-
-**Note on code organization:** The current `services/walkability.py` module handles multiple responsibilities (geocoding, validation, database connections, data fetching, and map creation) in a single file. This structure is functional and production-ready, but future iterations could benefit from splitting into focused modules (`geocoding.py`, `database.py`, `mapping.py`) for improved maintainability and testability as the codebase grows.
 
 ## Tech Stack
 | Area | Tools |
@@ -71,18 +70,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure database connection
-The app supports two connection methods:
-- **Replit PostgreSQL:** Set environment variables (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`)
-- **Streamlit secrets:** Create `.streamlit/secrets.toml` with your PostgreSQL credentials (replace placeholders):
-```toml
-[connections.postgresql]
-dialect = "postgresql"
-host = "YOUR_NEON_HOST"
-port = 5432
-database = "YOUR_DB"
-username = "YOUR_NEON_USER"
-password = "YOUR_NEON_PASSWORD"
-```
+Set the following environment variables (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`). All core services and scripts rely on these env vars exclusively — no Streamlit-specific configuration is required.
 
 ### 4. Load the walkability table (one-time setup only)
 > **Important:** The CSV file is only needed for initial database setup. Once the database is populated, you can remove the CSV file. The running application queries PostgreSQL directly and does not use the CSV file.
