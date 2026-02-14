@@ -12,7 +12,12 @@
       "Bash(.venv/Scripts/python.exe -m ruff:*)",
       "Bash(RUFF_CACHE_DIR=/tmp/ruff_cache .venv/Scripts/python.exe -m ruff check:*)",
       "Bash(npx vitest run:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(echo:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
