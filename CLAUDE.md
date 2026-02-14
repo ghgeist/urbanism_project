@@ -77,6 +77,8 @@ Tests use `unittest.mock` throughout — no live database connection needed. Thr
 
 - `PG*` env vars (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) — required by all services and scripts
 - API default: http://127.0.0.1:8000; frontend dev server: http://localhost:5173
+- `API_CORS_ORIGINS` — set in production to your frontend origin(s); defaults are localhost-only
+- `WALKABILITY_DEBUG_LOG=1` — optional, dev only; do not set in production (can log request-related data)
 - `.env` (gitignored) — environment variables for local/Replit
 - **PIP_NO_INDEX**: If the environment has `PIP_NO_INDEX=1` (pip config `:env:.no-index='1'`), pip will not contact PyPI and installs will fail with "No matching distribution found." To install from PyPI for a session, unset the variable then install:
   ```powershell

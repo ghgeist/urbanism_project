@@ -19,6 +19,7 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   location_not_found: "Location not found. Try a city name or ZIP code.",
   invalid_request: "Invalid request. Check your input and try again.",
   validation_error: "Invalid parameters. Check your input and try again.",
+  internal_error: "Something went wrong. Please try again later.",
   http_404: "Location not found. Try a city name or ZIP code.",
   http_422: "Invalid parameters. Check your input and try again.",
 };

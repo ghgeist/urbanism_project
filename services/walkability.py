@@ -101,6 +101,7 @@ def validate_location_input(location_string):
     """
     Validate location input before geocoding.
     Returns (is_valid, error_message).
+    The API enforces the same max length (200) via Query(max_length=200) in api/main.py.
     """
     if not location_string or not isinstance(location_string, str):
         return False, "Location must be a non-empty string"

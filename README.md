@@ -185,6 +185,13 @@ API_CORS_ORIGINS=http://localhost:3000,https://your-frontend.example
 - **Replit:** The live app runs at [walkability-index.replit.app](https://walkability-index.replit.app/). Configure Replit PostgreSQL (or a connected Neon/Supabase DB) via Secrets and run the FastAPI backend plus the React frontend build.
 - **Self-managed:** Run the FastAPI app (e.g. `uvicorn api.main:app`) and serve the built React app (e.g. `frontend/dist/`) with access to PostgreSQL/PostGIS. Use HTTPS and secure handling of secrets.
 
+### Production checklist (minimal)
+When deploying to a public URL (e.g. Replit, Vercel + your API host):
+
+1. **CORS:** Set `API_CORS_ORIGINS` to your frontend origin(s), e.g. `https://walkability-index.replit.app`. Defaults are localhost-only.
+2. **Debug logging:** Do not set `WALKABILITY_DEBUG_LOG` in production; it can log request-related data. Omit the variable or leave it unset.
+3. **Dependencies:** Periodically run `pip-audit` (install with `pip install pip-audit`) to check for known vulnerabilities. Fix criticals when convenient; this is not wired into CI so it won’t block shipping.
+
 ## Data Pipeline
 - Source datasets:
   - [Walkability Index](https://catalog.data.gov/dataset/walkability-index3)
@@ -197,7 +204,7 @@ API_CORS_ORIGINS=http://localhost:3000,https://your-frontend.example
 - Processed artifacts live in `data/` and feed the ingestion script.
 
 ## Testing & Validation
-- **Automated test suite:** Run `pytest` to execute 20 smoke tests covering input validation, distance conversion, geocoding, data fetching, and map creation. Tests use mocks and don't require a live database connection. See `tests/README.md` for details.
+- **Automated test suite:** Run `pytest` for the backend test suite (100+ tests): input validation, distance conversion, geocoding, data fetching, API endpoints, and map creation. Tests use mocks and don't require a live database connection. See `tests/README.md` for details.
 - **Schema validation:** Run `python scripts/validate_schema.py` to verify database table structure, spatial indexes, and PostGIS extension.
 - **Configuration check:** Run `python scripts/check_config.py` to validate required environment variables are present.
 - **Manual smoke test:** start the API and React app (see Quickstart), open the app in the browser, query "Knoxville, TN", and confirm the map and summary table populate.

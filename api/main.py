@@ -52,8 +52,6 @@ app.add_middleware(
 )
 
 
-
-
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     """Add security headers to all responses."""

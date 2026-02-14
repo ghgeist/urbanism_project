@@ -30,6 +30,7 @@ pytest -v
 pytest tests/test_walkability.py::TestInputValidation
 python scripts/check_config.py
 python scripts/validate_schema.py
+pip-audit   # optional; check deps for known CVEs (not in CI, won't block shipping)
 ```
 
 ## Workflow Orchestration (Incorporated)
