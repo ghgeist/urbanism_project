@@ -190,7 +190,7 @@ def compute_full_profile(
     high_threshold: float = DEFAULT_ISLAND_HIGH_THRESHOLD,
     low_threshold: float = DEFAULT_ISLAND_LOW_THRESHOLD,
 ) -> dict[str, Any]:
-    """Compute the canonical profile dictionary used by Streamlit and API layers."""
+    """Compute the canonical profile dictionary used by the API layer."""
     if search_radius_miles <= 0:
         raise ValueError("search_radius_miles must be positive")
 

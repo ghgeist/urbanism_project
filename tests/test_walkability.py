@@ -278,6 +278,49 @@ class TestWalkabilityData:
         assert len(executed_params) == 8
 
 
+class TestWalkabilityDataConnectionCheck:
+    """Test that get_walkability_data checks connection before use."""
+
+    @patch('services.walkability.get_location', return_value=(-83.9207, 35.9606))
+    def test_get_walkability_data_raises_on_closed_connection(self, mock_get_location):
+        """Test that get_walkability_data raises InterfaceError for closed connection."""
+        import psycopg2
+        closed_conn = Mock()
+        closed_conn.closed = True
+
+        with pytest.raises(psycopg2.InterfaceError) as exc_info:
+            get_walkability_data("Knoxville, TN", 1.0, conn=closed_conn)
+
+        assert "Connection is closed" in str(exc_info.value)
+
+    @patch('services.walkability.get_location', return_value=(-83.9207, 35.9606))
+    def test_get_walkability_data_succeeds_with_open_connection(self, mock_get_location):
+        """Test that get_walkability_data works with open connection."""
+        from shapely import wkb
+        open_conn = Mock()
+        open_conn.closed = False
+
+        mock_cursor = Mock()
+        mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+        mock_cursor.__exit__ = Mock(return_value=None)
+        open_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.description = [
+            ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
+            ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
+        ]
+        mock_point = Point(-83.9207, 35.9606).buffer(0.01)
+        mock_cursor.fetchall.return_value = [
+            ('123456789012', 10, 12, 8, 15, 11.25, wkb.dumps(mock_point), 0.0)
+        ]
+
+        result = get_walkability_data("Knoxville, TN", 1.0, conn=open_conn)
+
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert 'geoid20' in result.columns
+        assert 'natwalkind' in result.columns
+
+
 class TestMapCreation:
     """Test map creation logic."""
     

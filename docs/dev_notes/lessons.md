@@ -2,7 +2,6 @@
 
 ## 2026-02-14
 
-- When adding `@st.cache_data` or `@st.cache_resource` functions, clear all related caches in test `setup_method()` to prevent stale cached values from bypassing mocked call assertions.
 - Keep test classes aligned to the function under test; misplaced tests pass but hide intent and make maintenance/debugging slower.
 - For geography distance queries on a geometry-indexed table, use an indexable geometry bbox prefilter (`geometry && ST_Expand(...)`) before exact `ST_DWithin(...::geography, ...)`.
 - Geocoding (Nominatim/OSM) often uses US spelling for US addresses; if the user enters UK variants (e.g. "harbour" in a street name), normalize (e.g. harbour→harbor) and retry before treating the address as not found.
@@ -11,3 +10,4 @@
 - When adding an early-return in a sync effect (e.g. “skip when weJustSetParamsRef”), ask: “What state does the effect normally set? Is that state updated on the path that causes the skip?” If the effect usually calls setState(X), the code path that sets the skip flag must also set X (e.g. `updateDraft` must call `setParams(next)` when the effect skips and would have run `setParams(nextParams)`).
 - For optional UI (tooltips, popovers): handle “no content” and “content cleared” explicitly—unbind/hide the element rather than only setting content to `""`—and add a test that clears the content and asserts the UI is removed or hidden.
 - **Agents must not merge branches or PRs.** "Ship it" or "ready to ship" means commit, push, and leave the branch ready for the human to merge. See AGENTS.md "Agent boundaries."
+- When deprecating a UI framework (e.g. Streamlit → React+FastAPI), migrate any valuable test coverage (e.g. connection-closed checks) to framework-agnostic test files before deleting framework-specific tests. Delete the framework's entry point, components, config, and deps in one pass; then grep the entire repo for stale references in comments and docstrings.
