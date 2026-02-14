@@ -30,5 +30,5 @@ export function parseRadius(
     }
     return { radius: canonicalRadius(parsed), validationError: null };
   }
-  return { radius: RADIUS_DEFAULTS.MIN_RADIUS, validationError: null };
+  return { radius: RADIUS_DEFAULTS.DEFAULT_RADIUS, validationError: null };
 }

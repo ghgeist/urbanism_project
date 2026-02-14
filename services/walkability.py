@@ -14,6 +14,7 @@ from geopy.exc import GeocoderUnavailable
 from geopy.geocoders import Nominatim
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from services.constraints import MAX_QUERY_LENGTH, MAX_RADIUS_MILES, MIN_RADIUS_MILES
 from services.db import get_db_connection
 from services.db import is_connection_closed as _is_connection_closed
 
@@ -86,7 +87,7 @@ def _geocode_nominatim(query):
 
 
 @lru_cache(maxsize=256)
-def get_location(location_string, user_agent="location_walkability_app"):
+def get_location(location_string):
     """
     Geocode the location string using Nominatim and return (longitude, latitude).
     Tries the string as-is first; if not found, retries with US street spelling normalized
@@ -110,7 +111,7 @@ def validate_location_input(location_string):
     """
     Validate location input before geocoding.
     Returns (is_valid, error_message).
-    The API enforces the same max length (200) via Query(max_length=200) in api/main.py.
+    The API enforces the same max length via Query(max_length=MAX_QUERY_LENGTH) in api/main.py.
     """
     if not location_string or not isinstance(location_string, str):
         return False, "Location must be a non-empty string"
@@ -118,8 +119,8 @@ def validate_location_input(location_string):
     if len(location_string.strip()) == 0:
         return False, "Location cannot be empty"
     
-    if len(location_string) > 200:  # Reasonable upper bound
-        return False, "Location string too long (max 200 characters)"
+    if len(location_string) > MAX_QUERY_LENGTH:
+        return False, f"Location string too long (max {MAX_QUERY_LENGTH} characters)"
     
     return True, None
 
@@ -131,11 +132,11 @@ def validate_buffer_size(buffer_size):
     if not isinstance(buffer_size, (int, float)):
         return False, "Buffer size must be a number"
     
-    if buffer_size <= 0:
+    if buffer_size <= MIN_RADIUS_MILES:
         return False, "Buffer size must be positive"
     
-    if buffer_size > 50:  # Reasonable upper bound (50 miles)
-        return False, "Buffer size too large (max 50 miles)"
+    if buffer_size > MAX_RADIUS_MILES:
+        return False, f"Buffer size too large (max {int(MAX_RADIUS_MILES)} miles)"
     
     return True, None
 

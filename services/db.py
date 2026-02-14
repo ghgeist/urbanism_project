@@ -147,9 +147,28 @@ def get_pooled_connection():
 
 
 def return_connection(conn):
-    """Return a connection to the pool (or close it if the pool is gone)."""
+    """Return a connection to the pool (or close it if the pool is gone).
+
+    Resets transaction state with rollback() before putconn so a connection
+    that saw a failed query is not returned in error state (avoiding
+    InFailedSqlTransaction and pool poisoning).
+    """
     if _pool is not None and not _pool.closed:
-        _pool.putconn(conn)
+        try:
+            if conn and not is_connection_closed(conn):
+                conn.rollback()
+            _pool.putconn(conn)
+        except Exception as e:
+            if conn and not is_connection_closed(conn):
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                logger.warning(
+                    "Discarding connection after rollback failure: %s",
+                    e,
+                    exc_info=False,
+                )
     elif conn and not is_connection_closed(conn):
         conn.close()
 
