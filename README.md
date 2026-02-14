@@ -14,11 +14,12 @@ Understand how walkable any U.S. neighborhood is by querying the EPA’s Nationa
 3. [Tech Stack](#tech-stack)
 4. [Quickstart](#quickstart)
 5. [Usage](#usage)
-6. [Deployment](#deployment)
-7. [Data Pipeline](#data-pipeline)
-8. [Testing & Validation](#testing--validation)
-9. [Contributing & Roadmap](#contributing--roadmap)
-10. [License](#license)
+6. [API (FastAPI)](#api-fastapi)
+7. [Deployment](#deployment)
+8. [Data Pipeline](#data-pipeline)
+9. [Testing & Validation](#testing--validation)
+10. [Roadmap](#roadmap)
+11. [License](#license)
 
 ## Overview
 The National Walkability Index (NWI) scores every U.S. census block group on a 1–20 scale across four dimensions: land-use mix, employment mix, street connectivity, and transit access. This project wraps the dataset in a geospatial API + Streamlit experience so planners, advocates, and curious residents can:
@@ -107,6 +108,56 @@ streamlit run app.py
 - Use the radius slider (0.1–10 miles) to control the buffer around the location.
 - The map will draw block-group polygons colored by the National Walkability Index.
 - The accompanying table lists component ranks (`d2a`, `d2b`, `d3b`, `d4a`) plus the composite score to support deeper analysis.
+
+## API (FastAPI)
+### Run locally
+From the project root:
+```bash
+.\.venv\Scripts\python.exe -m uvicorn api.main:app --reload
+```
+
+Interactive docs:
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- ReDoc: `http://127.0.0.1:8000/redoc`
+
+### Endpoints
+- `GET /health`
+  - Returns service health status.
+- `GET /geocode?q=Knoxville,%20TN`
+  - Returns `{ lat, lon, label }` for a query string.
+- `GET /nwi/summary?lat=35.9606&lon=-83.9207&selected_radius_miles=1.0&search_radius_miles=3.0&min_delta=2.0&top_n=3`
+  - Returns the canonical summary profile for explicit coordinates.
+- `GET /nwi/summary/by-query?q=Knoxville,%20TN&selected_radius_miles=1.0&search_radius_miles=3.0&min_delta=2.0&top_n=3`
+  - One-call geocode + summary endpoint for frontend use.
+
+### Error envelope
+All API errors return a consistent JSON shape:
+```json
+{
+  "code": "location_not_found",
+  "message": "Location not found.",
+  "details": {
+    "query": "Nowhere, ZZ"
+  }
+}
+```
+
+Examples:
+- `location_not_found` (404) for unknown geocode/query lookups
+- `invalid_request` (400) for service-level validation failures
+- `validation_error` (422) for request parameter validation failures
+
+### CORS configuration
+Default allowed origins:
+- `http://localhost:3000`
+- `http://127.0.0.1:3000`
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
+
+Override with `API_CORS_ORIGINS` (comma-separated):
+```bash
+API_CORS_ORIGINS=http://localhost:3000,https://your-frontend.example
+```
 
 ## Deployment
 - **Replit:** The app is configured to work with Replit PostgreSQL. Set environment variables for database connection.
