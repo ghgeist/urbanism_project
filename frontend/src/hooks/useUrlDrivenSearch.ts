@@ -47,6 +47,8 @@ export function useUrlDrivenSearch<TParams, TResult>(
   const [error, setError] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(initial.validationError);
   const weJustSetParamsRef = useRef(false);
+  /** Tracks submit version so stale async work does not update state. */
+  const submitVersionRef = useRef(0);
 
   useEffect(() => {
     const { parse, canFetch, fetch: doFetch } = optionsRef.current;
@@ -58,7 +60,11 @@ export function useUrlDrivenSearch<TParams, TResult>(
       weJustSetParamsRef.current = false;
       return;
     }
-    if (validationError || !canFetch(nextParams)) return;
+    submitVersionRef.current += 1;
+    if (validationError || !canFetch(nextParams)) {
+      setLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setError(null);
@@ -100,16 +106,19 @@ export function useUrlDrivenSearch<TParams, TResult>(
     setValidationMessage(null);
     setError(null);
     setLoading(true);
+    const version = ++submitVersionRef.current;
     try {
       const data = await doFetch(params);
+      if (submitVersionRef.current !== version) return;
       setResult(data);
       weJustSetParamsRef.current = true;
       setSearchParams(build(params), { replace: false });
     } catch (err) {
+      if (submitVersionRef.current !== version) return;
       setError(err instanceof Error ? err.message : "Request failed");
       setResult(null);
     } finally {
-      setLoading(false);
+      if (submitVersionRef.current === version) setLoading(false);
     }
   }
 
