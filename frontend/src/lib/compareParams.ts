@@ -2,45 +2,21 @@
  * Compare page URL params: parse, build, validate, and constants.
  */
 
-export interface CompareParams {
-  a: string;
-  b: string;
-  radius: number;
-}
+import { RADIUS_DEFAULTS, canonicalRadius, parseRadius } from "./radiusParams";
 
-export const COMPARE_PARAMS = {
-  DEFAULT_RADIUS: 0.5,
-  MIN_RADIUS: 0.1,
-  MAX_RADIUS: 3,
-  STEP: 0.1,
-  MAX_QUERY_LENGTH: 200,
-} as const;
+export { canonicalRadius };
 
-/** Clamp and round radius to one decimal place within [MIN, MAX]. */
-export function canonicalRadius(value: number): number {
-  const clamped = Math.max(COMPARE_PARAMS.MIN_RADIUS, Math.min(COMPARE_PARAMS.MAX_RADIUS, value));
-  return Math.round(clamped * 10) / 10;
-}
+export type CompareParams = { a: string; b: string; radius: number };
+
+export const COMPARE_PARAMS = RADIUS_DEFAULTS;
 
 export function parseCompareParams(
   searchParams: URLSearchParams,
 ): { params: CompareParams; validationError: string | null } {
   const a = searchParams.get("a") ?? "";
   const b = searchParams.get("b") ?? "";
-  const rawRadius = searchParams.get("radius");
-
-  if (rawRadius !== null && rawRadius !== "") {
-    const parsed = Number(rawRadius);
-    if (Number.isNaN(parsed)) {
-      return {
-        params: { a, b, radius: COMPARE_PARAMS.DEFAULT_RADIUS },
-        validationError: "Radius must be a number.",
-      };
-    }
-    return { params: { a, b, radius: canonicalRadius(parsed) }, validationError: null };
-  }
-
-  return { params: { a, b, radius: COMPARE_PARAMS.MIN_RADIUS }, validationError: null };
+  const { radius, validationError } = parseRadius(searchParams.get("radius"));
+  return { params: { a, b, radius }, validationError };
 }
 
 export function buildCompareSearchParams(params: CompareParams): URLSearchParams {

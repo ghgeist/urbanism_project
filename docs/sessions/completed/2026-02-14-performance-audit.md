@@ -1,10 +1,10 @@
 ---
 title: "Execute: Performance Audit"
 date: "2026-02-14"
-status: "active"
+status: "completed"
 session_type: "execute"
 priority: "high"
-tags: ["performance", "connection-pooling", "caching", "fastapi"]
+tags: ["performance", "connection-pooling", "caching", "fastapi", "abort-controller", "dead-code"]
 ---
 
 # Performance Audit
@@ -29,13 +29,12 @@ Identify and fix the highest-impact performance bottlenecks in the API request p
 
 4. **Redundant `pd.to_numeric` coercions** — same columns coerced 3-4 times per request across `_rows_to_gdf`, `_numeric_series`, `_safe_numeric`, and `compute_upgrade_potential`.
 5. **`on_event("shutdown")` deprecation** — FastAPI warns about deprecated shutdown hook pattern.
+6. **No `AbortController` in frontend fetch** — superseded requests waste backend resources; stale results discarded only by version check.
 
-### Noted but not addressed
+### Addressed separately
 
-- No query `LIMIT` on large-radius searches (acceptable for current use; max buffer is 50mi).
-- No `AbortController` in frontend fetch (cosmetic; stale results are discarded).
-- `create_map()` / `folium` are dead code (not called by API or frontend).
-- **Compare page doubles geocode + DB costs** — Compare runs two independent `nwiSummaryByQuery` calls (A and B), so each compare does 2 geocodes + 2 DB queries. Reducing this would require either (1) a backend batch endpoint (e.g. `/nwi/summary/compare?a=...&b=...&radius=...`) that does both server-side in one request, or (2) frontend-level coordination (e.g. shared geocode/summary cache or URL state so the same location isn’t re-fetched across Explore and Compare).
+- `create_map()` / `folium` dead code — removed (not called by API or frontend).
+- **Compare page doubles geocode + DB costs** — noted for future batch endpoint optimization.
 
 ## Changes Made
 
@@ -63,15 +62,37 @@ Identify and fix the highest-impact performance bottlenecks in the API request p
 
 **Changed**: Replaced deprecated `@app.on_event("shutdown")` with `@asynccontextmanager` lifespan handler.
 
+### 5. Dead code removal (`services/walkability.py`)
+
+**Removed**: `create_map()`, `calculate_zoom_level()`, `CHOROPLETH_COLORMAP`, `MAP_DISPLAY_HEIGHT_PX`, `import folium`, `from branca.element import Figure`, and `folium` from `requirements.txt`.
+**Removed tests**: `TestZoomLevel` (3 tests), `TestMapCreation` (5 tests).
+
+### 6. AbortController in frontend fetch (`frontend/`)
+
+**Changed**: `api/client.ts` — `get()`, `geocode()`, `nwiSummaryByQuery()` accept optional `AbortSignal` and pass it to `fetch()`.
+**Changed**: `hooks/useUrlDrivenSearch.ts` — replaced boolean `cancelled` flag with `AbortController` in both effect and submit paths. Superseded requests are aborted at the network level.
+**Changed**: `pages/Explore.tsx`, `pages/Compare.tsx` — fetch callbacks pass `signal` through to the API client.
+**Fixed**: `api/client.test.ts` — updated `toHaveBeenCalledWith` assertions to account for the new `signal` parameter.
+
+### 7. DRY param modules (`frontend/src/lib/`)
+
+**Created**: `radiusParams.ts` — shared radius constants (`RADIUS_DEFAULTS`), `canonicalRadius()`, and `parseRadius()`.
+**Refactored**: `exploreParams.ts` and `compareParams.ts` now import shared logic from `radiusParams.ts`, eliminating duplicated radius parsing and clamping code.
+**Fixed**: `.gitignore` — added `!frontend/src/lib/` negation so the Python `lib/` ignore rule doesn't block frontend source files.
+
 ## Test Updates
 
 - `test_api.py`: API tests that hit pool-using endpoints now mock `get_pooled_connection` and `return_connection`.
-- `test_walkability.py`: Geocoding tests patch `_geocode_nominatim` instead of `Nominatim` class; `setup_method` clears `get_location.cache_clear()`.
+- `test_walkability.py`: Geocoding tests patch `_geocode_nominatim` instead of `Nominatim` class; `setup_method` clears `get_location.cache_clear()`. Removed `TestZoomLevel` and `TestMapCreation`.
 - `test_shipping_guardrails.py`: Pool mocks added to summary endpoint test.
+- `client.test.ts`: Updated fetch call assertions for signal parameter.
+- `useUrlDrivenSearch.test.tsx`: Tests pass with new `(params, signal)` fetch signature (mock ignores extra arg).
 
 ## Verification
 
-- `pytest -v`: 81 passed, 0 failed, 1 warning (third-party folium deprecation).
+- Backend: `pytest -v` — 73 passed, 0 failed.
+- Frontend: `vitest run` — 21 passed, 0 failed.
+- TypeScript: `tsc --noEmit` — clean.
 
 ## Expected Impact
 
@@ -79,4 +100,6 @@ Identify and fix the highest-impact performance bottlenecks in the API request p
 |---|---|
 | Connection pooling | 50-200ms (eliminates TCP handshake + TLS + auth) |
 | Geocoding cache (cache hit) | 100-500ms (eliminates Nominatim round-trip) |
+| AbortController | Cancels wasted backend work on superseded requests |
 | Type coercion skip | <1ms (micro-optimization, correctness benefit) |
+| Dead code removal | Cleaner dependency tree (folium/branca removed) |
