@@ -10,7 +10,9 @@
       "Bash(.venv/Scripts/pip:*)",
       "Bash(.venv/Scripts/python.exe -m pytest -v)",
       "Bash(.venv/Scripts/python.exe -m ruff:*)",
-      "Bash(RUFF_CACHE_DIR=/tmp/ruff_cache .venv/Scripts/python.exe -m ruff check:*)"
+      "Bash(RUFF_CACHE_DIR=/tmp/ruff_cache .venv/Scripts/python.exe -m ruff check:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
