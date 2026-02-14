@@ -76,7 +76,7 @@ React (Vite) frontend              FastAPI
 git clone https://github.com/ghgeist/urbanism_project.git
 cd urbanism_project
 python -m venv .venv
-.\.venv\Scripts\activate  # Windows
+# Activate the venv: Windows → .\.venv\Scripts\activate   Unix/macOS → source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -97,8 +97,9 @@ For this portfolio deployment, the dataset lives in:
 
 The repo contains the ingestion logic, schema, and validation scripts required to reload the data if needed.
 
-The repository bundles a simplified CSV produced by `notebooks/compress_walkability_df.ipynb`. To seed the database locally, set the env vars above, update the file path in `scripts/create_neo_postgres_db.py` if needed, and run:
+The repository bundles a simplified CSV produced by `notebooks/compress_walkability_df.ipynb`. Place the output at `data/walkability_index_geospatial.csv`, or set `WALKABILITY_CSV_PATH` (or `WALKABILITY_CSV_URL`) to your file or URL. Then, with the env vars above set, run:
 ```bash
+python scripts/enable_postgis.py   # If your database doesn't already have PostGIS
 python scripts/create_neo_postgres_db.py
 ```
 The script:
@@ -110,17 +111,19 @@ The script:
 After successful setup, you can safely delete the CSV file and any `WALKABILITY_CSV_URL` environment variables. The application will continue to work using only the PostgreSQL database.
 
 ### 5. Run the app locally
-Start the **API** (from project root):
+With your venv activated, start the **API** (from project root):
 ```bash
-.\.venv\Scripts\python.exe -m uvicorn api.main:app --reload
+uvicorn api.main:app --reload
 ```
-Then start the **React frontend** (from `frontend/`):
+Then start the **React frontend** (from another terminal, in `frontend/`):
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open http://localhost:5000 (or the URL Vite prints). The frontend uses the API at http://127.0.0.1:8000 by default; set `VITE_API_URL` if your API runs elsewhere.
+Open http://localhost:5173 (or the URL Vite prints). The frontend uses the API at http://127.0.0.1:8000 by default; set `VITE_API_URL` if your API runs elsewhere.
+
+**One-command option (Unix/macOS or Git Bash):** From the project root run `./scripts/run_dev.sh` (or `bash scripts/run_dev.sh`) to start both the API and the frontend; Ctrl+C stops both. On Windows without Bash, start the API and frontend in two terminals as above.
 
 ## Usage
 - Enter any U.S. address, ZIP code, or city in the search box.
@@ -131,11 +134,9 @@ Open http://localhost:5000 (or the URL Vite prints). The frontend uses the API a
 
 ## API (FastAPI)
 ### Run locally
-**React + API in one step:** From the project root run `./scripts/run_dev.sh` (or `bash scripts/run_dev.sh`) to start both the FastAPI backend and the Vite frontend; Ctrl+C stops both. See `frontend/README.md` for details.
-
-**API only** (e.g. for Swagger/ReDoc), from the project root:
+See [Quickstart](#5-run-the-app-locally) for full app startup. **API only** (e.g. for Swagger/ReDoc), from the project root with venv activated:
 ```bash
-.\.venv\Scripts\python.exe -m uvicorn api.main:app --reload
+uvicorn api.main:app --reload
 ```
 
 Interactive docs:
