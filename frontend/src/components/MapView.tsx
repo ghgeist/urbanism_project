@@ -51,8 +51,12 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
       if (marker) {
         marker.setLatLng([lat, lon]);
         const tooltip = marker.getTooltip();
-        if (tooltip) tooltip.setContent(label ?? "");
-        else if (label) marker.bindTooltip(label, { permanent: false });
+        if (label != null && label !== "") {
+          if (tooltip) tooltip.setContent(label);
+          else marker.bindTooltip(label, { permanent: false });
+        } else if (tooltip) {
+          marker.unbindTooltip();
+        }
       }
       return;
     }
