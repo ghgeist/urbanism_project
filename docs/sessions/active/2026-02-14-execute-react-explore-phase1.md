@@ -26,7 +26,7 @@ Build the first React UI that consumes the FastAPI walkability API: Explore page
 - [x] Map (Leaflet) centered on origin with marker.
 - [x] Walkable Island notice when applicable.
 - [x] Nearby-better candidates table when available.
-- [ ] Shareable state via URL query params (deferred to next slice).
+- [x] Shareable state via URL query params (Phase 1.1).
 - [ ] Compare page (Phase 2).
 
 ## Progress Log
@@ -38,6 +38,7 @@ Build the first React UI that consumes the FastAPI walkability API: Explore page
 - 2026-02-14: Implemented `SummaryCards`, `MapView` (Leaflet, default icon fix), and `Explore` page with form, error state, island notice, nearby-better table.
 - 2026-02-14: Wired `App.tsx` with BrowserRouter and `/` → Explore. Styling in `App.css` (metrics-first layout, neutral cards).
 - 2026-02-14: `npm run build` succeeds; no linter errors.
+- 2026-02-14: Phase 1.1 shareable URL state: `frontend/src/lib/exploreParams.ts` (parse/validate/canonicalize q and radius); Explore syncs from URL, replaceState on edit (no fetch on slider/input), pushState on "Get summary"; popstate restores and fetches; validation message for invalid params.
 
 ## Files Created/Modified
 
@@ -58,6 +59,8 @@ Build the first React UI that consumes the FastAPI walkability API: Explore page
 | `frontend/e2e/explore.spec.ts` | New – Playwright E2E smoke tests |
 | `frontend/playwright.config.ts` | New – Playwright config + webServer |
 | `docs/sessions/backlog/2026-02-14-react-deferred.md` | New – Deferred items backlog |
+| `frontend/src/lib/exploreParams.ts` | New – URL param parse/validate/canonicalize (Phase 1.1) |
+| `frontend/src/pages/Explore.tsx` | Modified – URL sync, replaceState on edit, pushState on submit |
 
 ## How to Run
 
@@ -84,6 +87,5 @@ The following are intentionally left for a later slice and tracked in backlog:
 
 ## Next Steps
 
-- Implement shareable URL state (Phase 1.1).
-- Add Compare page when Explore is stable.
+- Add Compare page when Explore is stable (Phase 2).
 - Optional: proxy `/api` in Vite; improve error messages from API codes.

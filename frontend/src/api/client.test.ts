@@ -2,17 +2,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { geocode, health, nwiSummaryByQuery } from "./client";
 
 describe("client", () => {
-  const baseUrl = "http://127.0.0.1:8000";
+  const baseUrl = "http://localhost:8000";
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
+  /** Client uses res.text() then JSON.parse; mock must provide text(). */
+  function mockRes(body: unknown, ok = true): { ok: boolean; text: () => Promise<string> } {
+    return {
+      ok,
+      text: () => Promise.resolve(JSON.stringify(body)),
+    };
+  }
+
   it("health() calls /health and returns status", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ status: "ok" }),
-    });
+    const mockFetch = vi.fn().mockResolvedValue(mockRes({ status: "ok" }));
     vi.stubGlobal("fetch", mockFetch);
 
     const result = await health();
@@ -22,10 +27,8 @@ describe("client", () => {
   });
 
   it("geocode() builds URL with query param", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ lat: 42.36, lon: -71.06, label: "Cambridge, MA" }),
-    });
+    const body = { lat: 42.36, lon: -71.06, label: "Cambridge, MA" };
+    const mockFetch = vi.fn().mockResolvedValue(mockRes(body));
     vi.stubGlobal("fetch", mockFetch);
 
     const result = await geocode("Cambridge, MA");
@@ -33,7 +36,7 @@ describe("client", () => {
     const expectedUrl = new URL("/geocode", baseUrl);
     expectedUrl.searchParams.set("q", "Cambridge, MA");
     expect(mockFetch).toHaveBeenCalledWith(expectedUrl.toString());
-    expect(result).toEqual({ lat: 42.36, lon: -71.06, label: "Cambridge, MA" });
+    expect(result).toEqual(body);
   });
 
   it("nwiSummaryByQuery() builds URL with required and optional params", async () => {
@@ -45,15 +48,17 @@ describe("client", () => {
       min_delta: 2,
       counts: { selected_block_groups: 5, context_block_groups: 10 },
       nwi: { mean: 12, min: 8, max: 16, spread: 8 },
-      components: {},
+      components: {
+        employment_housing_mix_rank_mean: null,
+        employment_type_diversity_rank_mean: null,
+        intersection_density_rank_mean: null,
+        transit_proximity_rank_mean_proxy: null,
+      },
       metrics: { everyday_convenience: 12, variation: 2, transit_viability: 10 },
       upgrade_potential: { found: false, candidates: [], selected_mean_nwi: 12, message: "None" },
       walkable_island: { is_island: false, label: null, high_threshold: 14, low_threshold: 10 },
     };
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(summary),
-    });
+    const mockFetch = vi.fn().mockResolvedValue(mockRes(summary));
     vi.stubGlobal("fetch", mockFetch);
 
     const result = await nwiSummaryByQuery("Cambridge, MA", 0.5, {
@@ -74,11 +79,9 @@ describe("client", () => {
   });
 
   it("throws with API error message when res.ok is false", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      json: () => Promise.resolve({ code: "location_not_found", message: "Location not found." }),
-    });
+    const mockFetch = vi.fn().mockResolvedValue(
+      mockRes({ code: "location_not_found", message: "Location not found." }, false)
+    );
     vi.stubGlobal("fetch", mockFetch);
 
     await expect(geocode("nowhere")).rejects.toThrow("Location not found.");

@@ -1,35 +1,122 @@
 /**
  * Explore page: search input, radius slider, summary cards, map.
- * State is intended to live in URL query params for shareability (Phase 1: local state).
+ * URL query params (q, radius) for shareability; replaceState while editing, pushState on submit.
  */
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { nwiSummaryByQuery } from "../api/client";
 import type { NwiSummaryResponse } from "../types/api";
 import { SummaryCards } from "../components/SummaryCards";
 import { MapView } from "../components/MapView";
+import {
+  EXPLORE_PARAMS,
+  parseExploreParams,
+  buildExploreSearchParams,
+  canFetch,
+  canonicalRadius,
+  type ExploreParams,
+} from "../lib/exploreParams";
 
-const DEFAULT_RADIUS = 0.5;
-const MIN_RADIUS = 0.1;
-const MAX_RADIUS = 3;
-const STEP = 0.1;
+const { MIN_RADIUS, MAX_RADIUS, STEP } = EXPLORE_PARAMS;
+
+function getInitialParams(searchParams: URLSearchParams): ExploreParams {
+  const { params } = parseExploreParams(searchParams);
+  return params;
+}
 
 export function Explore() {
-  const [query, setQuery] = useState("");
-  const [radius, setRadius] = useState(DEFAULT_RADIUS);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initial = getInitialParams(searchParams);
+  const [query, setQuery] = useState(initial.q);
+  const [radius, setRadius] = useState(initial.radius);
   const [summary, setSummary] = useState<NwiSummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paramValidationMessage, setParamValidationMessage] = useState<string | null>(null);
+  /** When true, we just called setSearchParams; skip fetch in the effect to avoid double-fetch. */
+  const weJustSetParamsRef = useRef(false);
+
+  /** Sync state from URL and optionally fetch (initial load or popstate). */
+  useEffect(() => {
+    const { params, validationError } = parseExploreParams(searchParams);
+    setQuery(params.q);
+    setRadius(params.radius);
+    setParamValidationMessage(validationError);
+
+    if (weJustSetParamsRef.current) {
+      weJustSetParamsRef.current = false;
+      return;
+    }
+    if (validationError || !canFetch(params)) return;
+
+    let cancelled = false;
+    setError(null);
+    setLoading(true);
+    nwiSummaryByQuery(params.q, params.radius)
+      .then((data) => {
+        if (!cancelled) setSummary(data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Request failed");
+          setSummary(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
+
+  /** Update URL as draft (replaceState); no fetch. */
+  function updateUrlDraft(next: ExploreParams) {
+    weJustSetParamsRef.current = true;
+    setSearchParams(buildExploreSearchParams(next), { replace: true });
+  }
+
+  function handleQueryChange(value: string) {
+    const trimmed = value.slice(0, EXPLORE_PARAMS.MAX_QUERY_LENGTH);
+    setQuery(trimmed);
+    updateUrlDraft({
+      q: trimmed.trim(),
+      radius: canonicalRadius(radius),
+    });
+  }
+
+  function handleRadiusChange(value: number) {
+    const r = canonicalRadius(value);
+    setRadius(r);
+    updateUrlDraft({ q: query.trim(), radius: r });
+  }
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
+    const params: ExploreParams = {
+      q: query.trim(),
+      radius: canonicalRadius(radius),
+    };
+    const { validationError } = parseExploreParams(
+      new URLSearchParams({ q: params.q, radius: params.radius.toFixed(1) })
+    );
+    if (validationError) {
+      setParamValidationMessage(validationError);
+      return;
+    }
+    if (!canFetch(params)) {
+      setParamValidationMessage("Enter a location to get a summary.");
+      return;
+    }
+    setParamValidationMessage(null);
     setError(null);
     setLoading(true);
     try {
-      const data = await nwiSummaryByQuery(q, radius);
+      const data = await nwiSummaryByQuery(params.q, params.radius);
       setSummary(data);
+      weJustSetParamsRef.current = true;
+      setSearchParams(buildExploreSearchParams(params), { replace: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
       setSummary(null);
@@ -56,7 +143,7 @@ export function Explore() {
                 id="search"
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder="e.g. Cambridge, MA"
                 disabled={loading}
                 autoComplete="off"
@@ -70,7 +157,7 @@ export function Explore() {
                   max={MAX_RADIUS}
                   step={STEP}
                   value={radius}
-                  onChange={(e) => setRadius(Number(e.target.value))}
+                  onChange={(e) => handleRadiusChange(Number(e.target.value))}
                   disabled={loading}
                 />
               </div>
@@ -80,9 +167,9 @@ export function Explore() {
             </form>
           </section>
 
-          {error && (
+          {(paramValidationMessage || error) && (
             <div className="explore__error" role="alert">
-              {error}
+              {paramValidationMessage ?? error}
             </div>
           )}
 
