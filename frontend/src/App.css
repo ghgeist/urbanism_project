@@ -1,9 +1,214 @@
+/* App shell: navbar, main, footer. */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.app-main {
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Navbar: minimal, keyboard navigable, wraps on small screens. */
+
+.app-nav {
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.app-nav__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-nav__brand {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #111;
+  text-decoration: none;
+  margin-right: 0.5rem;
+}
+
+.app-nav__brand:hover {
+  color: #374151;
+}
+
+.app-nav__links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.app-nav__link {
+  padding: 0.35rem 0.5rem;
+  color: #4b5563;
+  text-decoration: none;
+  font-size: 0.95rem;
+  border-radius: 4px;
+}
+
+.app-nav__link:hover {
+  color: #111;
+}
+
+.app-nav__link--active {
+  color: #111;
+  font-weight: 500;
+  background: #f3f4f6;
+}
+
+.app-nav__link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.app-nav__github {
+  margin-left: auto;
+  font-size: 0.9rem;
+  color: #4b5563;
+  text-decoration: none;
+}
+
+.app-nav__github:hover {
+  color: #111;
+}
+
+/* Footer: one row desktop, stacked mobile. */
+
+.app-footer {
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.app-footer__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.app-footer__data,
+.app-footer__disclaimer {
+  margin-right: 0.5rem;
+}
+
+.app-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.app-footer__links a {
+  color: #4b5563;
+}
+
+.app-footer__links a:hover {
+  color: #111;
+}
+
+.app-footer__sep {
+  color: #d1d5db;
+}
+
+.app-footer__copy {
+  margin-left: 0.25rem;
+}
+
+@media (max-width: 480px) {
+  .app-footer__inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Placeholder and Method page (same max-width lives in .app-main). */
+
+.page-placeholder {
+  padding: 2rem 0;
+}
+
+.page-placeholder h1 {
+  font-size: 1.75rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.page-placeholder p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.method-page {
+  max-width: 720px;
+}
+
+.method-page__header {
+  margin-bottom: 1.5rem;
+}
+
+.method-page__header h1 {
+  font-size: 1.75rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.method-page__tagline {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.method-page__section {
+  margin-bottom: 1.5rem;
+}
+
+.method-page__section h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.5rem 0;
+  color: #111;
+}
+
+.method-page__section p,
+.method-page__section ul {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.method-page__section ul {
+  padding-left: 1.25rem;
+}
+
+.method-page__section li {
+  margin-bottom: 0.35rem;
+}
+
 /* Explore layout: split view (metrics left, map right); stack on mobile. */
 
 .explore {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 0;
 }
 
 .explore__header {

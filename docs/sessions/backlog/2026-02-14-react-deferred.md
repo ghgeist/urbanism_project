@@ -10,19 +10,13 @@ related: ["docs/sessions/active/2026-02-14-execute-react-explore-phase1.md"]
 
 Items explicitly deferred from the initial React Explore phase. Pick up in order of product priority.
 
-## 1. Shareable state (URL query params)
+## ~~1. Shareable state (URL query params)~~ ✅ Done (Phase 1.1)
 
-**Goal:** Location (query or lat/lon) and radius live in the URL so results can be shared.
-
-- Sync `q` and `radius` (and optionally `search_radius_miles`, `min_delta`) with `?q=...&radius=...`.
-- On load, read query params and run summary if valid.
-- Update URL when user searches or changes radius (replaceState to avoid history spam).
-
-**Acceptance:** Copying the URL and opening in a new tab shows the same summary (or triggers the same search).
+Implemented in Phase 1.1: `exploreParams.ts`, replaceState on edit, pushState on submit, validation. See session progress log.
 
 ---
 
-## 2. Compare page
+## 1. Compare page
 
 **Goal:** Two locations side-by-side with summary panels and highlighted metric differences (product plan §6).
 
@@ -35,7 +29,7 @@ Items explicitly deferred from the initial React Explore phase. Pick up in order
 
 ---
 
-## 3. Vite API proxy (optional)
+## 2. Vite API proxy (optional)
 
 **Goal:** In dev, avoid CORS by proxying `/api` to the FastAPI backend.
 
@@ -47,7 +41,7 @@ Items explicitly deferred from the initial React Explore phase. Pick up in order
 
 ---
 
-## 4. API error mapping
+## 3. API error mapping
 
 **Goal:** Map backend `ErrorResponse.code` to clear, user-facing messages.
 

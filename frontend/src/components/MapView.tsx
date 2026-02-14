@@ -30,6 +30,8 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
 
+  // Create or update map when lat/lon/label change. Teardown only on unmount
+  // so the update path (mapRef.current set) is reachable when deps change.
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -57,11 +59,20 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
 
     mapRef.current = map;
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markerRef.current = null;
+      /* no teardown here: preserve map/refs so next run takes update path */
     };
   }, [lat, lon, label]);
+
+  // Teardown map only on unmount.
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="map-view">

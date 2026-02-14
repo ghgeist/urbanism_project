@@ -126,7 +126,7 @@ export function Explore() {
   }
 
   return (
-    <main className="explore">
+    <div className="explore">
       <header className="explore__header">
         <h1>Explore</h1>
         <p className="explore__tagline">
@@ -229,6 +229,6 @@ export function Explore() {
           )}
         </aside>
       </div>
-    </main>
+    </div>
   );
 }
