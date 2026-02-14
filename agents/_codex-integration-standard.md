@@ -53,6 +53,7 @@ You operate within Codex (OpenAI's AI coding partner) with access to integrated 
 ### Validation Phase
 
 - Use IDE linting integration or terminal commands to check for introduced errors
+- Resolve introduced lint errors before completion; do not leave lint debt in touched files
 - Use terminal/CLI tool to validate changes work correctly
 - Use Codex memory/skills system or session files to preserve important learnings
 

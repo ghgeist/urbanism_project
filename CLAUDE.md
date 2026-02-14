@@ -31,6 +31,9 @@ pytest
 # Run tests verbose
 pytest -v
 
+# Run Python lint checks
+python -m ruff check --no-cache api services scripts tests
+
 # Run a specific test class
 pytest tests/test_walkability.py::TestInputValidation
 
@@ -46,10 +49,19 @@ python scripts/create_neo_postgres_db.py
 
 ```
 frontend/                 # React (Vite) — search, map, summary table
+  src/
+    api/client.ts          # API client (fetch wrappers with AbortSignal support)
+    hooks/                 # Shared React hooks (useUrlDrivenSearch)
+    lib/                   # Pure logic modules (no React imports)
+      radiusParams.ts      #   Shared radius constants, canonicalRadius, parseRadius
+      exploreParams.ts     #   Explore page URL param parse/build/validate
+      compareParams.ts     #   Compare page URL param parse/build/validate
+    pages/                 # Route-level components (Explore, Compare, Method)
+    components/            # Reusable UI components (SummaryCards, MapView, etc.)
 api/main.py               # FastAPI — health, geocode, NWI summary
 services/
-├── db.py                 # Framework-agnostic DB connection factory (env vars only)
-└── walkability.py        # Geocoding, PostGIS queries, profile computation
+├── db.py                 # DB connection factory + connection pooling (env vars only)
+└── walkability.py        # Geocoding (cached), PostGIS queries, profile computation
 ```
 
 **Request flow**: User enters address in React UI → frontend calls FastAPI `/geocode` and `/nwi/summary/by-query` → API uses `walkability.py` (Nominatim, PostGIS) → returns JSON → frontend renders map and table.
@@ -71,6 +83,8 @@ services/
 Tests use `unittest.mock` throughout — no live database connection needed. Two test files:
 - `tests/test_db.py` — env var validation, port parsing, connection factory, connection-closed detection
 - `tests/test_walkability.py` — input validation, coordinate math, geocoding, data queries, connection checks, map creation
+
+When changing Python files, run `python -m ruff check --no-cache api services scripts tests` and fix lint errors before marking work complete.
 
 ## Configuration
 

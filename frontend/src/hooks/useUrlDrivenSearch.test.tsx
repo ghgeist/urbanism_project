@@ -53,7 +53,7 @@ describe("useUrlDrivenSearch", () => {
     );
 
     expect(result.current.params.q).toBe("");
-    expect(result.current.params.radius).toBe(0.1);
+    expect(result.current.params.radius).toBe(0.5);
   });
 
   it("updates validation message when draft is edited so stale errors clear", () => {

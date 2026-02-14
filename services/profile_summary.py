@@ -48,7 +48,9 @@ def _validate_radii(selected_radius_miles: float, search_radius_miles: float) ->
 def _safe_numeric(series: pd.Series | None) -> pd.Series:
     if series is None:
         return pd.Series(dtype=float)
-    return pd.to_numeric(series, errors="coerce").dropna()
+    if not pd.api.types.is_numeric_dtype(series):
+        series = pd.to_numeric(series, errors="coerce")
+    return series.dropna()
 
 
 def _safe_float(value: Any) -> float | None:
@@ -102,7 +104,9 @@ def _split_selected_context(full_gdf, selected_radius_miles: float):
     if "dist_miles" not in full_gdf.columns:
         return full_gdf.copy(), full_gdf.copy()
 
-    dist = pd.to_numeric(full_gdf["dist_miles"], errors="coerce")
+    dist = full_gdf["dist_miles"]
+    if not pd.api.types.is_numeric_dtype(dist):
+        dist = pd.to_numeric(dist, errors="coerce")
     selected_gdf = full_gdf[dist <= float(selected_radius_miles)].copy()
     return selected_gdf, full_gdf.copy()
 

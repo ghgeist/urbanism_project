@@ -1,7 +1,13 @@
 """Tests for services.db module."""
 import pytest
 from unittest.mock import patch, Mock
-from services.db import validate_pg_env, get_pg_env, get_db_connection, is_connection_closed
+from services.db import (
+    validate_pg_env,
+    get_pg_env,
+    get_db_connection,
+    is_connection_closed,
+    return_connection,
+)
 
 
 PG_ENV = {
@@ -130,3 +136,35 @@ class TestIsConnectionClosed:
     def test_missing_closed_attr_is_open(self):
         conn = Mock(spec=[])  # no attributes
         assert is_connection_closed(conn) is False
+
+
+class TestReturnConnection:
+    """return_connection must rollback before putconn to avoid pool poisoning."""
+
+    @patch('services.db._pool')
+    def test_rollback_called_before_putconn(self, mock_pool):
+        mock_pool.closed = False
+        conn = Mock()
+        conn.closed = 0
+        return_connection(conn)
+        conn.rollback.assert_called_once()
+        mock_pool.putconn.assert_called_once_with(conn)
+
+    @patch('services.db._pool')
+    def test_rollback_failure_discards_conn_from_pool(self, mock_pool):
+        mock_pool.closed = False
+        conn = Mock()
+        conn.closed = 0
+        conn.rollback.side_effect = Exception("connection dead")
+        return_connection(conn)
+        conn.close.assert_called_once()
+        mock_pool.putconn.assert_called_once_with(conn, close=True)
+
+    @patch('services.db._pool')
+    def test_no_rollback_when_conn_closed(self, mock_pool):
+        mock_pool.closed = False
+        conn = Mock()
+        conn.closed = 1  # closed
+        return_connection(conn)
+        conn.rollback.assert_not_called()
+        mock_pool.putconn.assert_called_once_with(conn, close=True)

@@ -22,7 +22,7 @@ describe("client", () => {
 
     const result = await health();
 
-    expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/health`);
+    expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/health`, undefined);
     expect(result).toEqual({ status: "ok" });
   });
 
@@ -35,7 +35,7 @@ describe("client", () => {
 
     const expectedUrl = new URL("/geocode", baseUrl);
     expectedUrl.searchParams.set("q", "Cambridge, MA");
-    expect(mockFetch).toHaveBeenCalledWith(expectedUrl.toString());
+    expect(mockFetch).toHaveBeenCalledWith(expectedUrl.toString(), undefined);
     expect(result).toEqual(body);
   });
 

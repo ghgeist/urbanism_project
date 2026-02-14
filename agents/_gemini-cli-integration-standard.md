@@ -53,6 +53,7 @@ You operate within Gemini CLI with access to integrated tools through the ReAct 
 ### Validation Phase
 
 - Use `run_shell_command` to run linting commands and check for introduced errors
+- Resolve introduced lint errors before completion; do not leave lint debt in touched files
 - Use `run_shell_command` to validate changes work correctly
 - Document important learnings in session files for future reference
 

@@ -1,13 +1,16 @@
 """Tests for FastAPI endpoints."""
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
 from api.main import app
 
 client = TestClient(app)
+
+# Shared mock so pool-using endpoints don't need real DB env vars.
+_mock_conn = Mock()
 
 
 def _sample_summary() -> dict:
@@ -82,7 +85,9 @@ def test_geocode_not_found_uses_error_envelope():
 
 
 def test_nwi_summary_success():
-    with patch("api.main.build_summary_from_coords", return_value=_sample_summary()) as mock_builder:
+    with patch("api.main.build_summary_from_coords", return_value=_sample_summary()) as mock_builder, \
+         patch("api.main.get_pooled_connection", return_value=_mock_conn), \
+         patch("api.main.return_connection"):
         response = client.get(
             "/nwi/summary",
             params={
@@ -103,7 +108,9 @@ def test_nwi_summary_success():
 
 
 def test_nwi_summary_value_error_returns_error_envelope():
-    with patch("api.main.build_summary_from_coords", side_effect=ValueError("bad radius relationship")):
+    with patch("api.main.build_summary_from_coords", side_effect=ValueError("bad radius relationship")), \
+         patch("api.main.get_pooled_connection", return_value=_mock_conn), \
+         patch("api.main.return_connection"):
         response = client.get(
             "/nwi/summary",
             params={"lat": 35.96, "lon": -83.92, "selected_radius_miles": 2.0, "search_radius_miles": 1.0},
@@ -129,7 +136,9 @@ def test_nwi_summary_validation_error_uses_error_envelope():
 def test_nwi_summary_by_query_success():
     summary = _sample_summary()
     summary["origin"]["label"] = "Knoxville, TN"
-    with patch("api.main.build_summary_from_location_query", return_value=summary) as mock_builder:
+    with patch("api.main.build_summary_from_location_query", return_value=summary) as mock_builder, \
+         patch("api.main.get_pooled_connection", return_value=_mock_conn), \
+         patch("api.main.return_connection"):
         response = client.get(
             "/nwi/summary/by-query",
             params={
@@ -148,7 +157,9 @@ def test_nwi_summary_by_query_success():
 
 
 def test_nwi_summary_by_query_not_found_returns_error_envelope():
-    with patch("api.main.build_summary_from_location_query", return_value=None):
+    with patch("api.main.build_summary_from_location_query", return_value=None), \
+         patch("api.main.get_pooled_connection", return_value=_mock_conn), \
+         patch("api.main.return_connection"):
         response = client.get(
             "/nwi/summary/by-query",
             params={"q": "Nowhere, ZZ", "selected_radius_miles": 1.0},

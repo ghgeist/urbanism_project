@@ -53,6 +53,7 @@ You operate within Claude Code (claude.ai/code) with access to integrated tools.
 ### Validation Phase
 
 - Use bash tool to run linting commands and check for introduced errors
+- Resolve introduced lint errors before completion; do not leave lint debt in touched files
 - Use bash tool to validate changes work correctly
 - Use memory tool to preserve important learnings for future sessions
 

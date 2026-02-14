@@ -32,7 +32,7 @@ export function Explore() {
     parse: parseExploreParams,
     build: buildExploreSearchParams,
     canFetch,
-    fetch: (p) => nwiSummaryByQuery(p.q, p.radius),
+    fetch: (p, signal) => nwiSummaryByQuery(p.q, p.radius, { signal }),
     emptyFetchMessage: "Enter a location to get a summary.",
     trimParams: (p) => ({ ...p, q: p.q.trim() }),
   });

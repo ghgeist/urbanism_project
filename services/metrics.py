@@ -10,10 +10,17 @@ DEFAULT_ISLAND_LOW_THRESHOLD = 10.51
 
 
 def _numeric_series(gdf, column_name: str) -> pd.Series:
-    """Return a numeric, NaN-dropped series for a GeoDataFrame column."""
+    """Return a numeric, NaN-dropped series for a GeoDataFrame column.
+
+    Skips pd.to_numeric when the column is already a numeric dtype (the
+    common case after _rows_to_gdf coerces once at the boundary).
+    """
     if gdf is None or column_name not in gdf.columns:
         return pd.Series(dtype=float)
-    return pd.to_numeric(gdf[column_name], errors="coerce").dropna()
+    col = gdf[column_name]
+    if not pd.api.types.is_numeric_dtype(col):
+        col = pd.to_numeric(col, errors="coerce")
+    return col.dropna()
 
 
 def _safe_float(value: Any) -> float | None:
@@ -97,14 +104,16 @@ def compute_upgrade_potential(
             "message": _no_improvement_message(search_radius_miles),
         }
 
-    candidates["natwalkind"] = pd.to_numeric(candidates["natwalkind"], errors="coerce")
+    if not pd.api.types.is_numeric_dtype(candidates["natwalkind"]):
+        candidates["natwalkind"] = pd.to_numeric(candidates["natwalkind"], errors="coerce")
     candidates["delta_nwi"] = candidates["natwalkind"] - selected_mean_nwi
     candidates = candidates.dropna(subset=["natwalkind", "delta_nwi"])
     candidates = candidates[candidates["delta_nwi"] >= float(min_delta)]
 
     has_distance = "dist_miles" in candidates.columns
     if has_distance:
-        candidates["dist_miles"] = pd.to_numeric(candidates["dist_miles"], errors="coerce")
+        if not pd.api.types.is_numeric_dtype(candidates["dist_miles"]):
+            candidates["dist_miles"] = pd.to_numeric(candidates["dist_miles"], errors="coerce")
         candidates = candidates.dropna(subset=["dist_miles"])
         if search_radius_miles is not None:
             candidates = candidates[candidates["dist_miles"] <= float(search_radius_miles)]
