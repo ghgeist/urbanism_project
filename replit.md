@@ -74,4 +74,4 @@ To populate the database (one-time setup):
    After successful setup, you can remove the CSV URL and the app will use only the database.
 
 ### Backward Compatibility
-The backend reads `PG*` environment variables (or `DATABASE_URL`). Replit Secrets and any env configuration (e.g. `.env` for local dev) are supported; there is no dependency on Streamlit secrets.
+The backend reads `PG*` environment variables (or `DATABASE_URL`). Replit Secrets and any env configuration (e.g. `.env` for local dev) are supported.

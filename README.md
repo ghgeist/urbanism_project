@@ -133,7 +133,7 @@ Open http://localhost:5173 (or the URL Vite prints). The frontend uses the API a
 ### Run locally
 **React + API in one step:** From the project root run `./scripts/run_dev.sh` (or `bash scripts/run_dev.sh`) to start both the FastAPI backend and the Vite frontend; Ctrl+C stops both. See `frontend/README.md` for details.
 
-**API only** (e.g. for Swagger/ReDoc or Streamlit-only use), from the project root:
+**API only** (e.g. for Swagger/ReDoc), from the project root:
 ```bash
 .\.venv\Scripts\python.exe -m uvicorn api.main:app --reload
 ```

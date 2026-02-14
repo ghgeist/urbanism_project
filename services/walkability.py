@@ -17,7 +17,7 @@ import time
 DEBUG_LOG_ENV = "WALKABILITY_DEBUG_LOG"
 _DEBUG_LOGGER = logging.getLogger("walkability.debug")
 CHOROPLETH_COLORMAP = "Blues"
-# Fixed height so metrics dominate; streamlit-folium renders the figure.
+# Fixed height so metrics dominate.
 MAP_DISPLAY_HEIGHT_PX = 420
 
 def log_debug(location, message, data=None, hypothesis_id=None):

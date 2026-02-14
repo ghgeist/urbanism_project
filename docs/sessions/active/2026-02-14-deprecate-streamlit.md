@@ -1,8 +1,8 @@
 ---
-title: "Plan: Deprecate Streamlit UI"
+title: "Execute: Deprecate Streamlit UI"
 date: "2026-02-14"
-status: "backlog"
-session_type: "plan"
+status: "active"
+session_type: "execute"
 priority: "medium"
 tags: ["streamlit", "deprecation", "react", "fastapi", "migration"]
 related: ["docs/sessions/backlog/2026-02-14-react-deferred.md", "docs/sessions/active/2026-02-14-execute-react-explore-phase1.md"]
@@ -137,11 +137,17 @@ Define a clear, low-risk path to retire the Streamlit UI while keeping the app�
 - **Risk**: Lost capability (e.g. a Streamlit-only feature).  
   **Mitigation**: Parity checklist in Phase 1; explicitly list any “we will not migrate” features and document them (e.g. “Compare page not in initial deprecation scope”).
 
-## Next Steps
+## Execution Log (2026-02-14)
 
-1. Confirm React + FastAPI parity (or agreed subset) with product/owner.
-2. Create an active session for “Execute Streamlit deprecation” when ready (e.g. `docs/sessions/active/YYYY-MM-DD-execute-streamlit-deprecation.md`) and work through phases in order.
-3. Optionally add a single backlog item: “Remove Streamlit after deprecation period” with a target date, and link it to this plan.
+Phases 1–4 executed in a single pass on branch `deprecate-streamlit`:
+
+- **Deleted**: `app.py`, `components/sidebar.py`, `components/map_display.py`, `.streamlit/` (config.toml, secrets.toml)
+- **Removed deps**: `streamlit`, `streamlit-folium`, `folium` from `requirements.txt`
+- **Tests**: Deleted `test_connection_caching.py` and `test_map_display_ui.py`. Migrated `TestWalkabilityDataConnectionCheck` (connection-closed checks) to `test_walkability.py`.
+- **Docs**: Updated README.md, CLAUDE.md, agents/README.md, replit.md to remove Streamlit references.
+- **Source comments**: Cleaned stale Streamlit references in `services/db.py`, `services/walkability.py`, `services/metrics.py`.
+- **Lessons**: Updated `docs/dev_notes/lessons.md` with deprecation lesson; removed stale `@st.cache_data` lesson.
+- **Verification**: `pytest -v` — 81 passed, 0 failed. Grep for "streamlit" in `*.py` — 0 matches.
 
 ## Related Work
 

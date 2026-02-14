@@ -2,7 +2,7 @@
 
 This directory contains specialized AI agent prompts for different coding tasks. All agents follow consistent structural coherence principles and support multiple AI coding platforms.
 
-**Repo context**: This is a subset of the agent suite, tailored for the urbanism_project (Streamlit, PostGIS, pytest). Agents detect Python/Streamlit context and adapt (e.g. pytest, Neon/PostgreSQL, `streamlit run app.py`).
+**Repo context**: This is a subset of the agent suite, tailored for the urbanism_project (React + FastAPI, PostGIS, pytest). Agents detect Python context and adapt (e.g. pytest, Neon/PostgreSQL, FastAPI).
 
 ## Platform Support
 

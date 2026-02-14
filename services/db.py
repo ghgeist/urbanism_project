@@ -5,7 +5,7 @@ Reads PostgreSQL credentials from either:
 - DATABASE_URL (single connection string), or
 - PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD.
 
-No Streamlit, Flask, or other framework imports.
+No framework imports.
 """
 import os
 import psycopg2
@@ -93,7 +93,7 @@ def is_connection_closed(conn):
     psycopg2 semantics: conn.closed is 0 when open, nonzero when the
     connection is closed or broken (e.g. server dropped it).  This
     function also handles None connections, missing ``closed`` attribute
-    (e.g. Streamlit SQL wrappers), and boolean mocks.
+    (e.g. ORM wrappers), and boolean mocks.
     """
     if conn is None:
         return True

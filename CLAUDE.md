@@ -60,7 +60,7 @@ services/
 
 ## Key Implementation Details
 
-- `db.py:get_db_connection()` reads `PG*` env vars exclusively (no Streamlit dependency). `validate_pg_env()` and `get_pg_env()` are reusable validators shared by scripts
+- `db.py:get_db_connection()` reads `PG*` env vars exclusively. `validate_pg_env()` and `get_pg_env()` are reusable validators shared by scripts
 - `walkability.py:get_walkability_data()` accepts psycopg2 connections; if `conn=None` it creates and closes its own. Handles memoryview-to-bytes conversion for geometry data
 - `walkability.py:miles_to_degrees()` is latitude-aware (accounts for Earth curvature)
 - Buffer radius spatial queries use `ST_DWithin` against the PostGIS geometry column
@@ -68,10 +68,9 @@ services/
 
 ## Testing
 
-Tests use `unittest.mock` throughout — no live database connection needed. Three test files:
+Tests use `unittest.mock` throughout — no live database connection needed. Two test files:
 - `tests/test_db.py` — env var validation, port parsing, connection factory, connection-closed detection
-- `tests/test_walkability.py` — input validation, coordinate math, geocoding, data queries, map creation
-- `tests/test_connection_caching.py` — connection lifecycle, cache clearing, closed connection recovery
+- `tests/test_walkability.py` — input validation, coordinate math, geocoding, data queries, connection checks, map creation
 
 ## Configuration
 
