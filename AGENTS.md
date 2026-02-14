@@ -14,16 +14,17 @@ Priority order when instructions conflict:
 
 ## Project Snapshot
 
-- App type: Streamlit geospatial app for EPA National Walkability Index exploration
-- Core stack: Python, Streamlit, GeoPandas/Folium/Shapely, PostgreSQL + PostGIS, pytest
-- Entry point: `app.py`
+- App type: React + FastAPI geospatial app for EPA National Walkability Index exploration
+- Core stack: React (Vite), FastAPI, Python, GeoPandas/Shapely, PostgreSQL + PostGIS, pytest
+- Frontend: `frontend/` (React, React-Leaflet)
+- API entry: `api/main.py`
 - Core services: `services/db.py`, `services/walkability.py`
-- UI components: `components/sidebar.py`, `components/map_display.py`
 
 ## Common Commands
 
 ```bash
-streamlit run app.py
+uvicorn api.main:app --reload
+cd frontend && npm run dev
 pytest
 pytest -v
 pytest tests/test_walkability.py::TestInputValidation

@@ -1,6 +1,6 @@
 # Running Locally with the Database on Replit
 
-You can run the Streamlit app, FastAPI backend, and React frontend on your machine while the PostgreSQL database lives on Replit (or any remote host).
+You can run the React frontend and FastAPI backend on your machine while the PostgreSQL database lives on Replit (or any remote host).
 
 ## 1. Get database credentials from Replit
 
@@ -55,12 +55,11 @@ The app reads **environment variables**, not the `.env` file by itself. Use one 
 ```powershell
 Get-Content .env | ForEach-Object { if ($_ -match '^([^#][^=]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process') } }
 uvicorn api.main:app --reload
-streamlit run app.py
 ```
 
-**Manual (any OS):** Export or set each var in your shell, then run the app.
+**Manual (any OS):** Export or set each var in your shell, then run the API.
 
-**Or use a helper:** Many setups use `python-dotenv`. If you add it, you can load `.env` in code (e.g. in `app.py` or a small `scripts/run_local.py` that loads dotenv then starts the app). The repo does not depend on dotenv today; you can add it for local convenience.
+**Or use a helper:** Many setups use `python-dotenv`. If you add it, you can load `.env` in code. The repo does not depend on dotenv today; you can add it for local convenience.
 
 ## 4. Run the stack locally
 
@@ -70,16 +69,12 @@ streamlit run app.py
    ```
    Default: http://127.0.0.1:8000
 
-2. **Streamlit app** — from repo root:
+2. **React frontend** — from `frontend/`:
    ```bash
-   streamlit run app.py
-   ```
-
-3. **React frontend** (optional) — from `frontend/`:
-   ```bash
+   npm install
    npm run dev
    ```
-   Default: http://localhost:5173. It talks to the FastAPI backend (set `VITE_API_URL` if the API is not at http://127.0.0.1:8000).
+   Default: http://localhost:5173. The frontend talks to the FastAPI backend (set `VITE_API_URL` if the API is not at http://127.0.0.1:8000).
 
 ## 5. Verify the connection
 
@@ -89,7 +84,7 @@ From repo root:
 python scripts/check_config.py
 ```
 
-If PG* or DATABASE_URL are set correctly, the script reports success. Then try a request to the API or open the Streamlit app and run a search.
+If PG* or DATABASE_URL are set correctly, the script reports success. Then open the React app and run a search, or call the API directly (e.g. http://127.0.0.1:8000/docs).
 
 ## Troubleshooting
 
@@ -98,4 +93,4 @@ If PG* or DATABASE_URL are set correctly, the script reports success. Then try a
 | “Missing required database environment variables” | Set either all of `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` or a single `DATABASE_URL`. |
 | “Connection refused” / “could not connect” | The DB host must be reachable from your machine. Replit’s built-in Postgres often is not; use a cloud Postgres (Neon, Supabase, etc.) that allows external connections. |
 | SSL errors with Neon | Add `?sslmode=require` to `DATABASE_URL`. |
-| Streamlit doesn’t see env vars | Ensure variables are set in the same shell session that runs `streamlit run app.py`, or use a `.env` loader (e.g. python-dotenv) if you add one. |
+| Frontend can’t reach API | Ensure the API is running and CORS allows your frontend origin (see README API section). Set `VITE_API_URL` if the API is not at http://127.0.0.1:8000. |
