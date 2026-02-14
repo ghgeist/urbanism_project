@@ -1,0 +1,10 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["api", "services", "scripts", "tests"]
+cache-dir = ".cache/ruff"
+extend-exclude = ["frontend", "notebooks", "docs", "assets", "attached_assets"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]
