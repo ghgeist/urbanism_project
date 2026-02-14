@@ -151,25 +151,36 @@ def return_connection(conn):
 
     Resets transaction state with rollback() before putconn so a connection
     that saw a failed query is not returned in error state (avoiding
-    InFailedSqlTransaction and pool poisoning).
+    InFailedSqlTransaction and pool poisoning). Closed/broken connections are
+    discarded from the pool via putconn(close=True).
     """
+    if conn is None:
+        return
+
     if _pool is not None and not _pool.closed:
         try:
-            if conn and not is_connection_closed(conn):
-                conn.rollback()
+            if is_connection_closed(conn):
+                _pool.putconn(conn, close=True)
+                return
+
+            conn.rollback()
             _pool.putconn(conn)
         except Exception as e:
-            if conn and not is_connection_closed(conn):
+            if not is_connection_closed(conn):
                 try:
                     conn.close()
                 except Exception:
                     pass
-                logger.warning(
-                    "Discarding connection after rollback failure: %s",
-                    e,
-                    exc_info=False,
-                )
-    elif conn and not is_connection_closed(conn):
+            try:
+                _pool.putconn(conn, close=True)
+            except Exception:
+                pass
+            logger.warning(
+                "Discarding connection after return failure: %s",
+                e,
+                exc_info=False,
+            )
+    elif not is_connection_closed(conn):
         conn.close()
 
 

@@ -151,14 +151,14 @@ class TestReturnConnection:
         mock_pool.putconn.assert_called_once_with(conn)
 
     @patch('services.db._pool')
-    def test_rollback_failure_closes_conn_and_does_not_putconn(self, mock_pool):
+    def test_rollback_failure_discards_conn_from_pool(self, mock_pool):
         mock_pool.closed = False
         conn = Mock()
         conn.closed = 0
         conn.rollback.side_effect = Exception("connection dead")
         return_connection(conn)
         conn.close.assert_called_once()
-        mock_pool.putconn.assert_not_called()
+        mock_pool.putconn.assert_called_once_with(conn, close=True)
 
     @patch('services.db._pool')
     def test_no_rollback_when_conn_closed(self, mock_pool):
@@ -167,4 +167,4 @@ class TestReturnConnection:
         conn.closed = 1  # closed
         return_connection(conn)
         conn.rollback.assert_not_called()
-        mock_pool.putconn.assert_called_once_with(conn)
+        mock_pool.putconn.assert_called_once_with(conn, close=True)
