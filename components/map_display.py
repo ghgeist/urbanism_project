@@ -1,6 +1,6 @@
 import streamlit as st
 from streamlit_folium import folium_static
-from services.walkability import get_location, get_walkability_data, create_map, get_db_connection
+from services.walkability import get_location, get_walkability_data, create_map, get_db_connection, _is_connection_closed
 from tenacity import RetryError
 import logging
 import os
@@ -39,56 +39,20 @@ def log_debug(location, message, data=None, hypothesis_id=None):
         }
         _DEBUG_LOGGER.info(json.dumps(fallback, default=str))
 
-def _is_connection_closed(conn):
-    """
-    Check if a database connection is closed.
-    Works with both psycopg2 connections and Streamlit SQL connections.
-    """
-    if conn is None:
-        return True
-    # Check psycopg2 connection - most reliable method
-    if hasattr(conn, 'closed'):
-        return conn.closed
-    # For Streamlit SQL connections, we can't easily check without a query
-    # Return False (assume open) and let the actual query fail gracefully
-    # The exception handler will catch connection errors
-    return False
-
 @st.cache_resource
 def get_cached_db_connection():
     """
     Get a cached database connection that persists across reruns.
     Uses @st.cache_resource to ensure the connection is reused efficiently.
     """
-    log_debug("map_display.py:14", "get_cached_db_connection entry", {"has_pghost": bool(os.environ.get('PGHOST'))}, "A")
-    if os.environ.get('PGHOST'):
-        conn = get_db_connection()
-        log_debug("map_display.py:17", "get_cached_db_connection created direct connection", {
-            "conn_id": id(conn),
-            "conn_closed": conn.closed if hasattr(conn, 'closed') else None,
-            "conn_type": type(conn).__name__
-        }, "A")
-        return conn
-    else:
-        try:
-            conn = st.connection("postgresql", type="sql")
-            log_debug("map_display.py:21", "get_cached_db_connection created streamlit connection", {
-                "conn_id": id(conn),
-                "conn_type": type(conn).__name__
-            }, "A")
-            return conn
-        except Exception as e:
-            log_debug("map_display.py:24", "get_cached_db_connection streamlit connection failed, using direct", {
-                "error": str(e)
-            }, "A")
-            # If Streamlit connection fails, try direct connection
-            conn = get_db_connection()
-            log_debug("map_display.py:27", "get_cached_db_connection fallback direct connection", {
-                "conn_id": id(conn),
-                "conn_closed": conn.closed if hasattr(conn, 'closed') else None,
-                "conn_type": type(conn).__name__
-            }, "A")
-            return conn
+    log_debug("map_display.py:14", "get_cached_db_connection entry", {}, "A")
+    conn = get_db_connection()
+    log_debug("map_display.py:17", "get_cached_db_connection created connection", {
+        "conn_id": id(conn),
+        "conn_closed": conn.closed if hasattr(conn, 'closed') else None,
+        "conn_type": type(conn).__name__
+    }, "A")
+    return conn
 
 @st.cache_data
 def cached_get_location(city_name):

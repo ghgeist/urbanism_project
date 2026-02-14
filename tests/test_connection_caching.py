@@ -42,12 +42,9 @@ class TestConnectionClosedDetection:
         mock_conn.closed = True
         assert _is_connection_closed(mock_conn) is True
     
-    def test_is_connection_closed_streamlit_connection(self):
-        """Test that Streamlit SQL connection (without closed attr) returns False."""
-        # Streamlit connections don't have 'closed' attribute
-        # We assume they're open and let the query fail gracefully
-        mock_conn = Mock()
-        del mock_conn.closed  # Remove closed attribute if it exists
+    def test_is_connection_closed_missing_attr(self):
+        """Test that connection without 'closed' attribute returns False."""
+        mock_conn = Mock(spec=[])  # no attributes
         assert _is_connection_closed(mock_conn) is False
 
 
@@ -55,60 +52,38 @@ class TestCachedConnection:
     """Test the get_cached_db_connection caching behavior."""
     
     @patch('components.map_display.get_db_connection')
-    @patch('components.map_display.os.environ.get')
-    def test_get_cached_db_connection_creates_connection(self, mock_env_get, mock_get_db):
+    def test_get_cached_db_connection_creates_connection(self, mock_get_db):
         """Test that a new connection is created when cache is empty."""
-        mock_env_get.return_value = 'test_host'  # Simulate PGHOST set
         mock_conn = Mock()
         mock_conn.closed = False
         mock_get_db.return_value = mock_conn
-        
+
         # Clear cache first
         get_cached_db_connection.clear()
-        
+
         conn = get_cached_db_connection()
-        
+
         assert conn == mock_conn
         mock_get_db.assert_called_once()
     
     @patch('components.map_display.get_db_connection')
-    @patch('components.map_display.os.environ.get')
-    def test_get_cached_db_connection_reuses_cached(self, mock_env_get, mock_get_db):
+    def test_get_cached_db_connection_reuses_cached(self, mock_get_db):
         """Test that cached connection is reused on subsequent calls."""
-        mock_env_get.return_value = 'test_host'
         mock_conn = Mock()
         mock_conn.closed = False
         mock_get_db.return_value = mock_conn
-        
+
         # Clear cache first
         get_cached_db_connection.clear()
-        
+
         # First call creates connection
         conn1 = get_cached_db_connection()
         # Second call should reuse cached connection
         conn2 = get_cached_db_connection()
-        
+
         assert conn1 == conn2
         # Should only be called once due to caching
         assert mock_get_db.call_count == 1
-    
-    @patch('components.map_display.st.connection')
-    @patch('components.map_display.os.environ.get')
-    def test_get_cached_db_connection_fallback_to_direct(self, mock_env_get, mock_st_conn):
-        """Test fallback to direct connection when Streamlit connection fails."""
-        mock_env_get.return_value = None  # No PGHOST, try Streamlit connection
-        
-        # Simulate Streamlit connection failure
-        mock_st_conn.side_effect = Exception("Connection failed")
-        
-        mock_direct_conn = Mock()
-        mock_direct_conn.closed = False
-        
-        with patch('components.map_display.get_db_connection', return_value=mock_direct_conn):
-            get_cached_db_connection.clear()
-            conn = get_cached_db_connection()
-            
-            assert conn == mock_direct_conn
 
 
 class TestCachedWalkabilityDataWithClosedConnection:
@@ -241,10 +216,7 @@ class TestWalkabilityDataConnectionCheck:
         """Test that get_walkability_data raises InterfaceError for closed connection."""
         closed_conn = Mock()
         closed_conn.closed = True
-        # Ensure it doesn't have 'query' attribute so it goes to psycopg2 path
-        if hasattr(closed_conn, 'query'):
-            delattr(closed_conn, 'query')
-        
+
         with pytest.raises(psycopg2.InterfaceError) as exc_info:
             get_walkability_data("Knoxville, TN", 1.0, conn=closed_conn)
         
@@ -255,10 +227,7 @@ class TestWalkabilityDataConnectionCheck:
         """Test that get_walkability_data works with open connection."""
         open_conn = Mock()
         open_conn.closed = False
-        # Ensure it doesn't have 'query' attribute so it goes to psycopg2 path
-        if hasattr(open_conn, 'query'):
-            delattr(open_conn, 'query')
-        
+
         mock_cursor = Mock()
         mock_cursor.__enter__ = Mock(return_value=mock_cursor)
         mock_cursor.__exit__ = Mock(return_value=None)
