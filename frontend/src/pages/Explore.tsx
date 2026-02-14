@@ -57,7 +57,12 @@ export function Explore() {
     // Invalidate any in-flight handleSearch to prevent stale pushState.
     searchVersionRef.current += 1;
 
-    if (validationError || !canFetch(params)) return;
+    if (validationError || !canFetch(params)) {
+      // Reset loading in case we navigated away from an in-flight fetch.
+      // The stale fetch's finally block won't run setLoading(false) due to version check.
+      setLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setError(null);
