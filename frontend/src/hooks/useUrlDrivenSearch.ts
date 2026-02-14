@@ -14,6 +14,8 @@ export interface UseUrlDrivenSearchOptions<TParams, TResult> {
   fetch: (params: TParams) => Promise<TResult>;
   /** Message to show when user submits but canFetch is false (e.g. empty location). */
   emptyFetchMessage?: string;
+  /** Normalize params before submit (e.g. trim query strings). Used for fetch and pushState. */
+  trimParams?: (params: TParams) => TParams;
 }
 
 export interface UseUrlDrivenSearchResult<TParams, TResult> {
@@ -51,15 +53,14 @@ export function useUrlDrivenSearch<TParams, TResult>(
   const submitVersionRef = useRef(0);
 
   useEffect(() => {
-    const { parse, canFetch, fetch: doFetch } = optionsRef.current;
-    const { params: nextParams, validationError } = parse(searchParams);
-    setParams(nextParams);
-    setValidationMessage(validationError);
-
     if (weJustSetParamsRef.current) {
       weJustSetParamsRef.current = false;
       return;
     }
+    const { parse, canFetch, fetch: doFetch } = optionsRef.current;
+    const { params: nextParams, validationError } = parse(searchParams);
+    setParams(nextParams);
+    setValidationMessage(validationError);
     submitVersionRef.current += 1;
     if (validationError || !canFetch(nextParams)) {
       setLoading(false);
@@ -89,17 +90,19 @@ export function useUrlDrivenSearch<TParams, TResult>(
 
   function updateDraft(next: TParams) {
     weJustSetParamsRef.current = true;
+    setParams(next);
     setSearchParams(optionsRef.current.build(next), { replace: true });
   }
 
   async function submit() {
-    const { parse, build, canFetch, fetch: doFetch, emptyFetchMessage } = optionsRef.current;
-    const { validationError } = parse(build(params));
+    const { parse, build, canFetch, fetch: doFetch, emptyFetchMessage, trimParams } = optionsRef.current;
+    const toSubmit = trimParams ? trimParams(params) : params;
+    const { validationError } = parse(build(toSubmit));
     if (validationError) {
       setValidationMessage(validationError);
       return;
     }
-    if (!canFetch(params)) {
+    if (!canFetch(toSubmit)) {
       setValidationMessage(emptyFetchMessage ?? null);
       return;
     }
@@ -108,11 +111,12 @@ export function useUrlDrivenSearch<TParams, TResult>(
     setLoading(true);
     const version = ++submitVersionRef.current;
     try {
-      const data = await doFetch(params);
+      const data = await doFetch(toSubmit);
       if (submitVersionRef.current !== version) return;
       setResult(data);
       weJustSetParamsRef.current = true;
-      setSearchParams(build(params), { replace: false });
+      setParams(toSubmit);
+      setSearchParams(build(toSubmit), { replace: false });
     } catch (err) {
       if (submitVersionRef.current !== version) return;
       setError(err instanceof Error ? err.message : "Request failed");

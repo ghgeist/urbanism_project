@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { useUrlDrivenSearch } from "./useUrlDrivenSearch";
 import {
@@ -54,5 +54,26 @@ describe("useUrlDrivenSearch", () => {
 
     expect(result.current.params.q).toBe("");
     expect(result.current.params.radius).toBe(0.1);
+  });
+
+  it("preserves trailing space in draft so multi-word queries can be typed", () => {
+    const mockFetch = vi.fn().mockResolvedValue({});
+    const { result } = renderHook(
+      () =>
+        useUrlDrivenSearch<ExploreParams, unknown>({
+          parse: parseExploreParams,
+          build: buildExploreSearchParams,
+          canFetch,
+          fetch: mockFetch,
+          trimParams: (p) => ({ ...p, q: p.q.trim() }),
+        }),
+      { wrapper: createWrapper("/?q=New&radius=0.5") }
+    );
+
+    act(() => {
+      result.current.updateDraft({ q: "New ", radius: 0.5 });
+    });
+
+    expect(result.current.params.q).toBe("New ");
   });
 });

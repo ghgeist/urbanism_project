@@ -34,19 +34,19 @@ export function Explore() {
     canFetch,
     fetch: (p) => nwiSummaryByQuery(p.q, p.radius),
     emptyFetchMessage: "Enter a location to get a summary.",
+    trimParams: (p) => ({ ...p, q: p.q.trim() }),
   });
 
   function handleQueryChange(value: string) {
-    const trimmed = value.slice(0, EXPLORE_PARAMS.MAX_QUERY_LENGTH);
     updateDraft({
-      q: trimmed.trim(),
+      q: value.slice(0, EXPLORE_PARAMS.MAX_QUERY_LENGTH),
       radius: canonicalRadius(params.radius),
     });
   }
 
   function handleRadiusChange(value: number) {
     const r = canonicalRadius(value);
-    updateDraft({ q: params.q.trim(), radius: r });
+    updateDraft({ q: params.q, radius: r });
   }
 
   function handleSearch(e: React.FormEvent) {

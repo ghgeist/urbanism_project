@@ -37,32 +37,31 @@ export function Compare() {
         nwiSummaryByQuery(p.b, p.radius),
       ]),
     emptyFetchMessage: "Enter both locations to compare.",
+    trimParams: (p) => ({ ...p, a: p.a.trim(), b: p.b.trim() }),
   });
 
   const summaryA = bothSummaries?.[0] ?? null;
   const summaryB = bothSummaries?.[1] ?? null;
 
   function handleAChange(value: string) {
-    const trimmed = value.slice(0, COMPARE_PARAMS.MAX_QUERY_LENGTH).trim();
     updateDraft({
-      a: trimmed,
-      b: params.b.trim(),
+      a: value.slice(0, COMPARE_PARAMS.MAX_QUERY_LENGTH),
+      b: params.b,
       radius: canonicalRadius(params.radius),
     });
   }
 
   function handleBChange(value: string) {
-    const trimmed = value.slice(0, COMPARE_PARAMS.MAX_QUERY_LENGTH).trim();
     updateDraft({
-      a: params.a.trim(),
-      b: trimmed,
+      a: params.a,
+      b: value.slice(0, COMPARE_PARAMS.MAX_QUERY_LENGTH),
       radius: canonicalRadius(params.radius),
     });
   }
 
   function handleRadiusChange(value: number) {
     const r = canonicalRadius(value);
-    updateDraft({ a: params.a.trim(), b: params.b.trim(), radius: r });
+    updateDraft({ a: params.a, b: params.b, radius: r });
   }
 
   function handleCompare(e: React.FormEvent) {
