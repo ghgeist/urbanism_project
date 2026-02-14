@@ -47,6 +47,7 @@ You operate within Cursor IDE with access to powerful integrated tools. **Follow
 ### Validation Phase
 
 - Use `read_lints` to check for introduced errors
+- Resolve introduced lint errors before completion; do not leave lint debt in touched files
 - Use `run_terminal_cmd` to validate changes work correctly
 - Use `update_memory` to preserve important learnings for future sessions
 

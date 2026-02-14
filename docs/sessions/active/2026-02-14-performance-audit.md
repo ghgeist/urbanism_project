@@ -35,6 +35,7 @@ Identify and fix the highest-impact performance bottlenecks in the API request p
 - No query `LIMIT` on large-radius searches (acceptable for current use; max buffer is 50mi).
 - No `AbortController` in frontend fetch (cosmetic; stale results are discarded).
 - `create_map()` / `folium` are dead code (not called by API or frontend).
+- **Compare page doubles geocode + DB costs** — Compare runs two independent `nwiSummaryByQuery` calls (A and B), so each compare does 2 geocodes + 2 DB queries. Reducing this would require either (1) a backend batch endpoint (e.g. `/nwi/summary/compare?a=...&b=...&radius=...`) that does both server-side in one request, or (2) frontend-level coordination (e.g. shared geocode/summary cache or URL state so the same location isn’t re-fetched across Explore and Compare).
 
 ## Changes Made
 

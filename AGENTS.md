@@ -32,6 +32,8 @@ cd frontend && npm run dev
 pytest
 pytest -v
 pytest tests/test_walkability.py::TestInputValidation
+python -m ruff check api services scripts tests
+python -m ruff check --fix api services scripts tests
 python scripts/check_config.py
 python scripts/validate_schema.py
 pip-audit   # optional; check deps for known CVEs (not in CI, won't block shipping)
@@ -65,6 +67,7 @@ Before and after meaningful fixes:
 
 Do not mark work done without evidence:
 - Run relevant tests.
+- Run Python lint (`python -m ruff check api services scripts tests`) when Python files are changed; fix lint errors before completion.
 - Validate behavior of changed paths (and compare old/new behavior when relevant).
 - Confirm no avoidable regressions are introduced.
 
@@ -79,6 +82,7 @@ Do not mark work done without evidence:
 A task is done when all apply:
 - Requested behavior is implemented.
 - Relevant tests pass (or limitations are explicitly documented).
+- Relevant lint checks pass for touched code (or limitations are explicitly documented).
 - Session record is updated with outcomes and file links.
 - Follow-up work is captured in `docs/sessions/backlog/` when needed.
 

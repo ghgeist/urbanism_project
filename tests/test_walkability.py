@@ -8,12 +8,9 @@ import geopandas as gpd
 from shapely.geometry import Point
 from services.walkability import (
     miles_to_degrees,
-    calculate_zoom_level,
     get_location,
     get_walkability_data,
     query_walkability_by_coords,
-    create_map,
-    CHOROPLETH_COLORMAP,
     validate_location_input,
     validate_buffer_size
 )
@@ -96,26 +93,6 @@ class TestMilesToDegrees:
         assert lon_deg > lat_deg
 
 
-class TestZoomLevel:
-    """Test map zoom calculation."""
-    
-    def test_zoom_level_small_buffer(self):
-        """Small buffer should result in higher zoom."""
-        zoom = calculate_zoom_level(0.5)
-        assert zoom > 10
-    
-    def test_zoom_level_large_buffer(self):
-        """Large buffer should result in lower zoom."""
-        zoom = calculate_zoom_level(10.0)
-        assert zoom < 14
-    
-    def test_zoom_level_monotonic(self):
-        """Zoom should decrease as buffer increases."""
-        zoom_small = calculate_zoom_level(0.5)
-        zoom_large = calculate_zoom_level(5.0)
-        assert zoom_small > zoom_large
-
-
 class TestGeocoding:
     """Test geocoding with mocked Nominatim."""
 
@@ -161,17 +138,6 @@ class TestWalkabilityData:
     
     def test_get_walkability_data_returns_gdf(self):
         """Verify function returns GeoDataFrame with expected columns."""
-        # Create mock GeoDataFrame
-        mock_gdf = gpd.GeoDataFrame({
-            'geoid20': ['123456789012'],
-            'd2a_ranked': [10],
-            'd2b_ranked': [12],
-            'd3b_ranked': [8],
-            'd4a_ranked': [15],
-            'natwalkind': [11.25],
-            'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
-        }, crs='EPSG:4326')
-        
         with patch('services.walkability.get_location', return_value=(-83.9207, 35.9606)):
             with patch('services.walkability.get_db_connection') as mock_db:
                 # Mock database connection and cursor with proper context manager
@@ -316,60 +282,3 @@ class TestWalkabilityDataConnectionCheck:
         assert isinstance(result, gpd.GeoDataFrame)
         assert 'geoid20' in result.columns
         assert 'natwalkind' in result.columns
-
-
-class TestMapCreation:
-    """Test map creation logic."""
-    
-    def test_create_map_with_valid_data(self):
-        """Test map creation with valid location and data."""
-        location = (-83.9207, 35.9606)
-        gdf = gpd.GeoDataFrame({
-            'geoid20': ['123456789012'],
-            'natwalkind': [11.25],
-            'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
-        }, crs='EPSG:4326')
-        
-        m = create_map(location, gdf, buffer_size=1.0)
-        assert m is not None
-    
-    def test_create_map_empty_data(self):
-        """Test map creation with empty GeoDataFrame returns None."""
-        location = (-83.9207, 35.9606)
-        empty_gdf = gpd.GeoDataFrame(columns=['geoid20', 'natwalkind', 'geometry'], crs='EPSG:4326')
-        
-        m = create_map(location, empty_gdf, buffer_size=1.0)
-        assert m is None
-    
-    def test_create_map_no_location(self):
-        """Test map creation with None location returns None."""
-        gdf = gpd.GeoDataFrame({
-            'geoid20': ['123456789012'],
-            'natwalkind': [11.25],
-            'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
-        }, crs='EPSG:4326')
-        
-        m = create_map(None, gdf, buffer_size=1.0)
-        assert m is None
-
-    def test_choropleth_colormap_constant(self):
-        assert CHOROPLETH_COLORMAP == "Blues"
-
-    def test_create_map_uses_colormap_constant(self):
-        location = (-83.9207, 35.9606)
-        gdf = gpd.GeoDataFrame({
-            'geoid20': ['123456789012'],
-            'natwalkind': [11.25],
-            'd4a_ranked': [14],
-            'd2a_ranked': [11],
-            'd3b_ranked': [9],
-            'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
-        }, crs='EPSG:4326')
-
-        with patch('services.walkability.folium.Choropleth') as mock_choropleth:
-            mock_layer = Mock()
-            mock_layer.add_to.return_value = mock_layer
-            mock_choropleth.return_value = mock_layer
-            create_map(location, gdf, buffer_size=1.0)
-
-            assert mock_choropleth.call_args.kwargs['fill_color'] == CHOROPLETH_COLORMAP

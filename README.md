@@ -205,6 +205,7 @@ When deploying to a public URL (e.g. Replit, Vercel + your API host):
 
 ## Testing & Validation
 - **Automated test suite:** Run `pytest` for the backend test suite (100+ tests): input validation, distance conversion, geocoding, data fetching, API endpoints, and map creation. Tests use mocks and don't require a live database connection. See `tests/README.md` for details.
+- **Python linting (Ruff):** Run `python -m ruff check api services scripts tests` for lint checks. Use `python -m ruff check --fix api services scripts tests` for safe autofixes.
 - **Schema validation:** Run `python scripts/validate_schema.py` to verify database table structure, spatial indexes, and PostGIS extension.
 - **Configuration check:** Run `python scripts/check_config.py` to validate required environment variables are present.
 - **Manual smoke test:** start the API and React app (see Quickstart), open the app in the browser, query "Knoxville, TN", and confirm the map and summary table populate.

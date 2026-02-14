@@ -62,8 +62,8 @@ def get_pg_env():
     raw_port = os.environ['PGPORT']
     try:
         port = int(raw_port)
-    except (ValueError, TypeError):
-        raise ValueError(f"PGPORT must be an integer, got '{raw_port}'")
+    except (ValueError, TypeError) as err:
+        raise ValueError(f"PGPORT must be an integer, got '{raw_port}'") from err
 
     return {
         'host': os.environ['PGHOST'],
