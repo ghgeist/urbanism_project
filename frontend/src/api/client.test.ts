@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { geocode, health, nwiSummaryByQuery } from "./client";
 
 describe("client", () => {
-  const baseUrl = "http://localhost:8000";
+  const baseUrl = "http://127.0.0.1:8000";
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -78,12 +78,45 @@ describe("client", () => {
     expect(result.origin.label).toBe("Cambridge, MA");
   });
 
-  it("throws with API error message when res.ok is false", async () => {
+  it("throws with mapped user message when res.ok is false and code is known", async () => {
     const mockFetch = vi.fn().mockResolvedValue(
       mockRes({ code: "location_not_found", message: "Location not found." }, false)
     );
     vi.stubGlobal("fetch", mockFetch);
 
-    await expect(geocode("nowhere")).rejects.toThrow("Location not found.");
+    await expect(geocode("nowhere")).rejects.toThrow(
+      "Location not found. Try a city name or ZIP code."
+    );
+  });
+
+  it("throws with mapped message for http_404 (unhandled HTTPException)", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      mockRes({ code: "http_404", message: "Not Found" }, false)
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    await expect(geocode("x")).rejects.toThrow(
+      "Location not found. Try a city name or ZIP code."
+    );
+  });
+
+  it("throws with backend message for unknown code, generic for non-JSON", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      mockRes({ code: "unknown_code", message: "Backend detail." }, false)
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    await expect(geocode("x")).rejects.toThrow("Backend detail.");
+  });
+
+  it("throws generic message when error response is not JSON", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: () => Promise.resolve("Internal error"),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await expect(geocode("x")).rejects.toThrow("Request failed (500).");
   });
 });

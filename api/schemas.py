@@ -83,6 +83,17 @@ class NwiSummaryResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
+    """API error payload. Keep canonical codes in sync with frontend API_ERROR_MESSAGES.
+
+    Canonical codes used by this API:
+    - location_not_found: geocode or summary-by-query could not resolve the location.
+    - invalid_request: summary params invalid or business-rule failure.
+    - validation_error: request body/query validation failed (e.g. 422).
+
+    Unhandled HTTPExceptions are serialized with code="http_<status>" (e.g. http_404).
+    Frontend maps http_404 and http_422 to the same copy as location_not_found and validation_error.
+    """
+
     code: str
     message: str
     details: Any | None = None

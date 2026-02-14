@@ -1,7 +1,7 @@
 ---
 title: "Execute: React Explore Phase 1"
 date: "2026-02-14"
-status: "active"
+status: "completed"
 session_type: "execute"
 priority: "high"
 tags: ["react", "frontend", "explore", "vite", "leaflet"]
@@ -40,8 +40,8 @@ Build the first React UI that consumes the FastAPI walkability API: Explore page
 - 2026-02-14: `npm run build` succeeds; no linter errors.
 - 2026-02-14: Build fixes: SummaryCards test fixture given full `Components` type; `vite.config.ts` uses `defineConfig` from `vitest/config` so `test` is typed.
 - 2026-02-14: UI polish: single light theme in `index.css` (no dark/light clash); summary card value truncation fixed (line-height/padding); Upgrade Potential text color consistent; card equal heights (grid-auto-rows + flex); map panel border/radius/shadow to match cards.
-- 2026-02-14: Split view: left column (42%) form + cards + upgrade table, right column (58%) map or placeholder “Enter a location to view spatial context.”; sticky right panel; mobile breakpoint stacks Form → Cards → Map. MapView `fillHeight` prop for split layout.
-- 2026-02-14: Phase 1.1 shareable URL state: `frontend/src/lib/exploreParams.ts` (parse/validate/canonicalize q and radius); Explore syncs from URL, replaceState on edit (no fetch on slider/input), pushState on “Get summary”; popstate restores and fetches; validation message for invalid params.
+- 2026-02-14: Split view: left column (42%) form + cards + upgrade table, right column (58%) map or placeholder "Enter a location to view spatial context."; sticky right panel; mobile breakpoint stacks Form → Cards → Map. MapView `fillHeight` prop for split layout.
+- 2026-02-14: Phase 1.1 shareable URL state: `frontend/src/lib/exploreParams.ts` (parse/validate/canonicalize q and radius); Explore syncs from URL, replaceState on edit (no fetch on slider/input), pushState on "Get summary"; popstate restores and fetches; validation message for invalid params.
 - 2026-02-14: Review refactors: `canonicalRadius` exported from exploreParams and used in Explore (DRY); `frontend/src/lib/exploreParams.test.ts` added (12 tests); API client tests fixed (mock provides `res.text()`); `weJustSetParamsRef` commented. Self-review in `docs/dev_notes/review-2026-02-14-explore-phase1.md`.
 
 ## Files Created/Modified

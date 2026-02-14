@@ -1,0 +1,105 @@
+import React from "react";
+import type { NwiSummaryResponse } from "../types/api";
+import { formatMetricValue, METRICS_CONFIG } from "../config/metrics";
+
+interface CompareTableProps {
+  summaryA: NwiSummaryResponse | null;
+  summaryB: NwiSummaryResponse | null;
+}
+
+/** Neutral framing: no moral color coding (no red/green) per product plan. */
+function formatDiff(valA: number | null | undefined, valB: number | null | undefined): React.ReactNode {
+  if (valA == null || valB == null) return "—";
+  const diff = valB - valA;
+  if (Math.abs(diff) < 0.01) return <span className="diff-neutral">—</span>;
+
+  const arrow = diff > 0 ? "↑" : "↓";
+  return (
+    <span className="diff diff-change">
+      {arrow} {Math.abs(diff).toFixed(2)}
+    </span>
+  );
+}
+
+export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
+  if (!summaryA || !summaryB) {
+    return null;
+  }
+
+  // Helper to extract upgrade potential text
+  const getUpgradeText = (s: NwiSummaryResponse) => {
+    const { upgrade_potential } = s;
+    if (upgrade_potential?.found && upgrade_potential.candidates?.length) {
+        const best = upgrade_potential.candidates[0];
+        if (best.delta_nwi != null) {
+            const d = best.delta_nwi;
+            return `${d > 0 ? '+' : ''}${d.toFixed(1)} available`;
+        }
+        return "Found";
+    }
+    return "None";
+  };
+
+  const rows = METRICS_CONFIG.map((config) => ({
+    label: config.label,
+    desc: config.description,
+    tooltip: config.tooltip,
+    valA: summaryA.metrics[config.key],
+    valB: summaryB.metrics[config.key],
+    isNumeric: true,
+  }));
+
+  const upgradeA = getUpgradeText(summaryA);
+  const upgradeB = getUpgradeText(summaryB);
+  const upgradeDiff = upgradeA === upgradeB ? "Same" : "—";
+
+  return (
+    <div className="compare-table-container">
+      <table className="compare-table">
+        <thead>
+          <tr>
+            <th className="col-metric">Metric</th>
+            <th className="col-val-a">{summaryA.origin.label || "Location A"}</th>
+            <th className="col-val-b">{summaryB.origin.label || "Location B"}</th>
+            <th className="col-diff">Difference</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label}>
+              <td className="cell-metric">
+                <div className="metric-label">
+                  {row.label}
+                  {row.tooltip && (
+                    <span className="metric-help" aria-label={row.tooltip}>
+                      ?
+                      <span className="tooltip-content">{row.tooltip}</span>
+                    </span>
+                  )}
+                </div>
+                <div className="metric-desc">{row.desc}</div>
+              </td>
+              <td className="cell-val-a">{formatMetricValue(row.valA)}</td>
+              <td className="cell-val-b">{formatMetricValue(row.valB)}</td>
+              <td className="cell-diff">{formatDiff(row.valA, row.valB)}</td>
+            </tr>
+          ))}
+          {/* Upgrade Potential is special because it's not a direct numeric comparison in the same way */}
+          <tr className="row-upgrade">
+            <td className="cell-metric">
+                <div className="metric-label">Upgrade Potential</div>
+                <div className="metric-desc">Best nearby improvement</div>
+            </td>
+            <td className="cell-val-a">{upgradeA}</td>
+            <td className="cell-val-b">{upgradeB}</td>
+            <td className="cell-diff">
+              <span className={upgradeDiff === "Same" ? "diff-neutral" : ""}>
+                {upgradeDiff}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}

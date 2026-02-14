@@ -10,13 +10,13 @@ React + TypeScript + Vite app for the walkability Explore (and future Compare) e
 ./scripts/run_dev.sh
 ```
 
-Or with bash: `bash scripts/run_dev.sh`. Backend runs on port 8000, frontend on 5173. Ctrl+C stops both.
+Or with bash: `bash scripts/run_dev.sh`. Backend runs on port 8000, frontend on port 5000 (see `vite.config.ts`). Ctrl+C stops both.
 
 **Manual (two terminals):**
 
 1. Start the API from repo root: `uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload` (requires PG* env and PostGIS).
 2. From `frontend/`: `npm install` then `npm run dev`.
-3. Open http://localhost:5173. Default API base is `http://127.0.0.1:8000`; override with `VITE_API_URL` (see `.env.example`).
+3. Open the dev server URL (see terminal; e.g. http://localhost:5000). When `VITE_API_URL` is unset, the app uses the same origin so Vite proxies `/health`, `/geocode`, and `/nwi` to the backend—no CORS. Override with `VITE_API_URL` if needed (see `.env.example`).
 
 ### Running from SSH / external terminal (e.g. Cursor)
 

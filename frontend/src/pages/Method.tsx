@@ -16,8 +16,16 @@ export function Method() {
         <h2>Data source</h2>
         <p>
           All scores come from the <strong>EPA National Walkability Index (NWI)</strong>.
-          The NWI assigns every U.S. census block group a value from 1 to 20 based on
-          four components: land-use mix, employment mix, street connectivity, and transit access.
+          The NWI assigns every U.S. census block group a value from 1 to 20 (higher = more walkable)
+          based on four components: land-use mix, employment mix, street connectivity, and transit access.
+          More information:{" "}
+          <a
+            href="https://www.epa.gov/smartgrowth/national-walkability-index-user-guide-and-methodology"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            EPA National Walkability Index — User Guide and Methodology
+          </a>
         </p>
       </section>
 
