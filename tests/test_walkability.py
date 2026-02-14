@@ -3,16 +3,17 @@ Lightweight smoke tests for core walkability service functions.
 These tests use mocks to avoid requiring a live database connection.
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import geopandas as gpd
-import pandas as pd
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 from services.walkability import (
     miles_to_degrees,
     calculate_zoom_level,
     get_location,
     get_walkability_data,
+    query_walkability_by_coords,
     create_map,
+    CHOROPLETH_COLORMAP,
     validate_location_input,
     validate_buffer_size
 )
@@ -142,6 +143,21 @@ class TestGeocoding:
         result = get_location("Nonexistent City, XX")
         assert result is None
 
+    @patch('services.walkability.Nominatim')
+    def test_get_location_fallback_us_spelling(self, mock_nominatim_class):
+        """When as-is fails, retry with US street spelling (e.g. harbour→harbor) returns coords."""
+        mock_location = Mock()
+        mock_location.longitude = -89.0
+        mock_location.latitude = 40.0
+        mock_geolocator = Mock()
+        # First call (raw with "harbour") returns None; second (normalized "harbor") succeeds.
+        mock_geolocator.geocode.side_effect = [None, mock_location]
+        mock_nominatim_class.return_value = mock_geolocator
+
+        result = get_location("1 Example Harbour Way, Springfield, IL")
+        assert result == (-89.0, 40.0)
+        assert mock_geolocator.geocode.call_count == 2
+
 
 class TestWalkabilityData:
     """Test data fetching with mocked database."""
@@ -173,12 +189,12 @@ class TestWalkabilityData:
                 # Mock query result
                 mock_cursor.description = [
                     ('geoid20',), ('d2a_ranked',), ('d2b_ranked',), 
-                    ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',)
+                    ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
                 ]
                 from shapely import wkb
                 mock_point = Point(-83.9207, 35.9606).buffer(0.01)
                 mock_cursor.fetchall.return_value = [
-                    ('123456789012', 10, 12, 8, 15, 11.25, wkb.dumps(mock_point))
+                    ('123456789012', 10, 12, 8, 15, 11.25, wkb.dumps(mock_point), 0.0)
                 ]
                 
                 mock_db.return_value = mock_conn
@@ -207,7 +223,7 @@ class TestWalkabilityData:
                 # Mock query result with memoryview objects (as psycopg2 returns)
                 mock_cursor.description = [
                     ('geoid20',), ('d2a_ranked',), ('d2b_ranked',), 
-                    ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',)
+                    ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
                 ]
                 from shapely import wkb
                 mock_point = Point(-83.9207, 35.9606).buffer(0.01)
@@ -217,7 +233,7 @@ class TestWalkabilityData:
                 # (psycopg2 returns memoryview for binary data)
                 memoryview_obj = memoryview(wkb_bytes)
                 mock_cursor.fetchall.return_value = [
-                    ('123456789012', 10, 12, 8, 15, 11.25, memoryview_obj)
+                    ('123456789012', 10, 12, 8, 15, 11.25, memoryview_obj, 0.0)
                 ]
                 
                 mock_db.return_value = mock_conn
@@ -232,6 +248,34 @@ class TestWalkabilityData:
                 # Verify geometry was correctly converted
                 assert len(result) == 1
                 assert result.geometry.iloc[0] is not None
+
+    def test_query_walkability_by_coords_includes_dist_miles(self):
+        """Verify coordinate query returns GeoDataFrame with dist_miles column."""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+        mock_cursor.__exit__ = Mock(return_value=None)
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.description = [
+            ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
+            ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
+        ]
+        from shapely import wkb
+        mock_poly = Point(-83.9207, 35.9606).buffer(0.01)
+        mock_cursor.fetchall.return_value = [
+            ('123456789012', 10, 12, 8, 15, 11.25, wkb.dumps(mock_poly), 0.25)
+        ]
+
+        result = query_walkability_by_coords(-83.9207, 35.9606, 2.0, conn=mock_conn)
+
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert 'dist_miles' in result.columns
+        assert result['dist_miles'].iloc[0] == 0.25
+        executed_sql = mock_cursor.execute.call_args.args[0]
+        executed_params = mock_cursor.execute.call_args.args[1]
+        assert "geometry && ST_Expand" in executed_sql
+        assert len(executed_params) == 8
 
 
 class TestMapCreation:
@@ -267,3 +311,25 @@ class TestMapCreation:
         
         m = create_map(None, gdf, buffer_size=1.0)
         assert m is None
+
+    def test_choropleth_colormap_constant(self):
+        assert CHOROPLETH_COLORMAP == "Blues"
+
+    def test_create_map_uses_colormap_constant(self):
+        location = (-83.9207, 35.9606)
+        gdf = gpd.GeoDataFrame({
+            'geoid20': ['123456789012'],
+            'natwalkind': [11.25],
+            'd4a_ranked': [14],
+            'd2a_ranked': [11],
+            'd3b_ranked': [9],
+            'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
+        }, crs='EPSG:4326')
+
+        with patch('services.walkability.folium.Choropleth') as mock_choropleth:
+            mock_layer = Mock()
+            mock_layer.add_to.return_value = mock_layer
+            mock_choropleth.return_value = mock_layer
+            create_map(location, gdf, buffer_size=1.0)
+
+            assert mock_choropleth.call_args.kwargs['fill_color'] == CHOROPLETH_COLORMAP

@@ -4,10 +4,9 @@ These tests ensure that closed connections are detected and handled gracefully,
 preventing the "connection already closed" error in production.
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import psycopg2
 import geopandas as gpd
-import pandas as pd
 from shapely.geometry import Point
 from shapely import wkb
 
@@ -15,12 +14,10 @@ from shapely import wkb
 from components.map_display import (
     _is_connection_closed,
     get_cached_db_connection,
-    cached_get_walkability_data
+    cached_get_walkability_data,
+    cached_get_profile,
 )
 from services.walkability import get_walkability_data
-
-# Import the actual function implementations (not the cached wrappers)
-import components.map_display as map_display_module
 
 
 class TestConnectionClosedDetection:
@@ -93,6 +90,7 @@ class TestCachedWalkabilityDataWithClosedConnection:
         """Clear caches before each test."""
         get_cached_db_connection.clear()
         cached_get_walkability_data.clear()
+        cached_get_profile.clear()
     
     def test_closed_connection_clears_cache_and_retries(self):
         """Test that closed connection triggers cache clear and retry."""
@@ -119,93 +117,163 @@ class TestCachedWalkabilityDataWithClosedConnection:
                 # Should have called get_walkability_data with the open connection
                 mock_get_data.assert_called_once_with("Knoxville, TN", 1.0, open_conn)
                 assert isinstance(result, gpd.GeoDataFrame)
-    
+
     def test_interface_error_triggers_retry(self):
         """Test that InterfaceError triggers cache clear and retry."""
-        # First connection causes InterfaceError
         bad_conn = Mock()
         bad_conn.closed = False
-        
-        # Second connection (after cache clear) works
         good_conn = Mock()
         good_conn.closed = False
-        
+
         mock_gdf = gpd.GeoDataFrame({
             'geoid20': ['123456789012'],
             'natwalkind': [11.25],
             'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
         }, crs='EPSG:4326')
-        
+
         with patch('components.map_display.get_cached_db_connection', side_effect=[bad_conn, good_conn]):
             with patch('components.map_display.get_walkability_data', side_effect=[
                 psycopg2.InterfaceError("connection already closed"),
                 mock_gdf
             ]) as mock_get_data:
                 result = cached_get_walkability_data("Knoxville, TN", 1.0)
-                
-                # Should have retried after clearing cache
                 assert mock_get_data.call_count == 2
                 assert isinstance(result, gpd.GeoDataFrame)
-    
+
     def test_operational_error_triggers_retry(self):
         """Test that OperationalError triggers cache clear and retry."""
         bad_conn = Mock()
         bad_conn.closed = False
         good_conn = Mock()
         good_conn.closed = False
-        
+
         mock_gdf = gpd.GeoDataFrame({
             'geoid20': ['123456789012'],
             'natwalkind': [11.25],
             'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
         }, crs='EPSG:4326')
-        
+
         with patch('components.map_display.get_cached_db_connection', side_effect=[bad_conn, good_conn]):
             with patch('components.map_display.get_walkability_data', side_effect=[
                 psycopg2.OperationalError("server closed the connection"),
                 mock_gdf
             ]) as mock_get_data:
                 result = cached_get_walkability_data("Knoxville, TN", 1.0)
-                
                 assert mock_get_data.call_count == 2
                 assert isinstance(result, gpd.GeoDataFrame)
-    
+
     def test_retry_failure_raises_original_error(self):
         """Test that if retry also fails, original error is raised."""
         bad_conn = Mock()
         bad_conn.closed = False
         also_bad_conn = Mock()
         also_bad_conn.closed = False
-        
+
         original_error = psycopg2.InterfaceError("connection already closed")
         retry_error = psycopg2.OperationalError("connection failed")
-        
+
         with patch('components.map_display.get_cached_db_connection', side_effect=[bad_conn, also_bad_conn]):
             with patch('components.map_display.get_walkability_data', side_effect=[original_error, retry_error]):
-                # Should raise the original error, not the retry error
                 with pytest.raises(psycopg2.InterfaceError) as exc_info:
                     cached_get_walkability_data("Knoxville, TN", 1.0)
-                
                 assert str(exc_info.value) == "connection already closed"
-    
+
     def test_successful_query_with_open_connection(self):
         """Test normal successful flow with open connection."""
         open_conn = Mock()
         open_conn.closed = False
-        
+
         mock_gdf = gpd.GeoDataFrame({
             'geoid20': ['123456789012'],
             'natwalkind': [11.25],
             'geometry': [Point(-83.9207, 35.9606).buffer(0.01)]
         }, crs='EPSG:4326')
-        
+
         with patch('components.map_display.get_cached_db_connection', return_value=open_conn):
             with patch('components.map_display.get_walkability_data', return_value=mock_gdf) as mock_get_data:
                 result = cached_get_walkability_data("Knoxville, TN", 1.0)
-                
-                # Should only call once (no retry needed)
                 mock_get_data.assert_called_once_with("Knoxville, TN", 1.0, open_conn)
                 assert isinstance(result, gpd.GeoDataFrame)
+
+
+class TestCachedGetProfile:
+    """Test profile cache layer (single query + split + compute)."""
+
+    def setup_method(self):
+        get_cached_db_connection.clear()
+        cached_get_walkability_data.clear()
+        cached_get_profile.clear()
+
+    def test_cached_get_profile_none_on_geocode_failure(self):
+        with patch('components.map_display.cached_get_location', return_value=None):
+            result = cached_get_profile("Nowhere, ZZ", 1.0, 3.0, 2.0)
+            assert result is None
+
+    def test_cached_get_profile_invalid_radius_relation_raises(self):
+        with pytest.raises(ValueError, match="Search radius must be greater than buffer radius"):
+            cached_get_profile("Knoxville, TN", 2.0, 2.0, 2.0)
+
+    def test_cached_get_profile_single_query_and_split(self):
+        open_conn = Mock()
+        open_conn.closed = False
+        full_gdf = gpd.GeoDataFrame({
+            'geoid20': ['A', 'B', 'C'],
+            'natwalkind': [11.0, 14.0, 18.0],
+            'd4a_ranked': [10.0, 14.0, 18.0],
+            'dist_miles': [0.4, 1.0, 2.5],
+            'geometry': [
+                Point(-83.92, 35.96).buffer(0.01),
+                Point(-83.93, 35.97).buffer(0.01),
+                Point(-83.94, 35.98).buffer(0.01),
+            ],
+        }, crs='EPSG:4326')
+
+        computed_profile = {
+            "everyday_convenience": 12.5,
+            "transit_viability": 12.0,
+            "variation": 2.12,
+            "upgrade_potential": {"found": True, "candidates": []},
+            "walkable_island": {"is_island": False, "label": None},
+        }
+
+        with patch('components.map_display.cached_get_location', return_value=(-83.92, 35.96)):
+            with patch('components.map_display.get_cached_db_connection', return_value=open_conn):
+                with patch('components.map_display.query_walkability_by_coords', return_value=full_gdf) as mock_query:
+                    with patch('components.map_display.compute_full_profile', return_value=computed_profile) as mock_profile:
+                        result = cached_get_profile("Knoxville, TN", 1.0, 3.0, 2.0)
+
+                        mock_query.assert_called_once_with(-83.92, 35.96, 3.0, open_conn)
+                        selected_arg = mock_profile.call_args.kwargs["selected_gdf"]
+                        context_arg = mock_profile.call_args.kwargs["context_gdf"]
+                        assert len(selected_arg) == 2
+                        assert len(context_arg) == 3
+                        assert result["location"] == (-83.92, 35.96)
+                        assert len(result["selected_gdf"]) == 2
+
+    def test_cached_get_profile_retries_on_interface_error(self):
+        bad_conn = Mock()
+        bad_conn.closed = False
+        good_conn = Mock()
+        good_conn.closed = False
+
+        full_gdf = gpd.GeoDataFrame({
+            'geoid20': ['A'],
+            'natwalkind': [11.0],
+            'd4a_ranked': [10.0],
+            'dist_miles': [0.4],
+            'geometry': [Point(-83.92, 35.96).buffer(0.01)],
+        }, crs='EPSG:4326')
+
+        with patch('components.map_display.cached_get_location', return_value=(-83.92, 35.96)):
+            with patch('components.map_display.get_cached_db_connection', side_effect=[bad_conn, good_conn]):
+                with patch('components.map_display.query_walkability_by_coords', side_effect=[
+                    psycopg2.InterfaceError("connection closed"),
+                    full_gdf,
+                ]) as mock_query:
+                    with patch('components.map_display.compute_full_profile', return_value={}):
+                        result = cached_get_profile("Knoxville, TN", 0.5, 2.0, 2.0)
+                        assert mock_query.call_count == 2
+                        assert result["location"] == (-83.92, 35.96)
 
 
 class TestWalkabilityDataConnectionCheck:
@@ -235,11 +303,11 @@ class TestWalkabilityDataConnectionCheck:
         
         mock_cursor.description = [
             ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
-            ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',)
+            ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
         ]
         mock_point = Point(-83.9207, 35.9606).buffer(0.01)
         mock_cursor.fetchall.return_value = [
-            ('123456789012', 10, 12, 8, 15, 11.25, wkb.dumps(mock_point))
+            ('123456789012', 10, 12, 8, 15, 11.25, wkb.dumps(mock_point), 0.0)
         ]
         
         result = get_walkability_data("Knoxville, TN", 1.0, conn=open_conn)

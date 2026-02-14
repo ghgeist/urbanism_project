@@ -207,3 +207,53 @@ After Phase 4 (full integration):
 - React frontend — only after FastAPI is stable
 - Comparison mode (side-by-side) — Phase 2 of the product plan
 - `docs/dev_notes/lessons.md` creation — will be created with the first bug fix during implementation
+
+---
+
+## Execution Update (2026-02-14)
+
+Status: Completed
+
+Implemented:
+- Phase 1: Added pure metrics service in `services/metrics.py` and full unit coverage in `tests/test_metrics.py`.
+- Phase 2: Added `query_walkability_by_coords()` with geography distance and `dist_miles`; `get_walkability_data()` now delegates to this query.
+- Post-PR hardening: added geometry index prefilter (`geometry && ST_Expand(...)`) ahead of geography `ST_DWithin` in `query_walkability_by_coords()` to avoid cast-only scan risk.
+- Phase 3: Added `cached_get_profile()` and profile composition in `components/map_display.py`.
+- Phase 4: Added sidebar controls (`search_radius_miles`, `min_delta`) and profile-first UI flow (summary cards, island banner, nearby-better list, collapsed raw table).
+- Phase 5: Updated map rendering to `CHOROPLETH_COLORMAP = "Blues"` and GeoJSON tooltips with explicit proxy/directionality labels.
+- Phase 6: Added edge-case handling in metrics/profile flow (empty data, NaN values, invalid radius relationship) with tests.
+
+Verification:
+- `.\.venv\Scripts\python.exe -m pytest -v` passed.
+- `.\.venv\Scripts\python.exe -m pytest --cov=services --cov-report=term` passed after installing `pytest-cov` (`TOTAL 88%`, `services/metrics.py 89%`, `services/walkability.py 85%`, `services/db.py 100%`).
+
+Related files:
+- `services/metrics.py`
+- `services/walkability.py`
+- `components/map_display.py`
+- `components/sidebar.py`
+- `app.py`
+- `tests/test_metrics.py`
+- `tests/test_walkability.py`
+- `tests/test_connection_caching.py`
+- `tests/test_map_display_ui.py`
+- `docs/dev_notes/lessons.md`
+
+---
+
+## UI Strengthening (2026-02-14)
+
+Addressed “Where It Can Be Strengthened” feedback:
+
+1. **Upgrade potential truncation** — Card now shows human-readable text:
+   - Single candidate: `+4.6 within 0.4 mi`
+   - Multiple candidates: `Best nearby: +4.6 at 0.4 mi`
+   - One decimal for delta and distance; no truncation.
+
+2. **Variation context** — Subtitle under the metric: “Dispersion (std dev)”. Tooltip: “Standard deviation of NWI within selected radius. Measures dispersion only.” (no interpretive adjectives).
+
+3. **Transit Viability** — Subtitle: “Transit proximity rank (avg, 1–20)”. Tooltip states scale and direction: “Average transit proximity rank (1–20 scale). Higher = closer to transit. EPA proxy d4a_ranked.”
+
+4. **Compare another location** — Ghosted button “Compare another location →” added in the metric row (fifth column); placeholder `pass` for now to signal product direction.
+
+5. **Micro-refinements** — Thin divider under the cards; map height capped at 420px via `branca.element.Figure` so metrics dominate; tooltip discipline applied as above.

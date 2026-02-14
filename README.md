@@ -97,6 +97,7 @@ The script:
 After successful setup, you can safely delete the CSV file and any `WALKABILITY_CSV_URL` environment variables. The application will continue to work using only the PostgreSQL database.
 
 ### 5. Run the app locally
+From the project root (the directory containing `app.py`):
 ```bash
 streamlit run app.py
 ```
