@@ -69,17 +69,4 @@ describe("SummaryCards", () => {
     render(<SummaryCards summary={summary} />);
     expect(screen.getByText("+2.5")).toBeInTheDocument();
   });
-
-  it("shows neutral deltas vs baseline when diffFrom and diffLabel are set", () => {
-    const baseline = minimalSummary({
-      metrics: { everyday_convenience: 12, transit_viability: 10, variation: 2 },
-    });
-    const summary = minimalSummary({
-      metrics: { everyday_convenience: 12.5, transit_viability: 9, variation: 2 },
-    });
-    render(<SummaryCards summary={summary} diffFrom={baseline} diffLabel="A" />);
-    expect(screen.getByText("+0.50 vs A")).toBeInTheDocument();
-    expect(screen.getByText("-1.00 vs A")).toBeInTheDocument();
-    expect(screen.getByText("same as A")).toBeInTheDocument();
-  });
 });

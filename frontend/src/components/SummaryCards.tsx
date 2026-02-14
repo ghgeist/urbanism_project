@@ -1,7 +1,6 @@
 /**
  * Four summary cards: Everyday Convenience, Transit Viability, Variation, Upgrade Potential.
  * Neutral descriptors only; no moral color coding per product plan.
- * Optional diffFrom: when set (e.g. Compare page B panel), show neutral delta vs baseline.
  */
 
 import type { NwiSummaryResponse } from "../types/api";
@@ -12,29 +11,11 @@ function formatMetric(value: number | null | undefined): string {
   return value.toFixed(2);
 }
 
-/** Format neutral delta for Compare view: "+0.5 vs A" or "0.3 lower than A". */
-function formatDelta(
-  value: number | null | undefined,
-  baseline: number | null | undefined,
-  label = "first"
-): string | null {
-  if (value == null || baseline == null || !Number.isFinite(value) || !Number.isFinite(baseline))
-    return null;
-  const delta = value - baseline;
-  if (Math.abs(delta) < 0.01) return `same as ${label}`;
-  if (delta > 0) return `+${delta.toFixed(2)} vs ${label}`;
-  return `${delta.toFixed(2)} vs ${label}`;
-}
-
 interface SummaryCardsProps {
   summary: NwiSummaryResponse;
-  /** When set, show neutral metric deltas vs this baseline (e.g. "B vs A"). */
-  diffFrom?: NwiSummaryResponse | null;
-  /** Label for diff text, e.g. "A" so hint reads "vs A". */
-  diffLabel?: string;
 }
 
-export function SummaryCards({ summary, diffFrom = null, diffLabel = "first" }: SummaryCardsProps) {
+export function SummaryCards({ summary }: SummaryCardsProps) {
   const { metrics, upgrade_potential } = summary;
 
   let upgradeVal: string;
@@ -60,16 +41,11 @@ export function SummaryCards({ summary, diffFrom = null, diffLabel = "first" }: 
     <section className="summary-cards" aria-label="Profile summary">
       {METRICS_CONFIG.map((config) => {
         const val = metrics?.[config.key] ?? null;
-        const baseVal = diffFrom?.metrics?.[config.key] ?? null;
-        const delta = formatDelta(val, baseVal, diffLabel);
-        
         return (
           <div key={config.key} className="summary-card" title={config.tooltip}>
             <div className="summary-card__value">{formatMetric(val)}</div>
             <div className="summary-card__label">{config.label}</div>
-            <div className="summary-card__hint">
-              {delta ?? config.description}
-            </div>
+            <div className="summary-card__hint">{config.description}</div>
           </div>
         );
       })}
