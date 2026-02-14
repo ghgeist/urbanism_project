@@ -34,11 +34,24 @@
 }
 
 .app-nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
   font-size: 1.1rem;
   color: #111;
   text-decoration: none;
   margin-right: 0.5rem;
+}
+
+.app-nav__brand-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: #1e40af;
+}
+
+.app-nav__brand:hover .app-nav__brand-icon {
+  color: #2563eb;
 }
 
 .app-nav__brand:hover {
