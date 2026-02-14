@@ -34,20 +34,29 @@ export function Explore() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paramValidationMessage, setParamValidationMessage] = useState<string | null>(null);
-  /** When true, we just called setSearchParams; skip fetch in the effect to avoid double-fetch. */
+  /** When true, we just called setSearchParams; skip state sync and fetch in the effect. */
   const weJustSetParamsRef = useRef(false);
+  /** Tracks current search version to cancel stale async operations. */
+  const searchVersionRef = useRef(0);
 
   /** Sync state from URL and optionally fetch (initial load or popstate). */
   useEffect(() => {
     const { params, validationError } = parseExploreParams(searchParams);
-    setQuery(params.q);
-    setRadius(params.radius);
-    setParamValidationMessage(validationError);
 
+    // If we just set params programmatically, don't overwrite local state or re-fetch.
     if (weJustSetParamsRef.current) {
       weJustSetParamsRef.current = false;
       return;
     }
+
+    // External URL change (initial load, browser back/forward): sync state from URL.
+    setQuery(params.q);
+    setRadius(params.radius);
+    setParamValidationMessage(validationError);
+
+    // Invalidate any in-flight handleSearch to prevent stale pushState.
+    searchVersionRef.current += 1;
+
     if (validationError || !canFetch(params)) return;
 
     let cancelled = false;
@@ -112,16 +121,25 @@ export function Explore() {
     setParamValidationMessage(null);
     setError(null);
     setLoading(true);
+
+    // Capture version to detect if user navigated away during the async operation.
+    const version = ++searchVersionRef.current;
+
     try {
       const data = await nwiSummaryByQuery(params.q, params.radius);
+      // If user navigated (back/forward) during fetch, version will have changed; abort.
+      if (searchVersionRef.current !== version) return;
       setSummary(data);
       weJustSetParamsRef.current = true;
       setSearchParams(buildExploreSearchParams(params), { replace: false });
     } catch (err) {
+      if (searchVersionRef.current !== version) return;
       setError(err instanceof Error ? err.message : "Request failed");
       setSummary(null);
     } finally {
-      setLoading(false);
+      if (searchVersionRef.current === version) {
+        setLoading(false);
+      }
     }
   }
 
