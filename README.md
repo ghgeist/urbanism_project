@@ -71,7 +71,9 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure database connection
-Set the following environment variables (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`). All core services and scripts rely on these env vars exclusively — no Streamlit-specific configuration is required.
+Set either **all** of `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` **or** a single `DATABASE_URL` (e.g. `postgresql://user:password@host:port/database`). All core services read these env vars exclusively.
+
+**Running locally with the DB on Replit or another host:** Copy credentials from Replit Secrets (or your cloud Postgres) into a local `.env` and load them before running commands. See [docs/running-locally-with-remote-db.md](docs/running-locally-with-remote-db.md) and the root [.env.example](.env.example). Note: Replit’s built-in Postgres is often only reachable from inside Replit; use a cloud Postgres (Neon, Supabase, etc.) if you need both local and Replit to share the same DB.
 
 ### 4. Load the walkability table (one-time setup only)
 > **Important:** The CSV file is only needed for initial database setup. Once the database is populated, you can remove the CSV file. The running application queries PostgreSQL directly and does not use the CSV file.
