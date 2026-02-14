@@ -1,16 +1,21 @@
 # Exploring the U.S. National Walkability Index
 
 ## Overview
-This is a Streamlit application that visualizes the EPA's National Walkability Index (NWI) on an interactive map. Users can search for any U.S. address, ZIP code, or city and explore walkability scores for nearby census block groups.
+This application visualizes the EPA's National Walkability Index (NWI) on an interactive map. Users can search for any U.S. address, ZIP code, or city and explore walkability scores for nearby census block groups.
 
 ## Project Structure
 ```
-├── app.py                     # Main Streamlit application entry point
-├── components/
-│   ├── sidebar.py             # Sidebar with search inputs and info
-│   └── map_display.py         # Map rendering and data display
+├── app.py                     # Legacy Streamlit application (kept for reference)
+├── api/
+│   ├── main.py                # FastAPI backend entry point
+│   └── schemas.py             # Pydantic response models
+├── frontend/                  # React + TypeScript + Vite frontend
+│   ├── src/                   # React source code
+│   ├── vite.config.ts         # Vite config (port 5000, proxy to API)
+│   └── package.json           # Node.js dependencies
 ├── services/
-│   └── walkability.py         # Geocoding, database queries, map creation
+│   ├── walkability.py         # Geocoding, database queries
+│   └── profile_summary.py    # NWI summary computation
 ├── scripts/
 │   └── create_neo_postgres_db.py  # Database setup script
 ├── notebooks/                 # Jupyter notebooks for data processing
@@ -18,17 +23,18 @@ This is a Streamlit application that visualizes the EPA's National Walkability I
 ```
 
 ## Tech Stack
-- **Frontend**: Streamlit, streamlit-folium, Folium
-- **Backend**: Python 3.11
+- **Frontend**: React 19, TypeScript, Vite, Leaflet, React Router
+- **Backend**: FastAPI (Python 3.11), uvicorn
 - **Database**: PostgreSQL with PostGIS extension
 - **Geospatial**: GeoPandas, Shapely, pyproj
 - **Geocoding**: Geopy (Nominatim)
 
 ## Running the App
-The app runs via Streamlit on port 5000:
-```
-streamlit run app.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true
-```
+Two workflows run in parallel:
+- **React Frontend** (port 5000, webview): `cd frontend && npm install && npm run dev`
+- **FastAPI Backend** (port 8000, console): `uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload`
+
+The Vite dev server proxies API requests (`/health`, `/geocode`, `/nwi`) to the backend on port 8000.
 
 ## Database Requirements
 The app requires a PostgreSQL database with PostGIS extension and a `national_walkability_index` table containing walkability data. The table structure:

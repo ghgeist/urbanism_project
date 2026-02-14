@@ -1,9 +1,11 @@
 """
 Framework-agnostic database connection factory.
 
-Reads PostgreSQL credentials from environment variables (PGHOST, PGPORT,
-PGDATABASE, PGUSER, PGPASSWORD). No Streamlit, Flask, or other framework
-imports.
+Reads PostgreSQL credentials from either:
+- DATABASE_URL (single connection string), or
+- PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD.
+
+No Streamlit, Flask, or other framework imports.
 """
 import os
 import psycopg2
@@ -11,11 +13,19 @@ import psycopg2
 REQUIRED_PG_VARS = ['PGDATABASE', 'PGHOST', 'PGPASSWORD', 'PGPORT', 'PGUSER']
 
 
+def _has_database_url():
+    """True if DATABASE_URL is set and non-empty."""
+    return bool(os.environ.get('DATABASE_URL', '').strip())
+
+
 def validate_pg_env():
     """Return a sorted list of missing PG* environment variable names.
 
-    Returns an empty list when all required vars are present.
+    Returns an empty list when all required vars are present, or when
+    DATABASE_URL is set (in which case PG* are not required).
     """
+    if _has_database_url():
+        return []
     return sorted(v for v in REQUIRED_PG_VARS if not os.environ.get(v))
 
 
@@ -54,6 +64,9 @@ def get_pg_env():
 def get_db_connection():
     """Create a PostgreSQL connection using environment variables.
 
+    Uses DATABASE_URL if set; otherwise requires PGHOST, PGPORT, PGDATABASE,
+    PGUSER, PGPASSWORD.
+
     Returns:
         psycopg2 connection object.
 
@@ -62,6 +75,8 @@ def get_db_connection():
         ValueError: if PGPORT is not a valid integer.
         psycopg2.OperationalError: if the connection attempt fails.
     """
+    if _has_database_url():
+        return psycopg2.connect(os.environ['DATABASE_URL'].strip())
     env = get_pg_env()
     return psycopg2.connect(
         host=env['host'],

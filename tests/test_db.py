@@ -20,6 +20,15 @@ class TestValidatePgEnv:
             monkeypatch.setenv(k, v)
         assert validate_pg_env() == []
 
+    def test_database_url_satisfies_validation(self, monkeypatch):
+        monkeypatch.delenv('PGHOST', raising=False)
+        monkeypatch.delenv('PGPORT', raising=False)
+        monkeypatch.delenv('PGDATABASE', raising=False)
+        monkeypatch.delenv('PGUSER', raising=False)
+        monkeypatch.delenv('PGPASSWORD', raising=False)
+        monkeypatch.setenv('DATABASE_URL', 'postgresql://u:p@localhost:5432/db')
+        assert validate_pg_env() == []
+
     def test_missing_returns_sorted(self, monkeypatch):
         monkeypatch.setenv('PGDATABASE', 'db')
         monkeypatch.setenv('PGPASSWORD', 'pw')
@@ -77,8 +86,20 @@ class TestGetDbConnection:
         monkeypatch.delenv('PGDATABASE', raising=False)
         monkeypatch.delenv('PGUSER', raising=False)
         monkeypatch.delenv('PGPASSWORD', raising=False)
+        monkeypatch.delenv('DATABASE_URL', raising=False)
         with pytest.raises(EnvironmentError, match="Missing required"):
             get_db_connection()
+
+    @patch('services.db.psycopg2.connect')
+    def test_uses_database_url_when_set(self, mock_connect, monkeypatch):
+        monkeypatch.delenv('PGHOST', raising=False)
+        monkeypatch.delenv('PGPORT', raising=False)
+        monkeypatch.delenv('PGDATABASE', raising=False)
+        monkeypatch.delenv('PGUSER', raising=False)
+        monkeypatch.delenv('PGPASSWORD', raising=False)
+        monkeypatch.setenv('DATABASE_URL', 'postgresql://user:pass@replit.db:5432/mydb')
+        get_db_connection()
+        mock_connect.assert_called_once_with('postgresql://user:pass@replit.db:5432/mydb')
 
 
 class TestIsConnectionClosed:
