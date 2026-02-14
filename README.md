@@ -1,65 +1,75 @@
 <p align="center">
-  <img src="assets\header_image.jpg" alt="Exploring the National Walkability Index hero image">
+  <img src="assets/header_image.jpg" alt="Exploring the National Walkability Index hero image">
 </p>
 
 # Exploring the National Walkability Index
-Understand how walkable any U.S. neighborhood is by querying the EPA’s National Walkability Index and visualizing the results on an interactive Streamlit map.
 
-[![Streamlit App](https://img.shields.io/badge/Streamlit-Live%20Demo-ff4b4b?logo=streamlit&logoColor=white)](https://citybot.streamlit.app/)
+A **portfolio project**: a geospatial web app that makes the EPA’s National Walkability Index (NWI) easy to explore. Search any U.S. location, set a buffer, and view walkability at the census block group level on an interactive map—backed by PostGIS and a REST API for reuse in other tools.
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Walkability%20Index-009688?style=flat-square)](https://walkability-index.replit.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/license/mit/)
 
 ## Table of Contents
 1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [Tech Stack](#tech-stack)
-4. [Quickstart](#quickstart)
-5. [Usage](#usage)
-6. [API (FastAPI)](#api-fastapi)
-7. [Deployment](#deployment)
-8. [Data Pipeline](#data-pipeline)
-9. [Testing & Validation](#testing--validation)
-10. [Roadmap](#roadmap)
-11. [License](#license)
+2. [Project Highlights](#project-highlights)
+3. [Architecture](#architecture)
+4. [Tech Stack](#tech-stack)
+5. [Quickstart](#quickstart)
+6. [Usage](#usage)
+7. [API (FastAPI)](#api-fastapi)
+8. [Deployment](#deployment)
+9. [Data Pipeline](#data-pipeline)
+10. [Testing & Validation](#testing--validation)
+11. [Roadmap](#roadmap)
+12. [License](#license)
 
 ## Overview
-The National Walkability Index (NWI) scores every U.S. census block group on a 1–20 scale across four dimensions: land-use mix, employment mix, street connectivity, and transit access. This project wraps the dataset in a geospatial API + Streamlit experience so planners, advocates, and curious residents can:
+The National Walkability Index (NWI) scores every U.S. census block group on a 1–20 scale across four dimensions: land-use mix, employment mix, street connectivity, and transit access. This project wraps the dataset in a React app + FastAPI backend so planners, advocates, and curious residents can:
 
 - Search an address, ZIP code, or city anywhere in the United States.
-- Apply a buffer radius to explore nearby block groups.
-- Inspect the component scores that make up the composite NWI value.
+- Apply buffer and search radii to explore nearby block groups.
+- Inspect component scores (d2a, d2b, d3b, d4a) and the composite NWI value.
+
+## Project Highlights
+- **Geospatial stack**: PostGIS spatial queries (`ST_DWithin`), GeoPandas, latitude-aware distance conversion; React-Leaflet for the map.
+- **Full-stack scope**: React (Vite) frontend, FastAPI backend with geocode + NWI summary endpoints.
+- **Production-minded**: Cached DB connections with reconnection handling, structured error responses, pytest coverage, schema and config validation scripts.
+- **Open data**: EPA NWI + FIPS and Smart Location Mapping; reproducible pipeline from source data to hosted PostGIS.
 
 ## Architecture
 ```
-Streamlit UI (sidebar + map components)
-        │
-        ▼
-Walkability service layer (`services/walkability.py`)
-        │
-        ▼
-Replit PostgreSQL + PostGIS (national_walkability_index table)
+React (Vite) frontend              FastAPI
+        │                              │
+        └──────────────┬───────────────┘
+                       ▼
+        Walkability service layer (`services/walkability.py`)
+                       │
+                       ▼
+        PostgreSQL + PostGIS (national_walkability_index table)
 ```
 
-- `app.py` boots Streamlit, renders the sidebar controls, and streams results.
-- `components/sidebar.py` captures address/radius inputs and introduces the dataset.
-- `components/map_display.py` calls cached data services, creates a Folium map, and surfaces a data table.
-- `services/db.py` provides the framework-agnostic database connection factory (env-var-based, no Streamlit dependency).
-- `services/walkability.py` geocodes inputs with Nominatim, queries PostGIS via psycopg2, and renders Folium layers.
-- `scripts/create_neo_postgres_db.py` loads the processed CSV into Replit PostgreSQL/PostGIS and maintains the spatial index.
+- **`frontend/`** — React app (Vite, React-Leaflet): search, radius/delta controls, map, and summary table.
+- **`api/main.py`** — FastAPI app: health, geocode, and NWI summary endpoints consumed by the frontend.
+- **`services/db.py`** — Framework-agnostic DB connection factory (env vars only).
+- **`services/walkability.py`** — Geocoding (Nominatim), PostGIS queries, profile computation.
+- **`scripts/create_neo_postgres_db.py`** — One-time load of processed CSV into PostGIS and spatial index creation.
 
 ## Tech Stack
 | Area | Tools |
 | --- | --- |
-| Web UI | Streamlit, streamlit-folium |
-| Geospatial | GeoPandas, Shapely, Folium, Tenacity |
-| Data / Infra | Neon PostgreSQL with PostGIS, SQLAlchemy, psycopg2 |
-| Testing | pytest, pytest-mock |
-| Tooling | Python 3.12, VS Code |
+| Frontend | React 19, Vite, React-Leaflet |
+| API | FastAPI, Uvicorn |
+| Geospatial | GeoPandas, Shapely, PyProj, Tenacity (backend); Leaflet (frontend) |
+| Data / Infra | PostgreSQL with PostGIS (Neon, Replit, or self-hosted), SQLAlchemy, psycopg2 |
+| Geocoding | Nominatim (geopy) |
+| Testing | pytest, pytest-mock (backend); Vitest, Playwright (frontend) |
+| Runtime | Python 3.11+, Node.js (frontend) |
 
 ## Quickstart
 ### 1. Prerequisites
-- Python 3.12+
+- Python 3.11+
 - Git
-- Access to a PostgreSQL database with PostGIS enabled (Replit PostgreSQL or Neon free tier works)
+- Access to a PostgreSQL database with PostGIS enabled (Neon, Replit, or self-hosted)
 
 ### 2. Clone & install
 ```bash
@@ -87,9 +97,9 @@ For this portfolio deployment, the dataset lives in:
 
 The repo contains the ingestion logic, schema, and validation scripts required to reload the data if needed.
 
-The repository bundles a simplified CSV produced by `notebooks/compress_walkability_df.ipynb`. To seed the database locally, update the file path in `scripts/create_neo_postgres_db.py` if needed and run:
+The repository bundles a simplified CSV produced by `notebooks/compress_walkability_df.ipynb`. To seed the database locally, set the env vars above, update the file path in `scripts/create_neo_postgres_db.py` if needed, and run:
 ```bash
-streamlit run scripts/create_neo_postgres_db.py
+python scripts/create_neo_postgres_db.py
 ```
 The script:
 - Converts WKT polygons into geometries.
@@ -100,16 +110,24 @@ The script:
 After successful setup, you can safely delete the CSV file and any `WALKABILITY_CSV_URL` environment variables. The application will continue to work using only the PostgreSQL database.
 
 ### 5. Run the app locally
-From the project root (the directory containing `app.py`):
+Start the **API** (from project root):
 ```bash
-streamlit run app.py
+.\.venv\Scripts\python.exe -m uvicorn api.main:app --reload
 ```
+Then start the **React frontend** (from `frontend/`):
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open http://localhost:5173 (or the URL Vite prints). The frontend uses the API at http://127.0.0.1:8000 by default; set `VITE_API_URL` if your API runs elsewhere.
 
 ## Usage
-- Enter any U.S. address, ZIP code, or city in the sidebar.
-- Use the radius slider (0.1–10 miles) to control the buffer around the location.
-- The map will draw block-group polygons colored by the National Walkability Index.
-- The accompanying table lists component ranks (`d2a`, `d2b`, `d3b`, `d4a`) plus the composite score to support deeper analysis.
+- Enter any U.S. address, ZIP code, or city in the search box.
+- **Buffer radius** (0.1–10 miles): area drawn on the map around the location.
+- **Search radius** (up to 25 miles): extent used for fetching and comparing block groups.
+- **Minimum NWI improvement delta**: filter or highlight areas by score improvement threshold.
+- The map shows block-group polygons colored by the National Walkability Index; the summary and table list component ranks (`d2a`, `d2b`, `d3b`, `d4a`) and the composite score.
 
 ## API (FastAPI)
 ### Run locally
@@ -164,9 +182,8 @@ API_CORS_ORIGINS=http://localhost:3000,https://your-frontend.example
 ```
 
 ## Deployment
-- **Replit:** The app is configured to work with Replit PostgreSQL. Set environment variables for database connection.
-- **Streamlit Community Cloud:** Push your fork, configure `.streamlit/secrets.toml` via the Streamlit dashboard, and point the app to `app.py`.
-- **Self-managed hosting:** Any container/service capable of running `streamlit run app.py` with access to PostgreSQL/PostGIS will work. Ensure HTTPS termination and secure handling of secrets.
+- **Replit:** The live app runs at [walkability-index.replit.app](https://walkability-index.replit.app/). Configure Replit PostgreSQL (or a connected Neon/Supabase DB) via Secrets and run the FastAPI backend plus the React frontend build.
+- **Self-managed:** Run the FastAPI app (e.g. `uvicorn api.main:app`) and serve the built React app (e.g. `frontend/dist/`) with access to PostgreSQL/PostGIS. Use HTTPS and secure handling of secrets.
 
 ## Data Pipeline
 - Source datasets:
@@ -183,13 +200,17 @@ API_CORS_ORIGINS=http://localhost:3000,https://your-frontend.example
 - **Automated test suite:** Run `pytest` to execute 20 smoke tests covering input validation, distance conversion, geocoding, data fetching, and map creation. Tests use mocks and don't require a live database connection. See `tests/README.md` for details.
 - **Schema validation:** Run `python scripts/validate_schema.py` to verify database table structure, spatial indexes, and PostGIS extension.
 - **Configuration check:** Run `python scripts/check_config.py` to validate required environment variables are present.
-- **Manual smoke test:** run `streamlit run app.py`, query "Knoxville, TN", confirm polygons render and the data table populates.
+- **Manual smoke test:** start the API and React app (see Quickstart), open the app in the browser, query "Knoxville, TN", and confirm the map and summary table populate.
 - **Data sanity checks:** inspect `walkability.log` for geocoding errors and verify `national_walkability_index` counts in Postgres (`SELECT COUNT(*) ...`).
 
 ## Roadmap
 - Enable GenAI/RAG queries across the walkability dataset.
 - Add percentile comparisons versus metro/state averages.
 - Cache frequently requested geometries to reduce query latency.
+
+---
+
+*This project is part of a portfolio demonstrating geospatial full-stack development with open government data. For more, see [grantgeist.com](https://grantgeist.com/).*
 
 ## License
 [MIT License](https://opensource.org/license/mit/)

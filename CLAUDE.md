@@ -4,24 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Streamlit geospatial application that visualizes the EPA's National Walkability Index (NWI) dataset. Users search any U.S. address, ZIP code, or city, apply a buffer radius, and view an interactive Folium choropleth map colored by walkability scores (1-20 scale) at the Census block group level.
+React + FastAPI geospatial application that visualizes the EPA's National Walkability Index (NWI) dataset. Users search any U.S. address, ZIP code, or city, apply buffer and search radii, and view an interactive map (React-Leaflet) and summary at the Census block group level. The API serves geocoding and NWI summary endpoints; the React frontend is the primary UI.
 
 ## Tech Stack
 
-- **Runtime**: Python 3.11+
-- **UI**: Streamlit + streamlit-folium
-- **Geospatial**: GeoPandas, Folium, Shapely, PyProj
-- **Database**: PostgreSQL with PostGIS (Replit PostgreSQL or Neon)
+- **Runtime**: Python 3.11+ (backend), Node.js (frontend)
+- **Frontend**: React 19, Vite, React-Leaflet
+- **API**: FastAPI, Uvicorn
+- **Geospatial**: GeoPandas, Shapely, PyProj (backend); Leaflet (frontend)
+- **Database**: PostgreSQL with PostGIS (Replit, Neon, or self-hosted)
 - **Geocoding**: Nominatim via geopy (with tenacity retry logic)
 - **DB drivers**: psycopg2-binary, SQLAlchemy
 
 ## Common Commands
 
 ```bash
-# Run the app
-streamlit run app.py
+# Run the API (from project root)
+uvicorn api.main:app --reload
 
-# Run all tests
+# Run the React frontend (from frontend/)
+cd frontend && npm install && npm run dev
+
+# Run all backend tests
 pytest
 
 # Run tests verbose
@@ -30,31 +34,27 @@ pytest -v
 # Run a specific test class
 pytest tests/test_walkability.py::TestInputValidation
 
-# Run a single test
-pytest tests/test_walkability.py::TestInputValidation::test_valid_city_name
-
 # Run with coverage
 pytest --cov=services --cov-report=html
 
 # Database setup (one-time, in order)
 python scripts/enable_postgis.py
-streamlit run scripts/create_neo_postgres_db.py
+python scripts/create_neo_postgres_db.py
 ```
 
 ## Architecture
 
 ```
-app.py                          # Entry point: page config + orchestrates sidebar/map
-├── components/sidebar.py       # User inputs (address, buffer radius slider)
-├── components/map_display.py   # Connection caching, data fetching, map rendering
-└── services/
-    ├── db.py                   # Framework-agnostic DB connection factory (env vars only)
-    └── walkability.py          # Core logic: geocoding, DB queries, map creation
+frontend/                 # React (Vite) — search, map, summary table
+api/main.py               # FastAPI — health, geocode, NWI summary
+services/
+├── db.py                 # Framework-agnostic DB connection factory (env vars only)
+└── walkability.py        # Geocoding, PostGIS queries, profile computation
 ```
 
-**Request flow**: User enters address in sidebar → `map_display.py` calls geocoding and DB query (with `@st.cache_resource` caching) → `walkability.py` geocodes via Nominatim, runs PostGIS spatial query with buffer → returns GeoDataFrame → `map_display.py` renders Folium choropleth + data table.
+**Request flow**: User enters address in React UI → frontend calls FastAPI `/geocode` and `/nwi/summary/by-query` → API uses `walkability.py` (Nominatim, PostGIS) → returns JSON → frontend renders map and table.
 
-**Connection handling**: `map_display.py` manages a cached DB connection (`get_cached_db_connection()`). It detects closed connections, clears the Streamlit cache, and retries automatically. Structured JSON debug logging is available via `WALKABILITY_DEBUG_LOG=1`.
+**Connection handling**: The API uses `services/db.py` for connections. Structured JSON debug logging is available via `WALKABILITY_DEBUG_LOG=1`.
 
 **Database**: Single table `national_walkability_index` with columns: `geoid20` (PK), `d2a_ranked`, `d2b_ranked`, `d3b_ranked`, `d4a_ranked`, `natwalkind` (all NUMERIC(4,2)), and `geometry` (PostGIS GEOMETRY, SRID 4326). Loaded from `data/walkability_index_tabular.csv` (~203k rows).
 
@@ -76,7 +76,7 @@ Tests use `unittest.mock` throughout — no live database connection needed. Thr
 ## Configuration
 
 - `PG*` env vars (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) — required by all services and scripts
-- `.streamlit/config.toml` — server runs headless on port 5000
+- API default: http://127.0.0.1:8000; frontend dev server: http://localhost:5173
 - `.env` (gitignored) — environment variables for local/Replit
 - **PIP_NO_INDEX**: If the environment has `PIP_NO_INDEX=1` (pip config `:env:.no-index='1'`), pip will not contact PyPI and installs will fail with "No matching distribution found." To install from PyPI for a session, unset the variable then install:
   ```powershell
@@ -106,4 +106,4 @@ See `agents/workflow-orchestration.md` for full details. Key points:
 ## Cursor Rules
 
 - `dev_log.mdc`: Dev notes use `YYYY_MM_DD_N.md` naming with Problem/Solution/Changes structure
-- `streamlit.mdc` / `neondb.mdc`: Always reference latest Streamlit and NeonDB docs
+- `neondb.mdc`: Reference latest NeonDB docs when touching database/config
