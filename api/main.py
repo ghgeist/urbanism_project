@@ -119,7 +119,9 @@ def handle_request_validation_error(_, exc: RequestValidationError):
 @app.exception_handler(Exception)
 def handle_uncaught_exception(_, exc: Exception):
     """Return a generic 500 response; never leak stack traces or internal details."""
-    logging.exception("Unhandled exception")
+    exc_type = type(exc).__name__
+    exc_msg = str(exc) or "(no message)"
+    logging.exception("Unhandled exception: %s: %s", exc_type, exc_msg)
     payload = _error_payload(
         code="internal_error",
         message="An unexpected error occurred.",
