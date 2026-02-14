@@ -29,6 +29,7 @@ All agents support **multi-platform** usage:
 ### Specialized Agents
 
 - **`readme_agent.md`** - Review and improve README.md for completeness and accuracy
+- **`security_agent.md`** - Implement essential security measures for production (input validation, auth, secrets, error handling)
 
 ## Infrastructure Files
 
