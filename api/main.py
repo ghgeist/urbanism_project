@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+from contextlib import asynccontextmanager
 from typing import Any, NoReturn
 
 from starlette.requests import Request
@@ -13,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api.schemas import ErrorResponse, GeocodeResponse, HealthResponse, NwiSummaryResponse
+from services.db import close_pool, get_pooled_connection, return_connection
 from services.profile_summary import build_summary_from_coords, build_summary_from_location_query
 from services.walkability import get_location
 
@@ -37,10 +39,17 @@ def _parse_cors_origins() -> list[str]:
     return origins if origins else DEFAULT_CORS_ORIGINS
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    close_pool()
+
+
 app = FastAPI(
     title="Urbanism Walkability API",
     version="0.1.0",
     description="API-first wrapper around EPA walkability summary metrics.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -156,6 +165,7 @@ def nwi_summary(
     min_delta: float = Query(default=2.0, ge=0.0, description="Minimum NWI improvement threshold"),
     top_n: int = Query(default=3, ge=1, le=10, description="Maximum nearby-better candidates to return"),
 ) -> NwiSummaryResponse:
+    conn = get_pooled_connection()
     try:
         summary = build_summary_from_coords(
             lat=lat,
@@ -164,6 +174,7 @@ def nwi_summary(
             search_radius_miles=search_radius_miles,
             min_delta=min_delta,
             top_n=top_n,
+            conn=conn,
         )
     except ValueError as exc:
         _raise_api_error(
@@ -171,6 +182,8 @@ def nwi_summary(
             code="invalid_request",
             message=str(exc),
         )
+    finally:
+        return_connection(conn)
 
     return NwiSummaryResponse.model_validate(summary)
 
@@ -201,6 +214,7 @@ def nwi_summary_by_query(
             code="invalid_request",
             message="Query must not be empty or whitespace only.",
         )
+    conn = get_pooled_connection()
     try:
         summary = build_summary_from_location_query(
             query=q,
@@ -208,6 +222,7 @@ def nwi_summary_by_query(
             search_radius_miles=search_radius_miles,
             min_delta=min_delta,
             top_n=top_n,
+            conn=conn,
         )
     except ValueError as exc:
         _raise_api_error(
@@ -215,6 +230,8 @@ def nwi_summary_by_query(
             code="invalid_request",
             message=str(exc),
         )
+    finally:
+        return_connection(conn)
 
     if summary is None:
         _raise_api_error(

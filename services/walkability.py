@@ -2,6 +2,7 @@ import logging
 import re
 import folium
 from branca.element import Figure
+from functools import lru_cache
 import geopandas as gpd
 import pandas as pd
 from geopy.geocoders import Nominatim
@@ -74,24 +75,36 @@ def _normalize_us_street_spelling(location_string):
     return s
 
 
+# Module-level geolocator reuses the underlying HTTP session across calls.
+_geolocator = Nominatim(user_agent="location_walkability_app")
+
+
 @retry(
-    stop=stop_after_attempt(3), 
-    wait=wait_exponential(multiplier=1, min=1, max=10), 
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
     retry=retry_if_exception_type(GeocoderUnavailable)
 )
+def _geocode_nominatim(query):
+    """Thin wrapper around Nominatim.geocode that tenacity can retry."""
+    return _geolocator.geocode(query, country_codes="us")
+
+
+@lru_cache(maxsize=256)
 def get_location(location_string, user_agent="location_walkability_app"):
     """
     Geocode the location string using Nominatim and return (longitude, latitude).
     Tries the string as-is first; if not found, retries with US street spelling normalized
     (e.g. harbour → harbor) so UK-spelled street names match OSM data.
+
+    Results are cached (LRU, 256 entries) so repeated queries for the same
+    string avoid redundant network round-trips.
     """
-    geolocator = Nominatim(user_agent=user_agent)
-    location = geolocator.geocode(location_string, country_codes="us")
+    location = _geocode_nominatim(location_string)
     if location:
         return location.longitude, location.latitude
     normalized = _normalize_us_street_spelling(location_string)
     if normalized != location_string:
-        location = geolocator.geocode(normalized, country_codes="us")
+        location = _geocode_nominatim(normalized)
         if location:
             return location.longitude, location.latitude
     logging.warning("Location not found (geocode returned no result)")

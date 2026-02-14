@@ -118,45 +118,42 @@ class TestZoomLevel:
 
 class TestGeocoding:
     """Test geocoding with mocked Nominatim."""
-    
-    @patch('services.walkability.Nominatim')
-    def test_get_location_success(self, mock_nominatim_class):
+
+    def setup_method(self):
+        """Clear the lru_cache between tests."""
+        get_location.cache_clear()
+
+    @patch('services.walkability._geocode_nominatim')
+    def test_get_location_success(self, mock_geocode):
         """Test successful geocoding."""
         mock_location = Mock()
         mock_location.longitude = -83.9207
         mock_location.latitude = 35.9606
-        
-        mock_geolocator = Mock()
-        mock_geolocator.geocode.return_value = mock_location
-        mock_nominatim_class.return_value = mock_geolocator
-        
+        mock_geocode.return_value = mock_location
+
         result = get_location("Knoxville, TN")
         assert result == (-83.9207, 35.9606)
-    
-    @patch('services.walkability.Nominatim')
-    def test_get_location_not_found(self, mock_nominatim_class):
+
+    @patch('services.walkability._geocode_nominatim')
+    def test_get_location_not_found(self, mock_geocode):
         """Test geocoding failure returns None."""
-        mock_geolocator = Mock()
-        mock_geolocator.geocode.return_value = None
-        mock_nominatim_class.return_value = mock_geolocator
-        
+        mock_geocode.return_value = None
+
         result = get_location("Nonexistent City, XX")
         assert result is None
 
-    @patch('services.walkability.Nominatim')
-    def test_get_location_fallback_us_spelling(self, mock_nominatim_class):
+    @patch('services.walkability._geocode_nominatim')
+    def test_get_location_fallback_us_spelling(self, mock_geocode):
         """When as-is fails, retry with US street spelling (e.g. harbour→harbor) returns coords."""
         mock_location = Mock()
         mock_location.longitude = -89.0
         mock_location.latitude = 40.0
-        mock_geolocator = Mock()
         # First call (raw with "harbour") returns None; second (normalized "harbor") succeeds.
-        mock_geolocator.geocode.side_effect = [None, mock_location]
-        mock_nominatim_class.return_value = mock_geolocator
+        mock_geocode.side_effect = [None, mock_location]
 
         result = get_location("1 Example Harbour Way, Springfield, IL")
         assert result == (-89.0, 40.0)
-        assert mock_geolocator.geocode.call_count == 2
+        assert mock_geocode.call_count == 2
 
 
 class TestWalkabilityData:

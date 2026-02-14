@@ -5,12 +5,25 @@ Reads PostgreSQL credentials from either:
 - DATABASE_URL (single connection string), or
 - PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD.
 
+Provides both raw connections (get_db_connection) and a process-level
+connection pool (get_pool / get_pooled_connection) to avoid per-request
+TCP handshake overhead on cloud-hosted Postgres.
+
 No framework imports.
 """
+import logging
 import os
+import threading
+
 import psycopg2
+from psycopg2 import pool as _pg_pool
 
 REQUIRED_PG_VARS = ['PGDATABASE', 'PGHOST', 'PGPASSWORD', 'PGPORT', 'PGUSER']
+
+_pool: _pg_pool.ThreadedConnectionPool | None = None
+_pool_lock = threading.Lock()
+
+logger = logging.getLogger(__name__)
 
 
 def _has_database_url():
@@ -85,6 +98,69 @@ def get_db_connection():
         user=env['user'],
         password=env['password'],
     )
+
+
+# ---------------------------------------------------------------------------
+# Connection pool
+# ---------------------------------------------------------------------------
+
+def get_pool(minconn: int = 1, maxconn: int = 5) -> _pg_pool.ThreadedConnectionPool:
+    """Return the process-level connection pool, creating it on first call.
+
+    Thread-safe: uses a lock so concurrent callers don't create duplicate pools.
+    The pool is backed by the same env-var logic as get_db_connection().
+    """
+    global _pool
+    if _pool is not None and not _pool.closed:
+        return _pool
+
+    with _pool_lock:
+        # Double-check after acquiring lock.
+        if _pool is not None and not _pool.closed:
+            return _pool
+
+        if _has_database_url():
+            _pool = _pg_pool.ThreadedConnectionPool(
+                minconn, maxconn, dsn=os.environ['DATABASE_URL'].strip()
+            )
+        else:
+            env = get_pg_env()
+            _pool = _pg_pool.ThreadedConnectionPool(
+                minconn,
+                maxconn,
+                host=env['host'],
+                port=env['port'],
+                database=env['database'],
+                user=env['user'],
+                password=env['password'],
+            )
+        logger.info("DB connection pool created (min=%d, max=%d)", minconn, maxconn)
+        return _pool
+
+
+def get_pooled_connection():
+    """Get a connection from the pool.
+
+    Caller MUST return it via return_connection() when done.
+    """
+    return get_pool().getconn()
+
+
+def return_connection(conn):
+    """Return a connection to the pool (or close it if the pool is gone)."""
+    if _pool is not None and not _pool.closed:
+        _pool.putconn(conn)
+    elif conn and not is_connection_closed(conn):
+        conn.close()
+
+
+def close_pool():
+    """Shut down the connection pool. Called during app shutdown."""
+    global _pool
+    if _pool is not None and not _pool.closed:
+        _pool.closeall()
+        logger.info("DB connection pool closed")
+    _pool = None
 
 
 def is_connection_closed(conn):

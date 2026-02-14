@@ -44,7 +44,9 @@ def test_happy_path_health_and_summary():
     assert health.status_code == 200
     assert health.json() == {"status": "ok"}
 
-    with patch("api.main.build_summary_from_coords", return_value=_sample_summary()):
+    with patch("api.main.build_summary_from_coords", return_value=_sample_summary()), \
+         patch("api.main.get_pooled_connection"), \
+         patch("api.main.return_connection"):
         summary = client.get(
             "/nwi/summary",
             params={"lat": 35.96, "lon": -83.92, "selected_radius_miles": 1.0},
