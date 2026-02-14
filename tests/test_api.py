@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
+import psycopg2
 from fastapi.testclient import TestClient
 
 from api.main import app
@@ -133,6 +134,37 @@ def test_nwi_summary_validation_error_uses_error_envelope():
     assert isinstance(payload["details"], list)
 
 
+def test_nwi_summary_operational_error_retries_then_returns_503():
+    """DB connection failure on both attempts returns 503 service_unavailable."""
+    with patch("api.main.build_summary_from_coords", side_effect=psycopg2.OperationalError("SSL connection has been closed unexpectedly")), \
+         patch("api.main.get_pooled_connection", return_value=_mock_conn), \
+         patch("api.main.return_connection"):
+        response = client.get(
+            "/nwi/summary",
+            params={"lat": 35.96, "lon": -83.92, "selected_radius_miles": 1.0, "search_radius_miles": 2.0},
+        )
+    assert response.status_code == 503
+    assert response.json() == {
+        "code": "service_unavailable",
+        "message": "Database temporarily unavailable. Please retry.",
+        "details": None,
+    }
+
+
+def test_nwi_summary_operational_error_retry_succeeds():
+    """DB connection failure on first attempt, success on retry returns 200."""
+    with patch("api.main.build_summary_from_coords", side_effect=[psycopg2.OperationalError("SSL closed"), _sample_summary()]) as mock_builder, \
+         patch("api.main.get_pooled_connection", return_value=_mock_conn), \
+         patch("api.main.return_connection"):
+        response = client.get(
+            "/nwi/summary",
+            params={"lat": 35.96, "lon": -83.92, "selected_radius_miles": 1.0, "search_radius_miles": 2.0},
+        )
+    assert response.status_code == 200
+    assert response.json()["schema_version"] == "2026-02-14"
+    assert mock_builder.call_count == 2
+
+
 def test_nwi_summary_by_query_success():
     summary = _sample_summary()
     summary["origin"]["label"] = "Knoxville, TN"
@@ -170,6 +202,23 @@ def test_nwi_summary_by_query_not_found_returns_error_envelope():
         "code": "location_not_found",
         "message": "Location not found.",
         "details": {"query": "Nowhere, ZZ"},
+    }
+
+
+def test_nwi_summary_by_query_operational_error_retries_then_returns_503():
+    """DB connection failure on both attempts returns 503 service_unavailable."""
+    with patch("api.main.build_summary_from_location_query", side_effect=psycopg2.OperationalError("SSL connection has been closed unexpectedly")), \
+         patch("api.main.get_pooled_connection", return_value=_mock_conn), \
+         patch("api.main.return_connection"):
+        response = client.get(
+            "/nwi/summary/by-query",
+            params={"q": "Knoxville, TN", "selected_radius_miles": 1.0},
+        )
+    assert response.status_code == 503
+    assert response.json() == {
+        "code": "service_unavailable",
+        "message": "Database temporarily unavailable. Please retry.",
+        "details": None,
     }
 
 

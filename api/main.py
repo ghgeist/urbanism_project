@@ -9,6 +9,8 @@ from typing import Any, NoReturn
 
 from starlette.requests import Request
 
+import psycopg2
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -121,7 +123,12 @@ def handle_uncaught_exception(_, exc: Exception):
     """Return a generic 500 response; never leak stack traces or internal details."""
     exc_type = type(exc).__name__
     exc_msg = str(exc) or "(no message)"
-    logging.exception("Unhandled exception: %s: %s", exc_type, exc_msg)
+    logging.error(
+        "Unhandled exception: %s: %s",
+        exc_type,
+        exc_msg,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
     payload = _error_payload(
         code="internal_error",
         message="An unexpected error occurred.",
@@ -159,7 +166,7 @@ def geocode(
 @app.get(
     "/nwi/summary",
     response_model=NwiSummaryResponse,
-    responses={400: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+    responses={400: {"model": ErrorResponse}, 422: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
 )
 def nwi_summary(
     lat: float = Query(description="Latitude in decimal degrees"),
@@ -175,20 +182,39 @@ def nwi_summary(
 ) -> NwiSummaryResponse:
     conn = get_pooled_connection()
     try:
-        summary = build_summary_from_coords(
-            lat=lat,
-            lon=lon,
-            selected_radius_miles=selected_radius_miles,
-            search_radius_miles=search_radius_miles,
-            min_delta=min_delta,
-            top_n=top_n,
-            conn=conn,
-        )
+        try:
+            summary = build_summary_from_coords(
+                lat=lat,
+                lon=lon,
+                selected_radius_miles=selected_radius_miles,
+                search_radius_miles=search_radius_miles,
+                min_delta=min_delta,
+                top_n=top_n,
+                conn=conn,
+            )
+        except psycopg2.OperationalError:
+            return_connection(conn)
+            conn = get_pooled_connection()
+            summary = build_summary_from_coords(
+                lat=lat,
+                lon=lon,
+                selected_radius_miles=selected_radius_miles,
+                search_radius_miles=search_radius_miles,
+                min_delta=min_delta,
+                top_n=top_n,
+                conn=conn,
+            )
     except ValueError as exc:
         _raise_api_error(
             status_code=400,
             code="invalid_request",
             message=str(exc),
+        )
+    except psycopg2.OperationalError:
+        _raise_api_error(
+            status_code=503,
+            code="service_unavailable",
+            message="Database temporarily unavailable. Please retry.",
         )
     finally:
         return_connection(conn)
@@ -199,7 +225,7 @@ def nwi_summary(
 @app.get(
     "/nwi/summary/by-query",
     response_model=NwiSummaryResponse,
-    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
 )
 def nwi_summary_by_query(
     q: str = Query(
@@ -219,19 +245,37 @@ def nwi_summary_by_query(
     normalized_q = _normalized_query_or_error(q)
     conn = get_pooled_connection()
     try:
-        summary = build_summary_from_location_query(
-            query=normalized_q,
-            selected_radius_miles=selected_radius_miles,
-            search_radius_miles=search_radius_miles,
-            min_delta=min_delta,
-            top_n=top_n,
-            conn=conn,
-        )
+        try:
+            summary = build_summary_from_location_query(
+                query=normalized_q,
+                selected_radius_miles=selected_radius_miles,
+                search_radius_miles=search_radius_miles,
+                min_delta=min_delta,
+                top_n=top_n,
+                conn=conn,
+            )
+        except psycopg2.OperationalError:
+            return_connection(conn)
+            conn = get_pooled_connection()
+            summary = build_summary_from_location_query(
+                query=normalized_q,
+                selected_radius_miles=selected_radius_miles,
+                search_radius_miles=search_radius_miles,
+                min_delta=min_delta,
+                top_n=top_n,
+                conn=conn,
+            )
     except ValueError as exc:
         _raise_api_error(
             status_code=400,
             code="invalid_request",
             message=str(exc),
+        )
+    except psycopg2.OperationalError:
+        _raise_api_error(
+            status_code=503,
+            code="service_unavailable",
+            message="Database temporarily unavailable. Please retry.",
         )
     finally:
         return_connection(conn)
