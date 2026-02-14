@@ -8,6 +8,25 @@ React + TypeScript + Vite app for the walkability Explore (and future Compare) e
 2. From `frontend/`: `npm install` then `npm run dev`.
 3. Open http://localhost:5173. Default API base is `http://127.0.0.1:8000`; override with `VITE_API_URL` (see `.env.example`).
 
+### Running from SSH / external terminal (e.g. Cursor)
+
+If you connect to this Replit via SSH and `node`/`npm` are not on your PATH,
+start a **new** shell session (close and reconnect). The `~/.bash_profile`
+automatically loads the Replit environment, including Node.js, on login.
+
+After reconnecting you can run:
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+If that still doesn't work, you can manually load the environment in your
+current session:
+
+```bash
+source /run/replit/env/latest
+```
+
 ## Scripts
 
 - `npm run dev` – dev server (Vite)
