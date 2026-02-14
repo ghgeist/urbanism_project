@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, NoReturn
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
@@ -48,7 +48,7 @@ def _error_payload(code: str, message: str, details: Any = None) -> dict[str, An
     return ErrorResponse(code=code, message=message, details=details).model_dump()
 
 
-def _raise_api_error(status_code: int, code: str, message: str, details: Any = None) -> None:
+def _raise_api_error(status_code: int, code: str, message: str, details: Any = None) -> NoReturn:
     raise HTTPException(
         status_code=status_code,
         detail=_error_payload(code=code, message=message, details=details),
