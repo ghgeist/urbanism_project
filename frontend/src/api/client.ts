@@ -14,10 +14,19 @@ async function get<T>(path: string, params: Record<string, string | number | und
   }
   const url = `${API_BASE}${path}${search.toString() ? `?${search}` : ""}`;
   const res = await fetch(url);
-  const data = await res.json();
+  const text = await res.text();
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : undefined;
+  } catch {
+    data = undefined;
+  }
   if (!res.ok) {
-    const err = data as { code?: string; message?: string };
-    throw new Error(err.message ?? `API error ${res.status}`);
+    const err = data as { code?: string; message?: string } | undefined;
+    throw new Error(err?.message ?? `API error ${res.status}`);
+  }
+  if (data === undefined) {
+    throw new Error(`Invalid response (${res.status})`);
   }
   return data as T;
 }

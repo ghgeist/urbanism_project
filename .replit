@@ -1,4 +1,4 @@
-modules = ["python-3.11", "postgresql-16"]
+modules = ["python-3.11", "postgresql-16", "nodejs-20"]
 [agent]
 expertMode = true
 
@@ -16,15 +16,31 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Streamlit App"
+args = "FastAPI Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "React Frontend"
 
 [[workflows.workflow]]
-name = "Streamlit App"
+name = "FastAPI Backend"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
+waitForPort = 8000
+
+[[workflows.workflow]]
+name = "React Frontend"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true"
+args = "cd frontend && npm install && npm run dev"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -34,9 +50,14 @@ outputType = "webview"
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
 [deployment]
 deploymentTarget = "autoscale"
-run = ["streamlit", "run", "app.py", "--server.port=5000", "--server.address=0.0.0.0", "--server.headless=true"]
+run = ["bash", "-c", "cd frontend && npx vite preview --host 0.0.0.0 --port 5000 & uvicorn api.main:app --host 0.0.0.0 --port 8000 & wait"]
+build = ["bash", "-c", "cd frontend && npm install && npm run build"]
 
 [userenv]
 
