@@ -54,7 +54,7 @@ describe("CompareTable", () => {
   it("calculates and displays positive difference correctly", () => {
     render(<CompareTable summaryA={summaryA} summaryB={summaryB} />);
     // B (12) - A (10) = +2.00
-    const diff = screen.getByText((content, element) => {
+    const diff = screen.getByText((_content, element) => {
         return element?.textContent === "↑ 2.00" && element?.className.includes("diff-positive");
     });
     expect(diff).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe("CompareTable", () => {
   it("calculates and displays negative difference correctly", () => {
     render(<CompareTable summaryA={summaryA} summaryB={summaryB} />);
     // B (1.5) - A (2.0) = -0.50
-    const diff = screen.getByText((content, element) => {
+    const diff = screen.getByText((_content, element) => {
         return element?.textContent === "↓ 0.50" && element?.className.includes("diff-negative");
     });
     expect(diff).toBeInTheDocument();

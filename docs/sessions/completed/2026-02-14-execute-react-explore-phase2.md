@@ -1,11 +1,11 @@
 ---
 title: "Execute: React Explore Phase 2 (Compare)"
 date: "2026-02-14"
-status: "active"
+status: "completed"
 session_type: "execute"
 priority: "high"
 tags: ["react", "frontend", "compare", "phase2"]
-related: ["docs/sessions/active/2026-02-14-execute-react-explore-phase1.md", "docs/sessions/backlog/2026-02-14-react-deferred.md"]
+related: ["docs/sessions/completed/2026-02-14-execute-react-explore-phase1.md", "docs/sessions/backlog/2026-02-14-react-deferred.md"]
 ---
 
 # Execute: React Explore Phase 2 – Compare Page
@@ -33,6 +33,7 @@ Implement the Compare page: two locations side-by-side with summary panels and n
 - 2026-02-14: Replaced Compare placeholder with full page: form, URL sync, dual fetch, two panels; B panel uses `diffFrom={summaryA}`.
 - 2026-02-14: Compare CSS in `App.css` (form, panels grid, panel styling, mobile stack).
 - 2026-02-14: Added `compareParams.test.ts` (9 tests), SummaryCards test for diffFrom (5 tests total in SummaryCards); 30 tests pass, build and lint pass.
+- 2026-02-14: Fixed CompareTable.test.tsx unused `content` param (→ `_content`) so build passes.
 
 ## Files Created/Modified
 
@@ -55,6 +56,7 @@ Implement the Compare page: two locations side-by-side with summary panels and n
 | `frontend/src/pages/Compare.tsx` | Refactored – use useUrlDrivenSearch |
 | `frontend/e2e/compare.spec.ts` | New – Compare page E2E smoke tests |
 | `docs/dev_notes/lessons.md` | Modified – lesson on extracting URL-driven search hook |
+| `frontend/src/components/CompareTable.test.tsx` | Modified – unused `content` → `_content` for build |
 
 ## How to Run
 
