@@ -1,8 +1,11 @@
 """FastAPI entrypoint for the walkability API."""
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, NoReturn
+
+from starlette.requests import Request
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
@@ -12,6 +15,9 @@ from fastapi.responses import JSONResponse
 from api.schemas import ErrorResponse, GeocodeResponse, HealthResponse, NwiSummaryResponse
 from services.profile_summary import build_summary_from_coords, build_summary_from_location_query
 from services.walkability import get_location
+
+# Align with services.walkability.validate_location_input max length.
+MAX_QUERY_LENGTH = 200
 
 DEFAULT_CORS_ORIGINS = [
     "http://localhost:3000",
@@ -44,6 +50,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 def _error_payload(code: str, message: str, details: Any = None) -> dict[str, Any]:
@@ -81,13 +98,37 @@ def handle_request_validation_error(_, exc: RequestValidationError):
     return JSONResponse(status_code=422, content=payload)
 
 
+@app.exception_handler(Exception)
+def handle_uncaught_exception(_, exc: Exception):
+    """Return a generic 500 response; never leak stack traces or internal details."""
+    logging.exception("Unhandled exception")
+    payload = _error_payload(
+        code="internal_error",
+        message="An unexpected error occurred.",
+        details=None,
+    )
+    return JSONResponse(status_code=500, content=payload)
+
+
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
-@app.get("/geocode", response_model=GeocodeResponse, responses={404: {"model": ErrorResponse}})
-def geocode(q: str = Query(min_length=1, description="Address, ZIP, or city query")) -> GeocodeResponse:
+@app.get("/geocode", response_model=GeocodeResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+def geocode(
+    q: str = Query(
+        min_length=1,
+        max_length=MAX_QUERY_LENGTH,
+        description="Address, ZIP, or city query",
+    ),
+) -> GeocodeResponse:
+    if not q.strip():
+        _raise_api_error(
+            status_code=400,
+            code="invalid_request",
+            message="Query must not be empty or whitespace only.",
+        )
     location = get_location(q)
     if not location:
         _raise_api_error(
@@ -142,7 +183,11 @@ def nwi_summary(
     responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
 )
 def nwi_summary_by_query(
-    q: str = Query(min_length=1, description="Address, ZIP, or city query"),
+    q: str = Query(
+        min_length=1,
+        max_length=MAX_QUERY_LENGTH,
+        description="Address, ZIP, or city query",
+    ),
     selected_radius_miles: float = Query(gt=0.0, description="Selected profile radius in miles"),
     search_radius_miles: float | None = Query(
         default=None,
@@ -152,6 +197,12 @@ def nwi_summary_by_query(
     min_delta: float = Query(default=2.0, ge=0.0, description="Minimum NWI improvement threshold"),
     top_n: int = Query(default=3, ge=1, le=10, description="Maximum nearby-better candidates to return"),
 ) -> NwiSummaryResponse:
+    if not q.strip():
+        _raise_api_error(
+            status_code=400,
+            code="invalid_request",
+            message="Query must not be empty or whitespace only.",
+        )
     try:
         summary = build_summary_from_location_query(
             query=q,

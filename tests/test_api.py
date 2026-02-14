@@ -160,3 +160,56 @@ def test_nwi_summary_by_query_not_found_returns_error_envelope():
         "message": "Location not found.",
         "details": {"query": "Nowhere, ZZ"},
     }
+
+
+def test_geocode_query_too_long_returns_422():
+    """Query param q over 200 chars is rejected at API boundary (security audit)."""
+    response = client.get("/geocode", params={"q": "x" * 201})
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["code"] == "validation_error"
+
+
+def test_geocode_whitespace_only_returns_400():
+    """Whitespace-only q is rejected with invalid_request (security audit)."""
+    response = client.get("/geocode", params={"q": "   "})
+    assert response.status_code == 400
+    assert response.json() == {
+        "code": "invalid_request",
+        "message": "Query must not be empty or whitespace only.",
+        "details": None,
+    }
+
+
+def test_nwi_summary_by_query_whitespace_only_returns_400():
+    """Whitespace-only q on by-query is rejected (security audit)."""
+    response = client.get(
+        "/nwi/summary/by-query",
+        params={"q": " \t ", "selected_radius_miles": 1.0},
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_request"
+    assert "whitespace" in response.json()["message"].lower()
+
+
+def test_uncaught_exception_returns_generic_500():
+    """Unhandled exceptions return generic 500; no stack trace or internal details (security audit)."""
+    with patch("api.main.get_location", side_effect=RuntimeError("internal failure")):
+        # TestClient(raise_server_exceptions=False) so we get the 500 response instead of the exception
+        no_raise_client = TestClient(app, raise_server_exceptions=False)
+        response = no_raise_client.get("/geocode", params={"q": "Knoxville, TN"})
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["code"] == "internal_error"
+    assert payload["message"] == "An unexpected error occurred."
+    assert payload["details"] is None
+    assert "internal failure" not in str(payload)
+    assert "RuntimeError" not in str(payload)
+
+
+def test_security_headers_present():
+    """Responses include X-Frame-Options and X-Content-Type-Options (security audit)."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.headers.get("x-frame-options") == "DENY"
+    assert response.headers.get("x-content-type-options") == "nosniff"
