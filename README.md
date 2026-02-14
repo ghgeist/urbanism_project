@@ -83,7 +83,7 @@ pip install -r requirements.txt
 ### 3. Configure database connection
 Set either **all** of `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` **or** a single `DATABASE_URL` (e.g. `postgresql://user:password@host:port/database`). All core services read these env vars exclusively.
 
-**Running locally with the DB on Replit or another host:** Copy credentials from Replit Secrets (or your cloud Postgres) into a local `.env` and load them before running commands. See [docs/running-locally-with-remote-db.md](docs/running-locally-with-remote-db.md) and the root [.env.example](.env.example). Note: Replit’s built-in Postgres is often only reachable from inside Replit; use a cloud Postgres (Neon, Supabase, etc.) if you need both local and Replit to share the same DB.
+**Local runs:** Use a local `.env` (see root [.env.example](.env.example)) and load vars in your shell before running commands.
 
 ### 4. Load the walkability table (one-time setup only)
 > **Important:** The CSV file is only needed for initial database setup. Once the database is populated, you can remove the CSV file. The running application queries PostgreSQL directly and does not use the CSV file.
@@ -131,7 +131,9 @@ Open http://localhost:5173 (or the URL Vite prints). The frontend uses the API a
 
 ## API (FastAPI)
 ### Run locally
-From the project root:
+**React + API in one step:** From the project root run `./scripts/run_dev.sh` (or `bash scripts/run_dev.sh`) to start both the FastAPI backend and the Vite frontend; Ctrl+C stops both. See `frontend/README.md` for details.
+
+**API only** (e.g. for Swagger/ReDoc or Streamlit-only use), from the project root:
 ```bash
 .\.venv\Scripts\python.exe -m uvicorn api.main:app --reload
 ```

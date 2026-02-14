@@ -85,6 +85,7 @@ Tests use `unittest.mock` throughout — no live database connection needed. Thr
   ```
   Alternatively configure an explicit index URL if your environment requires a private/internal index.
 - Deployment target: Replit (autoscale)
+- **React frontend (Replit / SSH)**: On Replit, login shells load Node via `~/.bash_profile`. If you use SSH (e.g. Cursor) and `node`/`npm` are missing, reconnect to get a fresh login shell, or run `source /run/replit/env/latest`. See `frontend/README.md` for details.
 
 ## Workflow
 

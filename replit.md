@@ -27,11 +27,11 @@ This is a React + FastAPI application that visualizes the EPA's National Walkabi
 - **Geocoding**: Geopy (Nominatim)
 
 ## Running the App on Replit
-Run the **FastAPI** backend and the **React** frontend (build + serve). Typical Replit setup:
-- Start the API (e.g. `uvicorn api.main:app --host 0.0.0.0 --port 8000`)
-- Build the frontend (`cd frontend && npm install && npm run build`) and serve `frontend/dist/` or use a static server
+Two workflows run in parallel:
+- **React Frontend** (port 5000, webview): `cd frontend && npm install && npm run dev`
+- **FastAPI Backend** (port 8000, console): `uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload`
 
-Configure the frontend to use the API URL for your Replit deployment.
+The Vite dev server proxies API requests (`/health`, `/geocode`, `/nwi`) to the backend on port 8000. For production, build the frontend (`npm run build`) and serve `frontend/dist/`; configure the frontend to use the API URL for your Replit deployment.
 
 ## Database Requirements
 The app requires a PostgreSQL database with PostGIS extension and a `national_walkability_index` table. Table structure:

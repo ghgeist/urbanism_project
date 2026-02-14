@@ -4,11 +4,7 @@
  */
 
 import type { NwiSummaryResponse } from "../types/api";
-
-function formatMetric(value: number | null | undefined): string {
-  if (value == null) return "—";
-  return value.toFixed(2);
-}
+import { formatMetricValue, METRICS_CONFIG } from "../config/metrics";
 
 interface SummaryCardsProps {
   summary: NwiSummaryResponse;
@@ -16,9 +12,6 @@ interface SummaryCardsProps {
 
 export function SummaryCards({ summary }: SummaryCardsProps) {
   const { metrics, upgrade_potential } = summary;
-  const everyday = metrics?.everyday_convenience ?? null;
-  const transit = metrics?.transit_viability ?? null;
-  const variation = metrics?.variation ?? null;
 
   let upgradeVal: string;
   let upgradeCaption: string | null = null;
@@ -41,26 +34,31 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
 
   return (
     <section className="summary-cards" aria-label="Profile summary">
-      <div className="summary-card" title="Average NWI score within the selected radius (higher = more walkable).">
-        <div className="summary-card__value">{formatMetric(everyday)}</div>
-        <div className="summary-card__label">Everyday Convenience</div>
-        <div className="summary-card__hint">Mean NWI within radius</div>
-      </div>
-      <div className="summary-card" title="Average transit proximity rank (1–20). EPA proxy d4a_ranked.">
-        <div className="summary-card__value">{formatMetric(transit)}</div>
-        <div className="summary-card__label">Transit Viability</div>
-        <div className="summary-card__hint">Transit proximity rank (avg, 1–20)</div>
-      </div>
-      <div className="summary-card" title="Standard deviation of NWI within radius. Dispersion only.">
-        <div className="summary-card__value">{formatMetric(variation)}</div>
-        <div className="summary-card__label">Variation</div>
-        <div className="summary-card__hint">Dispersion (std dev)</div>
-      </div>
+      {METRICS_CONFIG.map((config) => {
+        const val = metrics?.[config.key] ?? null;
+        return (
+          <div key={config.key} className="summary-card" title={config.tooltip}>
+            <div className="summary-card__value">{formatMetricValue(val)}</div>
+            <div className="summary-card__label">{config.label}</div>
+            <div className="summary-card__hint">{config.description}</div>
+          </div>
+        );
+      })}
+      
       <div className="summary-card" title="Best nearby candidate meeting min NWI improvement delta.">
-        <div className="summary-card__value">{upgradeVal}</div>
+        <div
+          className={
+            upgradeVal.length > 12
+              ? "summary-card__value summary-card__value--text"
+              : "summary-card__value"
+          }
+        >
+          {upgradeVal}
+        </div>
         <div className="summary-card__label">Upgrade Potential</div>
         {upgradeCaption && <div className="summary-card__hint">{upgradeCaption}</div>}
       </div>
     </section>
   );
 }
+

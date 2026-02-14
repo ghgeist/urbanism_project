@@ -10,32 +10,19 @@ related: ["docs/sessions/active/2026-02-14-execute-react-explore-phase1.md"]
 
 Items explicitly deferred from the initial React Explore phase. Pick up in order of product priority.
 
-## 1. Shareable state (URL query params)
+## ~~1. Shareable state (URL query params)~~ ✅ Done (Phase 1.1)
 
-**Goal:** Location (query or lat/lon) and radius live in the URL so results can be shared.
-
-- Sync `q` and `radius` (and optionally `search_radius_miles`, `min_delta`) with `?q=...&radius=...`.
-- On load, read query params and run summary if valid.
-- Update URL when user searches or changes radius (replaceState to avoid history spam).
-
-**Acceptance:** Copying the URL and opening in a new tab shows the same summary (or triggers the same search).
+Implemented in Phase 1.1: `exploreParams.ts`, replaceState on edit, pushState on submit, validation. See session progress log.
 
 ---
 
-## 2. Compare page
+## ~~1. Compare page~~ ✅ Done (Phase 2)
 
-**Goal:** Two locations side-by-side with summary panels and highlighted metric differences (product plan §6).
-
-- Route: e.g. `/compare` or `/compare?a=...&b=...`.
-- Two search inputs (or shareable links for A and B).
-- Render two `SummaryCards`-style panels; highlight which metrics improved or worsened for B vs A.
-- No red/green moral framing—neutral difference display.
-
-**Acceptance:** User can compare two addresses and see which metrics differ and by how much.
+Implemented on branch `feature/react-explore-phase2`: `/compare` with `a`, `b`, `radius` URL params; two panels; B shows neutral deltas vs A (e.g. "+0.5 vs A"). See `docs/sessions/active/2026-02-14-execute-react-explore-phase2.md`.
 
 ---
 
-## 3. Vite API proxy (optional)
+## 2. Vite API proxy (optional)
 
 **Goal:** In dev, avoid CORS by proxying `/api` to the FastAPI backend.
 
@@ -47,7 +34,7 @@ Items explicitly deferred from the initial React Explore phase. Pick up in order
 
 ---
 
-## 4. API error mapping
+## 3. API error mapping
 
 **Goal:** Map backend `ErrorResponse.code` to clear, user-facing messages.
 
