@@ -1,0 +1,9 @@
+{
+  "name": "walkability-app",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Root package for Replit deployment; frontend lives in frontend/",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
