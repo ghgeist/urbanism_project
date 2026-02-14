@@ -172,38 +172,65 @@ def render_summary_cards(profile):
     upgrade = profile.get("upgrade_potential", {})
 
     if upgrade.get("found") and upgrade.get("candidates"):
-        best = upgrade["candidates"][0]
+        candidates = upgrade["candidates"]
+        best = candidates[0]
         delta = best.get("delta_nwi")
         dist = best.get("dist_miles")
         if delta is not None and dist is not None:
-            upgrade_value = f"+{delta:.2f} at {dist:.2f} mi"
+            delta_str = f"+{delta:.1f}" if delta > 0 else f"{delta:.1f}"
+            dist_str = f"{dist:.1f}"
+            if len(candidates) > 1:
+                upgrade_val = delta_str
+                upgrade_caption = f"Best nearby ({dist_str} mi)"
+            else:
+                upgrade_val = delta_str
+                upgrade_caption = f"{dist_str} mi away"
         else:
-            upgrade_value = "Found"
+            upgrade_val = "Found"
+            upgrade_caption = None
     else:
         message = upgrade.get("message")
-        upgrade_value = "None found" if message else "N/A"
+        upgrade_val = "None found" if message else "N/A"
+        upgrade_caption = None
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(
-        "Everyday Convenience",
-        _format_metric(everyday),
-        help="Average NWI score within the selected radius (higher = more walkable).",
-    )
-    col2.metric(
-        "Transit Viability",
-        _format_metric(transit),
-        help="Average rank (1-20) from EPA transit proximity proxy (`d4a_ranked`, higher = closer to transit).",
-    )
-    col3.metric(
-        "Variation",
-        _format_metric(variation),
-        help="Standard deviation of NWI within the selected radius (dispersion only).",
-    )
-    col4.metric(
-        "Upgrade Potential",
-        upgrade_value,
-        help="Best nearby candidate meeting min NWI improvement delta within search radius.",
-    )
+    # Use 5 equal columns to give the button enough space (20% vs ~11%)
+    col1, col2, col3, col4, col_btn = st.columns(5)
+    
+    with col1:
+        st.metric(
+            "Everyday Convenience",
+            _format_metric(everyday),
+            help="Average NWI score within the selected radius (higher = more walkable).",
+        )
+    with col2:
+        st.metric(
+            "Transit Viability",
+            _format_metric(transit),
+            help="Average transit proximity rank (1–20 scale). Higher = closer to transit. EPA proxy d4a_ranked.",
+        )
+        st.caption("Transit proximity rank (avg, 1–20)")
+    with col3:
+        st.metric(
+            "Variation",
+            _format_metric(variation),
+            help="Standard deviation of NWI within selected radius. Measures dispersion only.",
+        )
+        st.caption("Dispersion (std dev)")
+    with col4:
+        st.metric(
+            "Upgrade Potential",
+            upgrade_val,
+            help="Best nearby candidate meeting min NWI improvement delta within search radius.",
+        )
+        if upgrade_caption:
+            st.caption(upgrade_caption)
+    with col_btn:
+        st.write("")  # vertical align with metric row
+        st.write("")
+        if st.button("Compare another location →", type="secondary"):
+            pass  # Placeholder: signals product direction
+
+    st.divider()
 
 
 def render_nearby_better_list(profile):
@@ -244,7 +271,10 @@ def render_main_content(city_name, buffer_radius_miles, search_radius_miles, min
             return
 
         if not profile:
-            st.error("Could not geocode that location. Try a more specific query (e.g., 'Cambridge, MA').")
+            st.error(
+                "Could not find that location. Try a city or ZIP (e.g. 'Cambridge, MA'). "
+                "If you used UK spelling (e.g. 'harbour'), try US spelling ('harbor')."
+            )
             return
 
         render_summary_cards(profile)

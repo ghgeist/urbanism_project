@@ -143,6 +143,21 @@ class TestGeocoding:
         result = get_location("Nonexistent City, XX")
         assert result is None
 
+    @patch('services.walkability.Nominatim')
+    def test_get_location_fallback_us_spelling(self, mock_nominatim_class):
+        """When as-is fails, retry with US street spelling (e.g. harbour→harbor) returns coords."""
+        mock_location = Mock()
+        mock_location.longitude = -89.0
+        mock_location.latitude = 40.0
+        mock_geolocator = Mock()
+        # First call (raw with "harbour") returns None; second (normalized "harbor") succeeds.
+        mock_geolocator.geocode.side_effect = [None, mock_location]
+        mock_nominatim_class.return_value = mock_geolocator
+
+        result = get_location("1 Example Harbour Way, Springfield, IL")
+        assert result == (-89.0, 40.0)
+        assert mock_geolocator.geocode.call_count == 2
+
 
 class TestWalkabilityData:
     """Test data fetching with mocked database."""

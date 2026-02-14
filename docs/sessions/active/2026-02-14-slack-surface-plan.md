@@ -236,4 +236,24 @@ Related files:
 - `tests/test_metrics.py`
 - `tests/test_walkability.py`
 - `tests/test_connection_caching.py`
+- `tests/test_map_display_ui.py`
 - `docs/dev_notes/lessons.md`
+
+---
+
+## UI Strengthening (2026-02-14)
+
+Addressed “Where It Can Be Strengthened” feedback:
+
+1. **Upgrade potential truncation** — Card now shows human-readable text:
+   - Single candidate: `+4.6 within 0.4 mi`
+   - Multiple candidates: `Best nearby: +4.6 at 0.4 mi`
+   - One decimal for delta and distance; no truncation.
+
+2. **Variation context** — Subtitle under the metric: “Dispersion (std dev)”. Tooltip: “Standard deviation of NWI within selected radius. Measures dispersion only.” (no interpretive adjectives).
+
+3. **Transit Viability** — Subtitle: “Transit proximity rank (avg, 1–20)”. Tooltip states scale and direction: “Average transit proximity rank (1–20 scale). Higher = closer to transit. EPA proxy d4a_ranked.”
+
+4. **Compare another location** — Ghosted button “Compare another location →” added in the metric row (fifth column); placeholder `pass` for now to signal product direction.
+
+5. **Micro-refinements** — Thin divider under the cards; map height capped at 420px via `branca.element.Figure` so metrics dominate; tooltip discipline applied as above.

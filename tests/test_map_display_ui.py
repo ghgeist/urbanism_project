@@ -1,6 +1,6 @@
 """Focused tests for Streamlit UI helper functions in map_display."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -20,14 +20,52 @@ class TestRenderSummaryCards:
                 ],
             },
         }
-        cols = [Mock(), Mock(), Mock(), Mock()]
+        cols = [MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()]
         with patch("components.map_display.st.columns", return_value=cols):
-            render_summary_cards(profile)
+            with patch("components.map_display.st.metric") as mock_metric:
+                with patch("components.map_display.st.caption") as mock_caption:
+                    render_summary_cards(profile)
 
-        assert cols[0].metric.call_args.args[0] == "Everyday Convenience"
-        assert cols[0].metric.call_args.args[1] == "12.35"
-        assert cols[3].metric.call_args.args[0] == "Upgrade Potential"
-        assert cols[3].metric.call_args.args[1] == "+3.00 at 1.50 mi"
+        # Check Everyday Convenience
+        everyday_calls = [c for c in mock_metric.call_args_list if len(c.args) >= 2 and c.args[0] == "Everyday Convenience"]
+        assert len(everyday_calls) == 1
+        assert everyday_calls[0].args[1] == "12.35"
+        
+        # Check Upgrade Potential metric value (now just the delta)
+        upgrade_calls = [c for c in mock_metric.call_args_list if len(c.args) >= 2 and c.args[0] == "Upgrade Potential"]
+        assert len(upgrade_calls) == 1
+        assert upgrade_calls[0].args[1] == "+3.0"
+        
+        # Check caption for context
+        # Captions called: "Transit proximity...", "Dispersion...", "1.5 mi away"
+        caption_args = [c.args[0] for c in mock_caption.call_args_list]
+        assert "1.5 mi away" in caption_args
+
+    def test_render_summary_cards_multiple_candidates_shows_best_nearby(self):
+        profile = {
+            "everyday_convenience": 10.0,
+            "transit_viability": 14.0,
+            "variation": 2.5,
+            "upgrade_potential": {
+                "found": True,
+                "candidates": [
+                    {"delta_nwi": 4.6, "dist_miles": 0.4},
+                    {"delta_nwi": 3.0, "dist_miles": 1.2},
+                ],
+            },
+        }
+        cols = [MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        with patch("components.map_display.st.columns", return_value=cols):
+            with patch("components.map_display.st.metric") as mock_metric:
+                with patch("components.map_display.st.caption") as mock_caption:
+                    render_summary_cards(profile)
+
+        upgrade_calls = [c for c in mock_metric.call_args_list if len(c.args) >= 2 and c.args[0] == "Upgrade Potential"]
+        assert len(upgrade_calls) == 1
+        assert upgrade_calls[0].args[1] == "+4.6"
+        
+        caption_args = [c.args[0] for c in mock_caption.call_args_list]
+        assert "Best nearby (0.4 mi)" in caption_args
 
     def test_render_summary_cards_none_found(self):
         profile = {
@@ -40,12 +78,20 @@ class TestRenderSummaryCards:
                 "message": "No improvement found within 3.0 miles.",
             },
         }
-        cols = [Mock(), Mock(), Mock(), Mock()]
+        cols = [MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()]
         with patch("components.map_display.st.columns", return_value=cols):
-            render_summary_cards(profile)
+            with patch("components.map_display.st.metric") as mock_metric:
+                render_summary_cards(profile)
 
-        assert cols[0].metric.call_args.args[1] == "N/A"
-        assert cols[3].metric.call_args.args[1] == "None found"
+        # Check Everyday Convenience
+        everyday_calls = [c for c in mock_metric.call_args_list if len(c.args) >= 2 and c.args[0] == "Everyday Convenience"]
+        assert len(everyday_calls) == 1
+        assert everyday_calls[0].args[1] == "N/A"
+
+        # Check Upgrade Potential
+        upgrade_calls = [c for c in mock_metric.call_args_list if len(c.args) >= 2 and c.args[0] == "Upgrade Potential"]
+        assert len(upgrade_calls) == 1
+        assert upgrade_calls[0].args[1] == "None found"
 
 
 class TestRenderNearbyBetterList:
