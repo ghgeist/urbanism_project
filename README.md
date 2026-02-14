@@ -120,14 +120,14 @@ cd frontend
 npm install
 npm run dev
 ```
-Open http://localhost:5173 (or the URL Vite prints). The frontend uses the API at http://127.0.0.1:8000 by default; set `VITE_API_URL` if your API runs elsewhere.
+Open http://localhost:5000 (or the URL Vite prints). The frontend uses the API at http://127.0.0.1:8000 by default; set `VITE_API_URL` if your API runs elsewhere.
 
 ## Usage
 - Enter any U.S. address, ZIP code, or city in the search box.
-- **Buffer radius** (0.1–10 miles): area drawn on the map around the location.
-- **Search radius** (up to 25 miles): extent used for fetching and comparing block groups.
-- **Minimum NWI improvement delta**: filter or highlight areas by score improvement threshold.
-- The map shows block-group polygons colored by the National Walkability Index; the summary and table list component ranks (`d2a`, `d2b`, `d3b`, `d4a`) and the composite score.
+- **Radius** (0.1-3.0 miles in current UI): area shown around the selected location.
+- **Search radius** (API parameter): optional context radius used for nearby-better detection; defaults to selected radius when omitted.
+- **Minimum NWI improvement delta**: filter/highlight threshold for nearby-better candidates.
+- The current map centers the selected location with a marker and radius context; summary and table views expose component ranks (`d2a`, `d2b`, `d3b`, `d4a`) and composite NWI metrics.
 
 ## API (FastAPI)
 ### Run locally
@@ -173,6 +173,8 @@ Examples:
 Default allowed origins:
 - `http://localhost:3000`
 - `http://127.0.0.1:3000`
+- `http://localhost:5000`
+- `http://127.0.0.1:5000`
 - `http://localhost:5173`
 - `http://127.0.0.1:5173`
 
@@ -204,7 +206,7 @@ When deploying to a public URL (e.g. Replit, Vercel + your API host):
 - Processed artifacts live in `data/` and feed the ingestion script.
 
 ## Testing & Validation
-- **Automated test suite:** Run `pytest` for the backend test suite (100+ tests): input validation, distance conversion, geocoding, data fetching, API endpoints, and map creation. Tests use mocks and don't require a live database connection. See `tests/README.md` for details.
+- **Automated test suite:** Run `pytest` for the backend test suite (currently 70+ tests): input validation, distance conversion, geocoding, data fetching, API endpoints, and profile metric invariants. Tests use mocks and don't require a live database connection. See `tests/README.md` for details.
 - **Python linting (Ruff):** Run `python -m ruff check --no-cache api services scripts tests` for lint checks. Use `python -m ruff check --no-cache --fix api services scripts tests` for safe autofixes.
 - **Schema validation:** Run `python scripts/validate_schema.py` to verify database table structure, spatial indexes, and PostGIS extension.
 - **Configuration check:** Run `python scripts/check_config.py` to validate required environment variables are present.

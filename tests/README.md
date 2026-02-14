@@ -22,11 +22,11 @@ pytest --cov=services --cov-report=html
 
 - **Input Validation**: Location strings and buffer sizes
 - **Distance Conversion**: Miles to degrees conversion logic
-- **Zoom Calculation**: Map zoom level calculations
 - **Geocoding**: Location lookup with mocked Nominatim
 - **Data Fetching**: Database queries with mocked connections
-- **Map Creation**: Folium map generation with various inputs
-- **Connection Caching**: Database connection caching and error recovery (closed connection handling, retry logic)
+- **API Contract**: Endpoint behavior and error envelope guarantees
+- **Profile Metrics**: Core metric math, invariants, and upgrade-potential filtering
+- **Connection Handling**: Closed/open DB connection behavior in walkability queries
 
 ## Adding New Tests
 
