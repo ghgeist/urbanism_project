@@ -53,18 +53,18 @@ describe("CompareTable", () => {
 
   it("calculates and displays positive difference correctly", () => {
     render(<CompareTable summaryA={summaryA} summaryB={summaryB} />);
-    // B (12) - A (10) = +2.00
+    // B (12) - A (10) = +2.00; neutral framing (diff-change, not green)
     const diff = screen.getByText((_content, element) => {
-        return element?.textContent === "↑ 2.00" && element?.className.includes("diff-positive");
+        return element?.textContent === "↑ 2.00" && element?.className.includes("diff-change");
     });
     expect(diff).toBeInTheDocument();
   });
 
   it("calculates and displays negative difference correctly", () => {
     render(<CompareTable summaryA={summaryA} summaryB={summaryB} />);
-    // B (1.5) - A (2.0) = -0.50
+    // B (1.5) - A (2.0) = -0.50; neutral framing (diff-change, not red)
     const diff = screen.getByText((_content, element) => {
-        return element?.textContent === "↓ 0.50" && element?.className.includes("diff-negative");
+        return element?.textContent === "↓ 0.50" && element?.className.includes("diff-change");
     });
     expect(diff).toBeInTheDocument();
   });

@@ -583,44 +583,6 @@
   border-radius: 6px;
 }
 
-.compare__panels {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.compare__panel {
-  padding: 1rem 0;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fafafa;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.compare__panel-title {
-  font-size: 1.1rem;
-  margin: 0 1rem 0.75rem;
-  color: #374151;
-}
-
-.compare__panel .summary-cards {
-  margin: 0 1rem 1rem;
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.compare__panel-empty {
-  margin: 0 1rem 1rem;
-  color: #6b7280;
-  font-size: 0.95rem;
-}
-
-@media (max-width: 768px) {
-  .compare__panels {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Compare Table */
 .compare-table-container {
   overflow-x: auto;
@@ -748,8 +710,8 @@
   font-size: 0.95rem;
 }
 
-.diff-positive { color: #16a34a; }
-.diff-negative { color: #dc2626; }
+/* Neutral framing: single style for all deltas; no red/green moral coding per product plan. */
+.diff-change { color: #475569; }
 .diff-neutral { color: #9ca3af; }
 
 .row-upgrade .cell-val-a,

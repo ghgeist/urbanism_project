@@ -11,16 +11,15 @@ function formatValue(val: number | null | undefined): string {
   return val.toFixed(2);
 }
 
+/** Neutral framing: no moral color coding (no red/green) per product plan. */
 function formatDiff(valA: number | null | undefined, valB: number | null | undefined): React.ReactNode {
   if (valA == null || valB == null) return "—";
   const diff = valB - valA;
   if (Math.abs(diff) < 0.01) return <span className="diff-neutral">—</span>;
 
   const arrow = diff > 0 ? "↑" : "↓";
-  const cls = diff > 0 ? "diff-positive" : "diff-negative";
-  
   return (
-    <span className={`diff ${cls}`}>
+    <span className="diff diff-change">
       {arrow} {Math.abs(diff).toFixed(2)}
     </span>
   );
