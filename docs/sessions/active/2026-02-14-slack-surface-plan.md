@@ -207,3 +207,32 @@ After Phase 4 (full integration):
 - React frontend — only after FastAPI is stable
 - Comparison mode (side-by-side) — Phase 2 of the product plan
 - `docs/dev_notes/lessons.md` creation — will be created with the first bug fix during implementation
+
+---
+
+## Execution Update (2026-02-14)
+
+Status: Completed
+
+Implemented:
+- Phase 1: Added pure metrics service in `services/metrics.py` and full unit coverage in `tests/test_metrics.py`.
+- Phase 2: Added `query_walkability_by_coords()` with geography distance and `dist_miles`; `get_walkability_data()` now delegates to this query.
+- Phase 3: Added `cached_get_profile()` and profile composition in `components/map_display.py`.
+- Phase 4: Added sidebar controls (`search_radius_miles`, `min_delta`) and profile-first UI flow (summary cards, island banner, nearby-better list, collapsed raw table).
+- Phase 5: Updated map rendering to `CHOROPLETH_COLORMAP = "Blues"` and GeoJSON tooltips with explicit proxy/directionality labels.
+- Phase 6: Added edge-case handling in metrics/profile flow (empty data, NaN values, invalid radius relationship) with tests.
+
+Verification:
+- `.\.venv\Scripts\python.exe -m pytest -v` passed.
+- `.\.venv\Scripts\python.exe -m pytest --cov=services --cov-report=term` passed after installing `pytest-cov` (`TOTAL 88%`, `services/metrics.py 89%`, `services/walkability.py 85%`, `services/db.py 100%`).
+
+Related files:
+- `services/metrics.py`
+- `services/walkability.py`
+- `components/map_display.py`
+- `components/sidebar.py`
+- `app.py`
+- `tests/test_metrics.py`
+- `tests/test_walkability.py`
+- `tests/test_connection_caching.py`
+- `docs/dev_notes/lessons.md`

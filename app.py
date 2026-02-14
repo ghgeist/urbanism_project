@@ -15,9 +15,9 @@ st.set_page_config(
 
 def main():
     # Render sidebar and get user inputs
-    city_name, buffer_radius_miles = render_sidebar()
+    city_name, buffer_radius_miles, search_radius_miles, min_delta = render_sidebar()
     # Render main content based on the inputs
-    render_main_content(city_name, buffer_radius_miles)
+    render_main_content(city_name, buffer_radius_miles, search_radius_miles, min_delta)
 
 if __name__ == "__main__":
     main() 

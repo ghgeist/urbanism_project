@@ -14,6 +14,7 @@ import time
 
 DEBUG_LOG_ENV = "WALKABILITY_DEBUG_LOG"
 _DEBUG_LOGGER = logging.getLogger("walkability.debug")
+CHOROPLETH_COLORMAP = "Blues"
 
 def log_debug(location, message, data=None, hypothesis_id=None):
     """Emit a structured debug log when WALKABILITY_DEBUG_LOG=1 is set."""
@@ -101,6 +102,78 @@ def miles_to_degrees(miles, latitude):
     degrees_longitude = miles / (69.0 * math.cos(math.radians(latitude)))
     return degrees_latitude, degrees_longitude
 
+def _rows_to_gdf(rows, columns):
+    """Convert SQL query results into a typed GeoDataFrame."""
+    df = pd.DataFrame(rows, columns=columns)
+    if df.empty:
+        gdf = gpd.GeoDataFrame(df, geometry=[])
+        gdf.set_crs(epsg=4326, inplace=True)
+        return gdf
+
+    geometry_data = df['geometry'].apply(lambda x: bytes(x) if isinstance(x, memoryview) else x)
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(geometry_data))
+
+    numeric_columns = ['d2a_ranked', 'd2b_ranked', 'd3b_ranked', 'd4a_ranked', 'natwalkind', 'dist_miles']
+    for col in numeric_columns:
+        if col in gdf.columns:
+            gdf[col] = pd.to_numeric(gdf[col], errors='coerce')
+
+    gdf.set_crs(epsg=4326, inplace=True)
+    return gdf
+
+def query_walkability_by_coords(lon, lat, radius_miles, conn=None):
+    """
+    Query walkability block groups around a lon/lat point using geography distance.
+
+    Distance is computed by PostGIS as the minimum distance from origin point to
+    polygon boundary in miles (0 if the point lies inside the polygon).
+    """
+    is_valid, error_msg = validate_buffer_size(radius_miles)
+    if not is_valid:
+        logging.error(f"Invalid radius miles: {error_msg}")
+        raise ValueError(f"Invalid radius miles: {error_msg}")
+
+    radius_meters = float(radius_miles) * 1609.344
+
+    should_close_conn = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close_conn = True
+
+    try:
+        if _is_connection_closed(conn):
+            raise psycopg2.InterfaceError("Connection is closed")
+
+        query = """
+            SELECT
+                geoid20,
+                d2a_ranked,
+                d2b_ranked,
+                d3b_ranked,
+                d4a_ranked,
+                natwalkind,
+                ST_AsBinary(geometry) AS geometry,
+                ST_Distance(
+                    geometry::geography,
+                    ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+                ) / 1609.344 AS dist_miles
+            FROM national_walkability_index
+            WHERE ST_DWithin(
+                geometry::geography,
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+                %s
+            );
+        """
+
+        with conn.cursor() as cursor:
+            cursor.execute(query, (lon, lat, lon, lat, radius_meters))
+            columns = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
+            return _rows_to_gdf(rows, columns)
+    finally:
+        if should_close_conn and conn:
+            conn.close()
+
 def get_walkability_data(location_string, buffer_size, conn=None):
     """
     Fetch walkability data within a given buffer radius around the stated location.
@@ -131,117 +204,12 @@ def get_walkability_data(location_string, buffer_size, conn=None):
     if not location:
         return None
     longitude, latitude = location
-    degrees_latitude, degrees_longitude = miles_to_degrees(buffer_size, latitude)
-    buffer_radius_degrees = max(degrees_latitude, degrees_longitude)
-
-    log_debug("walkability.py:172", "get_walkability_data entry", {
-        "conn_provided": conn is not None,
-        "conn_id": id(conn) if conn else None,
-        "conn_closed": conn.closed if conn and hasattr(conn, 'closed') else None,
-        "conn_type": type(conn).__name__ if conn else None
+    log_debug("walkability.py:get_walkability_data", "delegating query to coordinate search", {
+        "longitude": longitude,
+        "latitude": latitude,
+        "buffer_size_miles": buffer_size,
     }, "A")
-    should_close_conn = False
-    if conn is None:
-        conn = get_db_connection()
-        should_close_conn = True
-        log_debug("walkability.py:178", "get_walkability_data created new connection", {
-            "conn_id": id(conn),
-            "conn_closed": conn.closed if hasattr(conn, 'closed') else None
-        }, "A")
-
-    if conn and hasattr(conn, 'closed'):
-        if conn.closed:
-            log_debug("walkability.py:185", "get_walkability_data connection CLOSED before cursor", {
-                "conn_id": id(conn)
-            }, "A")
-        else:
-            log_debug("walkability.py:189", "get_walkability_data connection OPEN before cursor", {
-                "conn_id": id(conn)
-            }, "A")
-
-    try:
-        query = """
-            SELECT
-                geoid20,
-                d2a_ranked,
-                d2b_ranked,
-                d3b_ranked,
-                d4a_ranked,
-                natwalkind,
-                ST_AsBinary(geometry) as geometry
-            FROM national_walkability_index
-            WHERE ST_DWithin(
-                st_setsrid(st_makepoint(%s, %s), 4326),
-                geometry,
-                %s
-            );
-        """
-
-        log_debug("walkability.py:198", "get_walkability_data about to create cursor", {
-            "conn_id": id(conn),
-            "conn_closed": conn.closed if hasattr(conn, 'closed') else None
-        }, "A")
-
-        # Check connection health before using it
-        if _is_connection_closed(conn):
-            log_debug("walkability.py:203", "get_walkability_data connection closed before cursor creation", {
-                "conn_id": id(conn)
-            }, "A")
-            raise psycopg2.InterfaceError("Connection is closed")
-
-        with conn.cursor() as cursor:
-            log_debug("walkability.py:200", "get_walkability_data cursor created successfully", {
-                "conn_id": id(conn),
-                "conn_closed": conn.closed if hasattr(conn, 'closed') else None
-            }, "A")
-            cursor.execute(query, (longitude, latitude, buffer_radius_degrees))
-            log_debug("walkability.py:203", "get_walkability_data query executed", {
-                "conn_id": id(conn),
-                "conn_closed": conn.closed if hasattr(conn, 'closed') else None
-            }, "A")
-            columns = [desc[0] for desc in cursor.description]
-            rows = cursor.fetchall()
-            df = pd.DataFrame(rows, columns=columns)
-            log_debug("walkability.py:207", "get_walkability_data data fetched", {
-                "conn_id": id(conn),
-                "conn_closed": conn.closed if hasattr(conn, 'closed') else None,
-                "row_count": len(rows)
-            }, "A")
-
-        # Convert geometry bytes to GeoSeries
-        # Handle memoryview objects from psycopg2 by converting to bytes
-        geometry_data = df['geometry'].apply(lambda x: bytes(x) if isinstance(x, memoryview) else x)
-        gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(geometry_data))
-    except Exception as e:
-        log_debug("walkability.py:212", "get_walkability_data exception during query", {
-            "conn_id": id(conn) if conn else None,
-            "conn_closed": conn.closed if conn and hasattr(conn, 'closed') else None,
-            "error_type": type(e).__name__,
-            "error_message": str(e)
-        }, "A")
-        raise
-    finally:
-        # Only close if we created the connection ourselves
-        if should_close_conn and conn:
-            log_debug("walkability.py:220", "get_walkability_data closing connection", {
-                "conn_id": id(conn),
-                "conn_closed_before": conn.closed if hasattr(conn, 'closed') else None
-            }, "A")
-            conn.close()
-            log_debug("walkability.py:225", "get_walkability_data connection closed", {
-                "conn_id": id(conn),
-                "conn_closed_after": conn.closed if hasattr(conn, 'closed') else None
-            }, "A")
-
-    # Ensure numeric columns are properly typed (important for Folium Choropleth)
-    # This handles cases where database returns strings or object types
-    numeric_columns = ['d2a_ranked', 'd2b_ranked', 'd3b_ranked', 'd4a_ranked', 'natwalkind']
-    for col in numeric_columns:
-        if col in gdf.columns:
-            gdf[col] = pd.to_numeric(gdf[col], errors='coerce')
-    
-    gdf.set_crs(epsg=4326, inplace=True)
-    return gdf
+    return query_walkability_by_coords(longitude, latitude, buffer_size, conn=conn)
 
 def calculate_zoom_level(buffer_size):
     """
@@ -280,32 +248,34 @@ def create_map(location, gdf, buffer_size):
         data=gdf_map,
         columns=['geoid20', 'natwalkind'],
         key_on='feature.properties.geoid20',
-        fill_color='RdYlBu',
+        fill_color=CHOROPLETH_COLORMAP,
         fill_opacity=0.5,
         line_opacity=0.2,
-        legend_name='National Walkability Index',
+        legend_name='NWI Score (higher = more walkable)',
         threshold_scale=[1, 5, 10, 15, 20]
     ).add_to(m)
+
+    tooltip_fields = []
+    tooltip_aliases = []
+    field_alias_pairs = [
+        ("geoid20", "Block Group ID"),
+        ("natwalkind", "NWI Score (higher = more walkable)"),
+        ("d4a_ranked", "Transit Proximity Rank (proxy; higher = closer to transit)"),
+        ("d2a_ranked", "Employment + Housing Mix Rank (higher = more mixed)"),
+        ("d3b_ranked", "Intersection Density Rank (higher = denser network)"),
+    ]
+    for field_name, alias in field_alias_pairs:
+        if field_name in gdf_map.columns:
+            tooltip_fields.append(field_name)
+            tooltip_aliases.append(alias)
 
     # Add detailed GeoJSON layer
     folium.GeoJson(
         gdf_map,
         name='geojson',
-        style_function=lambda feature: {'color': 'black', 'weight': 1, 'fillOpacity': 0}
+        style_function=lambda feature: {'color': 'black', 'weight': 1, 'fillOpacity': 0},
+        tooltip=folium.GeoJsonTooltip(fields=tooltip_fields, aliases=tooltip_aliases, localize=True),
     ).add_to(m)
-
-    # Add markers for each block group
-    for _, row in gdf_map.iterrows():
-        centroid = row.geometry.centroid
-        folium.Circle(
-            location=[centroid.y, centroid.x],
-            radius=40,  # Customize as needed
-            color='blue',
-            fill=True,
-            fill_color='blue',
-            fill_opacity=0.6,
-            popup=f"Block Group ID: {row['geoid20']}<br>NatWalkInd: {round(row['natwalkind'], 1)}"
-        ).add_to(m)
 
     folium.LayerControl().add_to(m)
     return m 
