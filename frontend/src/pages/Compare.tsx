@@ -5,7 +5,7 @@
 
 import { nwiSummaryByQuery } from "../api/client";
 import type { NwiSummaryResponse } from "../types/api";
-import { SummaryCards } from "../components/SummaryCards";
+import { CompareTable } from "../components/CompareTable";
 import {
   parseCompareParams,
   buildCompareSearchParams,
@@ -70,6 +70,8 @@ export function Compare() {
     submit();
   }
 
+  const showTable = summaryA && summaryB;
+
   return (
     <div className="compare">
       <header className="compare__header">
@@ -130,32 +132,13 @@ export function Compare() {
         </div>
       )}
 
-      <div className="compare__panels">
-        <div className="compare__panel" aria-label="Location A summary">
-          <h2 className="compare__panel-title">
-            {summaryA?.origin?.label ?? "Location A"}
-          </h2>
-          {summaryA ? (
-            <SummaryCards summary={summaryA} />
-          ) : (
-            <p className="compare__panel-empty">Enter locations and click Compare.</p>
-          )}
+      {showTable ? (
+        <CompareTable summaryA={summaryA} summaryB={summaryB} />
+      ) : (
+        <div className="compare-placeholder">
+            {loading ? "Loading comparison..." : "Enter two locations and click Compare to see the difference."}
         </div>
-        <div className="compare__panel" aria-label="Location B summary">
-          <h2 className="compare__panel-title">
-            {summaryB?.origin?.label ?? "Location B"}
-          </h2>
-          {summaryB ? (
-            <SummaryCards
-              summary={summaryB}
-              diffFrom={summaryA}
-              diffLabel="A"
-            />
-          ) : (
-            <p className="compare__panel-empty">Enter locations and click Compare.</p>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

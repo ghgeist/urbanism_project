@@ -5,6 +5,7 @@
  */
 
 import type { NwiSummaryResponse } from "../types/api";
+import { METRICS_CONFIG } from "../config/metrics";
 
 function formatMetric(value: number | null | undefined): string {
   if (value == null) return "—";
@@ -35,16 +36,6 @@ interface SummaryCardsProps {
 
 export function SummaryCards({ summary, diffFrom = null, diffLabel = "first" }: SummaryCardsProps) {
   const { metrics, upgrade_potential } = summary;
-  const everyday = metrics?.everyday_convenience ?? null;
-  const transit = metrics?.transit_viability ?? null;
-  const variation = metrics?.variation ?? null;
-
-  const baseEveryday = diffFrom?.metrics?.everyday_convenience ?? null;
-  const baseTransit = diffFrom?.metrics?.transit_viability ?? null;
-  const baseVariation = diffFrom?.metrics?.variation ?? null;
-  const everydayDelta = formatDelta(everyday, baseEveryday, diffLabel);
-  const transitDelta = formatDelta(transit, baseTransit, diffLabel);
-  const variationDelta = formatDelta(variation, baseVariation, diffLabel);
 
   let upgradeVal: string;
   let upgradeCaption: string | null = null;
@@ -67,27 +58,22 @@ export function SummaryCards({ summary, diffFrom = null, diffLabel = "first" }: 
 
   return (
     <section className="summary-cards" aria-label="Profile summary">
-      <div className="summary-card" title="Average NWI score within the selected radius (higher = more walkable).">
-        <div className="summary-card__value">{formatMetric(everyday)}</div>
-        <div className="summary-card__label">Everyday Convenience</div>
-        <div className="summary-card__hint">
-          {everydayDelta ?? "Mean NWI within radius"}
-        </div>
-      </div>
-      <div className="summary-card" title="Average transit proximity rank (1–20). EPA proxy d4a_ranked.">
-        <div className="summary-card__value">{formatMetric(transit)}</div>
-        <div className="summary-card__label">Transit Viability</div>
-        <div className="summary-card__hint">
-          {transitDelta ?? "Transit proximity rank (avg, 1–20)"}
-        </div>
-      </div>
-      <div className="summary-card" title="Standard deviation of NWI within radius. Dispersion only.">
-        <div className="summary-card__value">{formatMetric(variation)}</div>
-        <div className="summary-card__label">Variation</div>
-        <div className="summary-card__hint">
-          {variationDelta ?? "Dispersion (std dev)"}
-        </div>
-      </div>
+      {METRICS_CONFIG.map((config) => {
+        const val = metrics?.[config.key] ?? null;
+        const baseVal = diffFrom?.metrics?.[config.key] ?? null;
+        const delta = formatDelta(val, baseVal, diffLabel);
+        
+        return (
+          <div key={config.key} className="summary-card" title={config.tooltip}>
+            <div className="summary-card__value">{formatMetric(val)}</div>
+            <div className="summary-card__label">{config.label}</div>
+            <div className="summary-card__hint">
+              {delta ?? config.description}
+            </div>
+          </div>
+        );
+      })}
+      
       <div className="summary-card" title="Best nearby candidate meeting min NWI improvement delta.">
         <div
           className={
@@ -104,3 +90,4 @@ export function SummaryCards({ summary, diffFrom = null, diffLabel = "first" }: 
     </section>
   );
 }
+

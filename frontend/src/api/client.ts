@@ -1,19 +1,27 @@
 /**
  * API client for the Urbanism Walkability API.
- * Base URL: VITE_API_URL at build time, or at runtime same host as the page on port 8000,
- * so deployment builds work without setting env (no localhost baked in).
+ * Base URL: VITE_API_URL at build time. When unset in the browser, uses same origin
+ * so Vite's dev proxy ( /health, /geocode, /nwi → backend) avoids CORS.
  */
 
-import type { GeocodeResponse, NwiSummaryResponse } from "../types/api";
+import type { ErrorResponse, GeocodeResponse, NwiSummaryResponse } from "../types/api";
 
 function getApiBase(): string {
   const env = import.meta.env.VITE_API_URL;
   if (env) return env;
-  if (typeof window !== "undefined") {
-    return `${window.location.protocol}//${window.location.hostname}:8000`;
-  }
+  if (import.meta.env.MODE === "test") return "http://127.0.0.1:8000";
+  if (typeof window !== "undefined") return "";
   return "http://127.0.0.1:8000";
 }
+
+/** User-facing messages for API error codes. Canonical codes documented in api/schemas.py ErrorResponse. */
+const API_ERROR_MESSAGES: Record<string, string> = {
+  location_not_found: "Location not found. Try a city name or ZIP code.",
+  invalid_request: "Invalid request. Check your input and try again.",
+  validation_error: "Invalid parameters. Check your input and try again.",
+  http_404: "Location not found. Try a city name or ZIP code.",
+  http_422: "Invalid parameters. Check your input and try again.",
+};
 
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
   const search = new URLSearchParams();
@@ -30,8 +38,11 @@ async function get<T>(path: string, params: Record<string, string | number | und
     data = undefined;
   }
   if (!res.ok) {
-    const err = data as { code?: string; message?: string } | undefined;
-    throw new Error(err?.message ?? `API error ${res.status}`);
+    const err = data as ErrorResponse | undefined;
+    const code = err?.code;
+    const userMessage =
+      (code && API_ERROR_MESSAGES[code]) ?? err?.message ?? `Request failed (${res.status}).`;
+    throw new Error(userMessage);
   }
   if (data === undefined) {
     throw new Error(`Invalid response (${res.status})`);
