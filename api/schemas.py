@@ -1,6 +1,8 @@
 """Pydantic schemas for the FastAPI contract."""
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -79,3 +81,8 @@ class NwiSummaryResponse(BaseModel):
     upgrade_potential: UpgradePotential
     walkable_island: WalkableIsland
 
+
+class ErrorResponse(BaseModel):
+    code: str
+    message: str
+    details: Any | None = None
