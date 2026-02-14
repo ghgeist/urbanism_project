@@ -1,12 +1,20 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AppLayout } from "./layouts/AppLayout";
 import { Explore } from "./pages/Explore";
+import { Compare } from "./pages/Compare";
+import { Method } from "./pages/Method";
 import "./App.css";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Explore />} />
+        <Route element={<AppLayout />}>
+          <Route index element={<Explore />} />
+          <Route path="compare" element={<Compare />} />
+          <Route path="method" element={<Method />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

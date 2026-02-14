@@ -1,45 +1,61 @@
 /**
  * Explore page: search input, radius slider, summary cards, map.
- * State is intended to live in URL query params for shareability (Phase 1: local state).
+ * URL query params (q, radius) for shareability; replaceState while editing, pushState on submit.
  */
 
-import { useState } from "react";
 import { nwiSummaryByQuery } from "../api/client";
 import type { NwiSummaryResponse } from "../types/api";
 import { SummaryCards } from "../components/SummaryCards";
 import { MapView } from "../components/MapView";
+import {
+  EXPLORE_PARAMS,
+  parseExploreParams,
+  buildExploreSearchParams,
+  canFetch,
+  canonicalRadius,
+  type ExploreParams,
+} from "../lib/exploreParams";
+import { useUrlDrivenSearch } from "../hooks/useUrlDrivenSearch";
 
-const DEFAULT_RADIUS = 0.5;
-const MIN_RADIUS = 0.1;
-const MAX_RADIUS = 3;
-const STEP = 0.1;
+const { MIN_RADIUS, MAX_RADIUS, STEP } = EXPLORE_PARAMS;
 
 export function Explore() {
-  const [query, setQuery] = useState("");
-  const [radius, setRadius] = useState(DEFAULT_RADIUS);
-  const [summary, setSummary] = useState<NwiSummaryResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    params,
+    result: summary,
+    loading,
+    error,
+    validationMessage: paramValidationMessage,
+    updateDraft,
+    submit,
+  } = useUrlDrivenSearch<ExploreParams, NwiSummaryResponse>({
+    parse: parseExploreParams,
+    build: buildExploreSearchParams,
+    canFetch,
+    fetch: (p) => nwiSummaryByQuery(p.q, p.radius),
+    emptyFetchMessage: "Enter a location to get a summary.",
+    trimParams: (p) => ({ ...p, q: p.q.trim() }),
+  });
 
-  async function handleSearch(e: React.FormEvent) {
+  function handleQueryChange(value: string) {
+    updateDraft({
+      q: value.slice(0, EXPLORE_PARAMS.MAX_QUERY_LENGTH),
+      radius: canonicalRadius(params.radius),
+    });
+  }
+
+  function handleRadiusChange(value: number) {
+    const r = canonicalRadius(value);
+    updateDraft({ q: params.q, radius: r });
+  }
+
+  function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    setError(null);
-    setLoading(true);
-    try {
-      const data = await nwiSummaryByQuery(q, radius);
-      setSummary(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
-      setSummary(null);
-    } finally {
-      setLoading(false);
-    }
+    submit();
   }
 
   return (
-    <main className="explore">
+    <div className="explore">
       <header className="explore__header">
         <h1>Explore</h1>
         <p className="explore__tagline">
@@ -55,22 +71,22 @@ export function Explore() {
               <input
                 id="search"
                 type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={params.q}
+                onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder="e.g. Cambridge, MA"
                 disabled={loading}
                 autoComplete="off"
               />
               <div className="explore__radius">
-                <label htmlFor="radius">Radius (miles): {radius.toFixed(1)}</label>
+                <label htmlFor="radius">Radius (miles): {params.radius.toFixed(1)}</label>
                 <input
                   id="radius"
                   type="range"
                   min={MIN_RADIUS}
                   max={MAX_RADIUS}
                   step={STEP}
-                  value={radius}
-                  onChange={(e) => setRadius(Number(e.target.value))}
+                  value={params.radius}
+                  onChange={(e) => handleRadiusChange(Number(e.target.value))}
                   disabled={loading}
                 />
               </div>
@@ -80,9 +96,9 @@ export function Explore() {
             </form>
           </section>
 
-          {error && (
+          {(paramValidationMessage || error) && (
             <div className="explore__error" role="alert">
-              {error}
+              {paramValidationMessage ?? error}
             </div>
           )}
 
@@ -142,6 +158,6 @@ export function Explore() {
           )}
         </aside>
       </div>
-    </main>
+    </div>
   );
 }
