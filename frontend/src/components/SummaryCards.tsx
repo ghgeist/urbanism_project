@@ -57,7 +57,15 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
         <div className="summary-card__hint">Dispersion (std dev)</div>
       </div>
       <div className="summary-card" title="Best nearby candidate meeting min NWI improvement delta.">
-        <div className="summary-card__value">{upgradeVal}</div>
+        <div
+          className={
+            upgradeVal.length > 12
+              ? "summary-card__value summary-card__value--text"
+              : "summary-card__value"
+          }
+        >
+          {upgradeVal}
+        </div>
         <div className="summary-card__label">Upgrade Potential</div>
         {upgradeCaption && <div className="summary-card__hint">{upgradeCaption}</div>}
       </div>

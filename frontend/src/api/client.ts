@@ -1,18 +1,26 @@
 /**
  * API client for the Urbanism Walkability API.
- * Base URL is read from VITE_API_URL (defaults to local FastAPI).
+ * Base URL: VITE_API_URL at build time, or at runtime same host as the page on port 8000,
+ * so deployment builds work without setting env (no localhost baked in).
  */
 
 import type { GeocodeResponse, NwiSummaryResponse } from "../types/api";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+function getApiBase(): string {
+  const env = import.meta.env.VITE_API_URL;
+  if (env) return env;
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://127.0.0.1:8000";
+}
 
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
   const search = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== "") search.set(k, String(v));
   }
-  const url = `${API_BASE}${path}${search.toString() ? `?${search}` : ""}`;
+  const url = `${getApiBase()}${path}${search.toString() ? `?${search}` : ""}`;
   const res = await fetch(url);
   const text = await res.text();
   let data: unknown;

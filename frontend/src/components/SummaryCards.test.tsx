@@ -12,7 +12,12 @@ function minimalSummary(overrides: Partial<NwiSummaryResponse> = {}): NwiSummary
     min_delta: 2,
     counts: { selected_block_groups: 5, context_block_groups: 10 },
     nwi: { mean: 12, min: 8, max: 16, spread: 8 },
-    components: {},
+    components: {
+      employment_housing_mix_rank_mean: null,
+      employment_type_diversity_rank_mean: null,
+      intersection_density_rank_mean: null,
+      transit_proximity_rank_mean_proxy: null,
+    },
     metrics: {
       everyday_convenience: 12.5,
       variation: 2.1,

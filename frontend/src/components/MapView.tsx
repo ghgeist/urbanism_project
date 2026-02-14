@@ -21,9 +21,11 @@ interface MapViewProps {
   lon: number;
   radiusMiles: number;
   label?: string | null;
+  /** When true, container height is controlled by parent (e.g. split layout). */
+  fillHeight?: boolean;
 }
 
-export function MapView({ lat, lon, radiusMiles, label }: MapViewProps) {
+export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -63,7 +65,11 @@ export function MapView({ lat, lon, radiusMiles, label }: MapViewProps) {
 
   return (
     <div className="map-view">
-      <div ref={containerRef} className="map-view__container" style={{ height: "360px" }} />
+      <div
+        ref={containerRef}
+        className="map-view__container"
+        style={fillHeight ? undefined : { height: "360px" }}
+      />
       <p className="map-view__caption">
         Center: {lat.toFixed(4)}, {lon.toFixed(4)} · Radius: {radiusMiles} mi
       </p>

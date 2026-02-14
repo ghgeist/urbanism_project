@@ -4,7 +4,17 @@ React + TypeScript + Vite app for the walkability Explore (and future Compare) e
 
 ## Run locally
 
-1. Start the API from repo root: `uvicorn api.main:app --reload` (requires PG* env and PostGIS).
+**One command (recommended)** – from repo root, start both backend and frontend:
+
+```bash
+./scripts/run_dev.sh
+```
+
+Or with bash: `bash scripts/run_dev.sh`. Backend runs on port 8000, frontend on 5173. Ctrl+C stops both.
+
+**Manual (two terminals):**
+
+1. Start the API from repo root: `uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload` (requires PG* env and PostGIS).
 2. From `frontend/`: `npm install` then `npm run dev`.
 3. Open http://localhost:5173. Default API base is `http://127.0.0.1:8000`; override with `VITE_API_URL` (see `.env.example`).
 
