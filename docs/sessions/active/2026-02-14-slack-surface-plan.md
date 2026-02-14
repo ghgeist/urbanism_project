@@ -217,6 +217,7 @@ Status: Completed
 Implemented:
 - Phase 1: Added pure metrics service in `services/metrics.py` and full unit coverage in `tests/test_metrics.py`.
 - Phase 2: Added `query_walkability_by_coords()` with geography distance and `dist_miles`; `get_walkability_data()` now delegates to this query.
+- Post-PR hardening: added geometry index prefilter (`geometry && ST_Expand(...)`) ahead of geography `ST_DWithin` in `query_walkability_by_coords()` to avoid cast-only scan risk.
 - Phase 3: Added `cached_get_profile()` and profile composition in `components/map_display.py`.
 - Phase 4: Added sidebar controls (`search_radius_miles`, `min_delta`) and profile-first UI flow (summary cards, island banner, nearby-better list, collapsed raw table).
 - Phase 5: Updated map rendering to `CHOROPLETH_COLORMAP = "Blues"` and GeoJSON tooltips with explicit proxy/directionality labels.

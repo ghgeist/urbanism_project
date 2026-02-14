@@ -257,6 +257,10 @@ class TestWalkabilityData:
         assert isinstance(result, gpd.GeoDataFrame)
         assert 'dist_miles' in result.columns
         assert result['dist_miles'].iloc[0] == 0.25
+        executed_sql = mock_cursor.execute.call_args.args[0]
+        executed_params = mock_cursor.execute.call_args.args[1]
+        assert "geometry && ST_Expand" in executed_sql
+        assert len(executed_params) == 8
 
 
 class TestMapCreation:

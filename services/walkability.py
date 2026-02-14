@@ -134,6 +134,9 @@ def query_walkability_by_coords(lon, lat, radius_miles, conn=None):
         raise ValueError(f"Invalid radius miles: {error_msg}")
 
     radius_meters = float(radius_miles) * 1609.344
+    # Index-friendly bbox prefilter in degrees, then exact geography distance in meters.
+    deg_lat, deg_lon = miles_to_degrees(radius_miles, lat)
+    bbox_radius_degrees = max(deg_lat, deg_lon)
 
     should_close_conn = False
     if conn is None:
@@ -158,7 +161,11 @@ def query_walkability_by_coords(lon, lat, radius_miles, conn=None):
                     ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
                 ) / 1609.344 AS dist_miles
             FROM national_walkability_index
-            WHERE ST_DWithin(
+            WHERE geometry && ST_Expand(
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326),
+                %s
+            )
+            AND ST_DWithin(
                 geometry::geography,
                 ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
                 %s
@@ -166,7 +173,10 @@ def query_walkability_by_coords(lon, lat, radius_miles, conn=None):
         """
 
         with conn.cursor() as cursor:
-            cursor.execute(query, (lon, lat, lon, lat, radius_meters))
+            cursor.execute(
+                query,
+                (lon, lat, lon, lat, bbox_radius_degrees, lon, lat, radius_meters),
+            )
             columns = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
             return _rows_to_gdf(rows, columns)
