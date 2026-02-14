@@ -184,7 +184,7 @@ API_CORS_ORIGINS=http://localhost:3000,https://your-frontend.example
 ```
 
 ## Deployment
-- **Replit:** The live app runs at [walkability-index.replit.app](https://walkability-index.replit.app/). Configure Replit PostgreSQL (or a connected Neon/Supabase DB) via Secrets and run the FastAPI backend plus the React frontend build.
+- **Replit:** The live app runs at [walkability-index.replit.app](https://walkability-index.replit.app/). A single process serves both the API and the built React app from the same origin (FastAPI mounts `frontend/dist` when present), so Replit’s one-port deployment works without CORS. Configure Replit PostgreSQL (or a connected Neon/Supabase DB) via Secrets; see `replit.md` for Run workflow and deployment best practices.
 - **Self-managed:** Run the FastAPI app (e.g. `uvicorn api.main:app`) and serve the built React app (e.g. `frontend/dist/`) with access to PostgreSQL/PostGIS. Use HTTPS and secure handling of secrets.
 
 ### Production checklist (minimal)

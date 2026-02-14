@@ -36,6 +36,7 @@ class TestValidatePgEnv:
         assert validate_pg_env() == []
 
     def test_missing_returns_sorted(self, monkeypatch):
+        monkeypatch.delenv('DATABASE_URL', raising=False)
         monkeypatch.setenv('PGDATABASE', 'db')
         monkeypatch.setenv('PGPASSWORD', 'pw')
         monkeypatch.setenv('PGUSER', 'user')
@@ -47,6 +48,7 @@ class TestValidatePgEnv:
 class TestGetPgEnv:
 
     def test_raises_when_missing(self, monkeypatch):
+        monkeypatch.delenv('DATABASE_URL', raising=False)
         monkeypatch.delenv('PGHOST', raising=False)
         monkeypatch.delenv('PGPORT', raising=False)
         monkeypatch.delenv('PGDATABASE', raising=False)
@@ -75,6 +77,7 @@ class TestGetDbConnection:
 
     @patch('services.db.psycopg2.connect')
     def test_calls_psycopg2_with_env(self, mock_connect, monkeypatch):
+        monkeypatch.delenv('DATABASE_URL', raising=False)
         for k, v in PG_ENV.items():
             monkeypatch.setenv(k, v)
         get_db_connection()

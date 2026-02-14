@@ -27,6 +27,7 @@ pytest --cov=services --cov-report=html
 - **API Contract**: Endpoint behavior and error envelope guarantees
 - **Profile Metrics**: Core metric math, invariants, and upgrade-potential filtering
 - **Connection Handling**: Closed/open DB connection behavior in walkability queries
+- **Static/SPA serving** (`test_static_serving.py`): When `frontend/dist` exists, API routes take precedence over the SPA catch-all, root serves `index.html`, and path-traversal requests are safe. These tests are skipped if the SPA is not mounted (no `frontend/dist`).
 
 ## Adding New Tests
 
