@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, NoReturn
 
 from starlette.requests import Request
@@ -11,7 +12,8 @@ from starlette.requests import Request
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.schemas import ErrorResponse, GeocodeResponse, HealthResponse, NwiSummaryResponse
 from services.constraints import MAX_QUERY_LENGTH
@@ -241,3 +243,23 @@ def nwi_summary_by_query(
         )
 
     return NwiSummaryResponse.model_validate(summary)
+
+
+# Serve built frontend when frontend/dist exists (e.g. Replit deployment).
+# API routes are registered above, so /health, /geocode, /nwi/* take precedence.
+_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if _DIST.is_dir():
+    _ASSETS = _DIST / "assets"
+    if _ASSETS.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_ASSETS)), name="assets")
+
+    @app.get("/{full_path:path}")
+    def _serve_spa(full_path: str):
+        """Serve SPA: existing files under dist, else index.html for client-side routing."""
+        try:
+            candidate = (_DIST / full_path).resolve()
+            if candidate.is_file() and candidate.resolve().is_relative_to(_DIST):
+                return FileResponse(candidate)
+        except (ValueError, OSError):
+            pass
+        return FileResponse(_DIST / "index.html")

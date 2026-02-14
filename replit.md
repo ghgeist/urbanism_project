@@ -31,7 +31,16 @@ Two workflows run in parallel:
 - **React Frontend** (port 5000, webview): `cd frontend && npm install && npm run dev`
 - **FastAPI Backend** (port 8000, console): `uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload`
 
-The Vite dev server proxies API requests (`/health`, `/geocode`, `/nwi`) to the backend on port 8000. For production, build the frontend (`npm run build`) and serve `frontend/dist/`; configure the frontend to use the API URL for your Replit deployment.
+The Vite dev server proxies API requests (`/health`, `/geocode`, `/nwi`) to the backend on port 8000. For production, see **Replit deployment (below)**.
+
+**Dev vs prod ports:** Production uses a single process on Replit’s `PORT`. The Run workflow uses 8000. If you’re developing via SSH and the Run workflow is already using 8000, start the backend on a different port (e.g. `uvicorn api.main:app --host 0.0.0.0 --port 8001 --reload`) and point the frontend proxy or `VITE_API_URL` at 8001 if needed.
+
+### Replit deployment best practices (review)
+
+- **Use `PORT`:** The deployment run command uses `uvicorn ... --port ${PORT:-8000}` so the app binds to Replit’s assigned port. Replit sets `PORT` in deployment; your app must listen on it so the platform can route traffic.
+- **Bind to `0.0.0.0`:** The server uses `--host 0.0.0.0` so it’s reachable from Replit’s proxy (not only localhost).
+- **Single process, single port:** Autoscale deployments support only **one** external port. The deployment runs a single process (FastAPI) that serves both the API and the built React app from `frontend/dist`. The build step runs `npm run build`; at run time, if `frontend/dist` exists, FastAPI mounts it so the same origin serves the SPA and the API (no CORS or second port).
+- **[[ports]] in .replit:** Multiple `externalPort` entries are for the workspace (Run/Preview). For published autoscale apps, only the default port (e.g. 80) is exposed; the single `run` process listens on `PORT`.
 
 ## Database Requirements
 The app requires a PostgreSQL database with PostGIS extension and a `national_walkability_index` table. Table structure:
