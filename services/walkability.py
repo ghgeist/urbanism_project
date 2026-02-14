@@ -87,7 +87,7 @@ def _geocode_nominatim(query):
 
 
 @lru_cache(maxsize=256)
-def get_location(location_string, user_agent="location_walkability_app"):
+def get_location(location_string):
     """
     Geocode the location string using Nominatim and return (longitude, latitude).
     Tries the string as-is first; if not found, retries with US street spelling normalized
