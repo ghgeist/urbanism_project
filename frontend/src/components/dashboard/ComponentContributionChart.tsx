@@ -4,7 +4,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import type { NwiSummaryResponse } from "../../types/api";
-import { COMPONENT_INFO } from "../../lib/componentLabels";
+import { createComponentData, CHART_MARGINS, CHART_HEIGHTS, NWI_DOMAIN } from "../../lib/chartConfig";
 import { ChartErrorBoundary } from "./ChartErrorBoundary";
 
 interface ComponentContributionChartProps {
@@ -12,30 +12,9 @@ interface ComponentContributionChartProps {
 }
 
 export function ComponentContributionChart({ summary }: ComponentContributionChartProps) {
-  const { components, nwi } = summary;
+  const { nwi } = summary;
 
-  const data = [
-    {
-      component: COMPONENT_INFO.d2a_ranked.code,
-      label: COMPONENT_INFO.d2a_ranked.shortLabel,
-      value: components.employment_housing_mix_rank_mean,
-    },
-    {
-      component: COMPONENT_INFO.d2b_ranked.code,
-      label: COMPONENT_INFO.d2b_ranked.shortLabel,
-      value: components.employment_type_diversity_rank_mean,
-    },
-    {
-      component: COMPONENT_INFO.d3b_ranked.code,
-      label: COMPONENT_INFO.d3b_ranked.shortLabel,
-      value: components.intersection_density_rank_mean,
-    },
-    {
-      component: COMPONENT_INFO.d4a_ranked.code,
-      label: COMPONENT_INFO.d4a_ranked.shortLabel,
-      value: components.transit_proximity_rank_mean_proxy,
-    },
-  ].filter((d) => d.value != null);
+  const data = createComponentData(summary).filter((d) => d.value != null);
 
   if (data.length === 0) {
     return <p>No component data available.</p>;
@@ -45,8 +24,8 @@ export function ComponentContributionChart({ summary }: ComponentContributionCha
 
   return (
     <ChartErrorBoundary chartName="Component Contribution Chart">
-      <ResponsiveContainer width="100%" height={300} aria-label="Bar chart comparing component means to NWI average">
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+      <ResponsiveContainer width="100%" height={CHART_HEIGHTS.compact} aria-label="Bar chart comparing component means to NWI average">
+        <BarChart data={data} margin={CHART_MARGINS}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="component"
@@ -55,7 +34,7 @@ export function ComponentContributionChart({ summary }: ComponentContributionCha
           />
           <YAxis
             label={{ value: "Average Score (1-20)", angle: -90, position: "insideLeft" }}
-            domain={[0, 20]}
+            domain={NWI_DOMAIN}
             aria-label="Average Score"
           />
           <Tooltip formatter={(value: number) => value.toFixed(2)} />

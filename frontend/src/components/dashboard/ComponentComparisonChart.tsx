@@ -4,7 +4,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { NwiSummaryResponse } from "../../types/api";
-import { COMPONENT_INFO } from "../../lib/componentLabels";
+import { createComponentData, CHART_MARGINS, CHART_HEIGHTS, NWI_DOMAIN } from "../../lib/chartConfig";
 import { ChartErrorBoundary } from "./ChartErrorBoundary";
 
 interface ComponentComparisonChartProps {
@@ -12,30 +12,13 @@ interface ComponentComparisonChartProps {
 }
 
 export function ComponentComparisonChart({ summary }: ComponentComparisonChartProps) {
-  const { components } = summary;
-
-  const data = [
-    {
-      name: COMPONENT_INFO.d2a_ranked.code,
-      label: COMPONENT_INFO.d2a_ranked.shortLabel,
-      value: components.employment_housing_mix_rank_mean,
-    },
-    {
-      name: COMPONENT_INFO.d2b_ranked.code,
-      label: COMPONENT_INFO.d2b_ranked.shortLabel,
-      value: components.employment_type_diversity_rank_mean,
-    },
-    {
-      name: COMPONENT_INFO.d3b_ranked.code,
-      label: COMPONENT_INFO.d3b_ranked.shortLabel,
-      value: components.intersection_density_rank_mean,
-    },
-    {
-      name: COMPONENT_INFO.d4a_ranked.code,
-      label: COMPONENT_INFO.d4a_ranked.shortLabel,
-      value: components.transit_proximity_rank_mean_proxy,
-    },
-  ].filter((d) => d.value != null);
+  const data = createComponentData(summary)
+    .map((d) => ({
+      name: d.component,
+      label: d.label,
+      value: d.value,
+    }))
+    .filter((d) => d.value != null);
 
   if (data.length === 0) {
     return <p>No component data available.</p>;
@@ -46,8 +29,8 @@ export function ComponentComparisonChart({ summary }: ComponentComparisonChartPr
 
   return (
     <ChartErrorBoundary chartName="Component Comparison Chart">
-      <ResponsiveContainer width="100%" height={300} aria-label="Bar chart comparing component means sorted by strength">
-        <BarChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+      <ResponsiveContainer width="100%" height={CHART_HEIGHTS.compact} aria-label="Bar chart comparing component means sorted by strength">
+        <BarChart data={sortedData} margin={CHART_MARGINS}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="name"
@@ -56,7 +39,7 @@ export function ComponentComparisonChart({ summary }: ComponentComparisonChartPr
           />
           <YAxis
             label={{ value: "Average Score (1-20)", angle: -90, position: "insideLeft" }}
-            domain={[0, 20]}
+            domain={NWI_DOMAIN}
             aria-label="Average Score"
           />
           <Tooltip

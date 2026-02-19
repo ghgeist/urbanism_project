@@ -5,6 +5,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { BlockGroupFeature } from "../../types/api";
 import { COMPONENT_INFO } from "../../lib/componentLabels";
+import { COMPONENT_COLORS, CHART_MARGINS, CHART_HEIGHTS, NWI_DOMAIN } from "../../lib/chartConfig";
 import { ChartErrorBoundary } from "./ChartErrorBoundary";
 
 interface ComponentDistributionChartProps {
@@ -38,13 +39,14 @@ export function ComponentDistributionChart({ blockGroups }: ComponentDistributio
 
   return (
     <ChartErrorBoundary chartName="Component Distribution Chart">
-      <ResponsiveContainer width="100%" height={400} aria-label="Histogram showing distribution of component scores across block groups">
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+      <ResponsiveContainer width="100%" height={CHART_HEIGHTS.standard} aria-label="Histogram showing distribution of component scores across block groups">
+        <BarChart data={data} margin={CHART_MARGINS}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="score"
             label={{ value: "Component Score (1-20)", position: "insideBottom", offset: -5 }}
             aria-label="Component Score"
+            domain={NWI_DOMAIN}
           />
           <YAxis
             label={{ value: "Number of Block Groups", angle: -90, position: "insideLeft" }}
@@ -54,25 +56,25 @@ export function ComponentDistributionChart({ blockGroups }: ComponentDistributio
           <Legend />
           <Bar
             dataKey="d2a"
-            fill="#8884d8"
+            fill={COMPONENT_COLORS.d2a}
             name={`${COMPONENT_INFO.d2a_ranked.code}: ${COMPONENT_INFO.d2a_ranked.shortLabel}`}
             aria-label={`${COMPONENT_INFO.d2a_ranked.shortLabel} distribution`}
           />
           <Bar
             dataKey="d2b"
-            fill="#82ca9d"
+            fill={COMPONENT_COLORS.d2b}
             name={`${COMPONENT_INFO.d2b_ranked.code}: ${COMPONENT_INFO.d2b_ranked.shortLabel}`}
             aria-label={`${COMPONENT_INFO.d2b_ranked.shortLabel} distribution`}
           />
           <Bar
             dataKey="d3b"
-            fill="#ffc658"
+            fill={COMPONENT_COLORS.d3b}
             name={`${COMPONENT_INFO.d3b_ranked.code}: ${COMPONENT_INFO.d3b_ranked.shortLabel}`}
             aria-label={`${COMPONENT_INFO.d3b_ranked.shortLabel} distribution`}
           />
           <Bar
             dataKey="d4a"
-            fill="#ff7300"
+            fill={COMPONENT_COLORS.d4a}
             name={`${COMPONENT_INFO.d4a_ranked.code}: ${COMPONENT_INFO.d4a_ranked.shortLabel}`}
             aria-label={`${COMPONENT_INFO.d4a_ranked.shortLabel} distribution`}
           />

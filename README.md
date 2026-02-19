@@ -127,10 +127,11 @@ Open http://localhost:5173 (or the URL Vite prints). The frontend uses the API a
 
 ## Usage
 
-The app includes three main pages accessible via navigation:
+The app includes four main pages accessible via navigation:
 
 - **Explore** (`/`): Search any U.S. address, ZIP code, or city and view walkability metrics on an interactive map. Set buffer and search radii to explore nearby census block groups.
 - **Compare** (`/compare`): Side-by-side comparison of two locations with summary panels and metric differences.
+- **Dashboard** (`/dashboard`): Component analysis dashboard with visualizations showing distributions, correlations, contributions, and comparisons of the four NWI components (D2A, D2B, D3B, D4A).
 - **Method** (`/method`): Documentation about the National Walkability Index methodology and data sources.
 
 ### Key Features

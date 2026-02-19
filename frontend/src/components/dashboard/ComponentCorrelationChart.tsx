@@ -7,6 +7,8 @@ import { useState } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { BlockGroupFeature } from "../../types/api";
 import { COMPONENT_INFO } from "../../lib/componentLabels";
+import { CHART_MARGINS, CHART_HEIGHTS, NWI_DOMAIN, getComponentColor } from "../../lib/chartConfig";
+import { calculateCorrelation } from "../../lib/correlation";
 import { ChartErrorBoundary } from "./ChartErrorBoundary";
 
 interface ComponentCorrelationChartProps {
@@ -34,27 +36,6 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
 
   if (data.length === 0) {
     return <p>No data available for correlation analysis.</p>;
-  }
-
-  // Calculate correlation coefficient (simple Pearson correlation)
-  function calculateCorrelation(x: (number | null)[], y: (number | null)[]): number {
-    const pairs = x
-      .map((xi, i) => ({ x: xi, y: y[i] }))
-      .filter((p) => p.x != null && p.y != null) as { x: number; y: number }[];
-
-    if (pairs.length < 2) return 0;
-
-    const n = pairs.length;
-    const sumX = pairs.reduce((sum, p) => sum + p.x, 0);
-    const sumY = pairs.reduce((sum, p) => sum + p.y, 0);
-    const sumXY = pairs.reduce((sum, p) => sum + p.x * p.y, 0);
-    const sumX2 = pairs.reduce((sum, p) => sum + p.x * p.x, 0);
-    const sumY2 = pairs.reduce((sum, p) => sum + p.y * p.y, 0);
-
-    const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-
-    return denominator === 0 ? 0 : numerator / denominator;
   }
 
   const correlations = {
@@ -116,15 +97,15 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
           </div>
         </div>
         <div className="correlation-chart-container" aria-label={`Scatter plot showing ${selectedInfo.shortLabel} vs NWI Score`}>
-          <ResponsiveContainer width="100%" height={400}>
-            <ScatterChart margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <ResponsiveContainer width="100%" height={CHART_HEIGHTS.standard}>
+            <ScatterChart margin={CHART_MARGINS}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 type="number"
                 dataKey="nwi"
                 name="NWI Score"
                 label={{ value: "NWI Score", position: "insideBottom", offset: -5 }}
-                domain={[0, 20]}
+                domain={NWI_DOMAIN}
                 aria-label="NWI Score axis"
               />
               <YAxis
@@ -132,7 +113,7 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
                 dataKey="component"
                 name="Component Score"
                 label={{ value: `${selectedInfo.code} Score`, angle: -90, position: "insideLeft" }}
-                domain={[0, 20]}
+                domain={NWI_DOMAIN}
                 aria-label={`${selectedInfo.shortLabel} Score axis`}
               />
               <Tooltip
@@ -144,15 +125,7 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
               <Scatter
                 name={`${selectedInfo.code}: ${selectedInfo.shortLabel}`}
                 data={selectedData}
-                fill={
-                  selectedComponent === "d2a"
-                    ? "#8884d8"
-                    : selectedComponent === "d2b"
-                      ? "#82ca9d"
-                      : selectedComponent === "d3b"
-                        ? "#ffc658"
-                        : "#ff7300"
-                }
+                fill={getComponentColor(selectedComponent)}
               />
             </ScatterChart>
           </ResponsiveContainer>
