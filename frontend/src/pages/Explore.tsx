@@ -148,6 +148,8 @@ export function Explore() {
                 lon={summary.origin.lon}
                 radiusMiles={summary.selected_radius_miles}
                 label={summary.origin.label ?? undefined}
+                blockGroups={summary.block_groups}
+                nwiMean={summary.nwi.mean}  {/* mean of selected radius — colors are relative to searched area */}
                 fillHeight
               />
             </div>

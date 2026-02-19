@@ -41,6 +41,12 @@ class Metrics(BaseModel):
     transit_viability: float | None
 
 
+class BlockGroupFeature(BaseModel):
+    geoid20: str | None
+    natwalkind: float | None
+    geometry: dict[str, Any]  # GeoJSON geometry object (type + coordinates)
+
+
 class UpgradeCandidate(BaseModel):
     geoid20: str | None
     natwalkind: float | None
@@ -80,6 +86,7 @@ class NwiSummaryResponse(BaseModel):
     metrics: Metrics
     upgrade_potential: UpgradePotential
     walkable_island: WalkableIsland
+    block_groups: list[BlockGroupFeature] = Field(default_factory=list)
 
 
 class ErrorResponse(BaseModel):

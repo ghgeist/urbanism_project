@@ -20,7 +20,8 @@
       "Bash(git rm:*)",
       "Bash(git mv:*)",
       "Bash(.venv/Scripts/python.exe -m pytest tests/test_walkability.py -v)",
-      "Bash(.venv/Scripts/python.exe -m pytest tests/test_walkability.py -q)"
+      "Bash(.venv/Scripts/python.exe -m pytest tests/test_walkability.py -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest:*)"
     ]
   }
 }

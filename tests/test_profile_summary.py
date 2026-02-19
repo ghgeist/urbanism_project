@@ -42,7 +42,7 @@ class TestBuildSummaryFromCoords:
             )
 
         mock_query.assert_called_once_with(-83.92, 35.96, 2.0, conn=None)
-        assert result["schema_version"] == "2026-02-14"
+        assert result["schema_version"] == "2026-02-19"
         assert result["origin"]["lat"] == pytest.approx(35.96)
         assert result["origin"]["lon"] == pytest.approx(-83.92)
         assert result["origin"]["label"] is None
@@ -66,6 +66,16 @@ class TestBuildSummaryFromCoords:
         assert result["upgrade_potential"]["found"] is True
         assert len(result["upgrade_potential"]["candidates"]) == 1
         assert result["upgrade_potential"]["candidates"][0]["geoid20"] == "C"
+
+        # block_groups: 2 block groups fall within selected_radius_miles=1.0 (dist 0.2, 0.8).
+        assert "block_groups" in result
+        assert len(result["block_groups"]) == 2
+        bg0 = result["block_groups"][0]
+        assert bg0["geoid20"] == "A"
+        assert bg0["natwalkind"] == pytest.approx(10.0)
+        assert isinstance(bg0["geometry"], dict)
+        assert "type" in bg0["geometry"]
+        assert "coordinates" in bg0["geometry"]
 
     def test_defaults_search_radius_to_selected_radius(self):
         full_gdf = _sample_gdf(include_dist=True)
@@ -95,6 +105,52 @@ class TestBuildSummaryFromCoords:
 
         assert result["counts"]["selected_block_groups"] == 3
         assert result["counts"]["context_block_groups"] == 3
+
+    def test_block_groups_all_geometries_serialize(self):
+        """All block groups within the search radius get valid GeoJSON geometry dicts."""
+        full_gdf = _sample_gdf(include_dist=True)
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=full_gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=2.0,
+                search_radius_miles=2.0,
+                min_delta=2.0,
+            )
+        assert len(result["block_groups"]) == 3
+        for bg in result["block_groups"]:
+            assert isinstance(bg["geometry"], dict)
+            assert "type" in bg["geometry"]
+            assert "coordinates" in bg["geometry"]
+
+    def test_block_groups_skips_none_geometry(self):
+        """Rows with None geometry are excluded from block_groups rather than raising."""
+        gdf = gpd.GeoDataFrame(
+            {
+                "geoid20": ["X", "Y"],
+                "natwalkind": [10.0, 14.0],
+                "d2a_ranked": [9.0, 11.0],
+                "d2b_ranked": [8.0, 10.0],
+                "d3b_ranked": [7.0, 9.0],
+                "d4a_ranked": [5.0, 15.0],
+                "geometry": [None, Point(-83.92, 35.96).buffer(0.01)],
+                "dist_miles": [0.2, 0.8],
+            },
+            crs="EPSG:4326",
+        )
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=2.0,
+                search_radius_miles=2.0,
+                min_delta=2.0,
+            )
+        assert len(result["block_groups"]) == 1
+        assert result["block_groups"][0]["geoid20"] == "Y"
+        # counts.selected_block_groups tracks serialized geometry count, so it
+        # matches len(block_groups) even when rows are dropped for None geometry.
+        assert result["counts"]["selected_block_groups"] == 1
 
     @pytest.mark.parametrize(
         ("kwargs", "message"),

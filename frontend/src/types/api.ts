@@ -31,6 +31,12 @@ export interface Metrics {
   transit_viability: number | null;
 }
 
+export interface BlockGroupFeature {
+  geoid20: string | null;
+  natwalkind: number | null;
+  geometry: GeoJSON.Geometry;
+}
+
 export interface UpgradeCandidate {
   geoid20: string | null;
   natwalkind: number | null;
@@ -64,6 +70,7 @@ export interface NwiSummaryResponse {
   metrics: Metrics;
   upgrade_potential: UpgradePotential;
   walkable_island: WalkableIsland;
+  block_groups: BlockGroupFeature[];
 }
 
 export interface GeocodeResponse {
