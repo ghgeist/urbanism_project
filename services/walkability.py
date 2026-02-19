@@ -87,7 +87,7 @@ def _normalize_us_street_spelling(location_string):
     s = location_string
     for uk, us in _US_STREET_SPELLING:
         # Case-insensitive whole-word replacement with case preservation
-        def replacer(match):
+        def replacer(match, us=us):
             return _preserve_case_replacement(match.group(0), us)
         s = re.sub(rf"\b{re.escape(uk)}\b", replacer, s, flags=re.IGNORECASE)
     return s

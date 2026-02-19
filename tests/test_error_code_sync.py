@@ -6,8 +6,6 @@ without updating the frontend API_ERROR_MESSAGES mapping.
 import re
 from pathlib import Path
 
-import pytest
-
 
 def test_error_codes_sync():
     """Backend error codes documented in api/schemas.py must have frontend messages."""
