@@ -25,6 +25,11 @@ L.Marker.prototype.options.icon = DefaultIcon;
 const NWI_TIER_HIGH = 3;
 const NWI_TIER_LOW  = 1;
 
+// Fill color for block groups where natwalkind or the area mean is unavailable.
+// Must be visually distinct from every NWI_TIERS color so users are never
+// misled into thinking an unknown block group is "Near avg".
+const NWI_NO_DATA_COLOR = "#9ca3af";  // neutral gray
+
 // Single source of truth for colors and labels. nwiDeltaColor and the legend
 // both iterate this array so they can never fall out of sync.
 const NWI_TIERS: Array<{ min: number; color: string; label: string }> = [
@@ -126,10 +131,10 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     const layer = L.geoJSON(geojsonData, {
       style: (feature) => {
         const nwi = (feature?.properties?.natwalkind as number | null) ?? null;
-        const delta = nwi != null && nwiMean != null ? nwi - nwiMean : 0;
+        const hasData = nwi != null && nwiMean != null;
         return {
-          fillColor: nwiDeltaColor(delta),
-          fillOpacity: 0.45,
+          fillColor: hasData ? nwiDeltaColor(nwi - nwiMean) : NWI_NO_DATA_COLOR,
+          fillOpacity: hasData ? 0.45 : 0.3,  // lower opacity flags missing data
           color: "#444",
           weight: 0.8,
         };
@@ -170,6 +175,10 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
               {tier.label}
             </span>
           ))}
+          <span className="map-view__legend-item">
+            <span className="map-view__legend-swatch" style={{ background: NWI_NO_DATA_COLOR }} />
+            No data
+          </span>
         </div>
       )}
       <p className="map-view__caption">
