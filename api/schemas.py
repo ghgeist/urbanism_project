@@ -97,6 +97,7 @@ class ErrorResponse(BaseModel):
     - invalid_request: summary params invalid or business-rule failure (e.g. empty query).
     - validation_error: request body/query validation failed (e.g. 422).
     - internal_error: unhandled server error (generic 500).
+    - service_unavailable: database temporarily unavailable (503).
 
     Unhandled HTTPExceptions are serialized with code="http_<status>" (e.g. http_404).
     Frontend maps http_404 and http_422 to the same copy as location_not_found and validation_error.
