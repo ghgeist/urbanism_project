@@ -36,13 +36,3 @@ export const COMPONENT_INFO: Record<string, ComponentInfo> = {
     description: "Distance from population center to nearest transit stop. Shorter distances (higher scores) correlate with more walk trips.",
   },
 };
-
-export function getComponentInfo(componentKey: string): ComponentInfo | undefined {
-  return COMPONENT_INFO[componentKey];
-}
-
-export function getComponentLabel(componentKey: string, useFull = false): string {
-  const info = COMPONENT_INFO[componentKey];
-  if (!info) return componentKey;
-  return useFull ? info.fullLabel : info.shortLabel;
-}

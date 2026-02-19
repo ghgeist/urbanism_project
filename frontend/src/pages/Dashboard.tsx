@@ -105,7 +105,7 @@ export function Dashboard() {
           </div>
         )}
 
-        {!hasData && !loading && (
+        {!hasData && !loading && !error && !paramValidationMessage && (
           <div className="dashboard__empty">
             <p>Enter a location to view component analysis.</p>
             <p className="dashboard__empty-hint">
