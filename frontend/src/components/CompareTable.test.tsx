@@ -32,6 +32,7 @@ const createMockSummary = (label: string, metrics: { everyday: number; transit: 
     message: upgradeFound ? "Found" : "None found",
   },
   walkable_island: { is_island: false, label: null, high_threshold: 14, low_threshold: 8 },
+  block_groups: [],
 });
 
 describe("CompareTable", () => {

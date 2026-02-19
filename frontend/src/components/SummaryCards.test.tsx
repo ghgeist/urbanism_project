@@ -30,6 +30,7 @@ function minimalSummary(overrides: Partial<NwiSummaryResponse> = {}): NwiSummary
       message: "No improvement found within search radius.",
     },
     walkable_island: { is_island: false, label: null, high_threshold: 14, low_threshold: 10 },
+    block_groups: [],
     ...overrides,
   };
 }
