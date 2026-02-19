@@ -149,7 +149,8 @@ export function Explore() {
                 radiusMiles={summary.selected_radius_miles}
                 label={summary.origin.label ?? undefined}
                 blockGroups={summary.block_groups}
-                nwiMean={summary.nwi.mean}  {/* mean of selected radius — colors are relative to searched area */}
+                {/* nwiMean is the selected-radius mean; choropleth colors are relative to the searched area */}
+                nwiMean={summary.nwi.mean}
                 fillHeight
               />
             </div>
