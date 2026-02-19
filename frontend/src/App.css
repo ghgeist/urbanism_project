@@ -90,18 +90,8 @@
   outline-offset: 2px;
 }
 
-.app-nav__github {
-  margin-left: auto;
-  font-size: 0.9rem;
-  color: #4b5563;
-  text-decoration: none;
-}
 
-.app-nav__github:hover {
-  color: #111;
-}
-
-/* Footer: one row desktop, stacked mobile. */
+/* Footer: attribution left, social icons right; stacks on mobile. */
 
 .app-footer {
   border-top: 1px solid #e5e7eb;
@@ -117,35 +107,74 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
 }
 
-.app-footer__data,
-.app-footer__disclaimer {
-  margin-right: 0.5rem;
-}
-
-.app-footer__links {
+.app-footer__left {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem 0.5rem;
 }
 
-.app-footer__links a {
-  color: #4b5563;
-}
-
-.app-footer__links a:hover {
-  color: #111;
-}
-
 .app-footer__sep {
   color: #d1d5db;
 }
 
-.app-footer__copy {
-  margin-left: 0.25rem;
+
+/* Social icon links */
+
+.app-footer__social {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-footer__social-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  text-decoration: none;
+  transition: color 0.15s ease;
+  outline: none;
+}
+
+.app-footer__social-link:hover,
+.app-footer__social-link:focus-visible {
+  color: #2563eb;
+}
+
+.app-footer__social-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* Tooltip */
+
+.app-footer__tooltip {
+  pointer-events: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  white-space: nowrap;
+  background: #1f2937;
+  color: #f9fafb;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.app-footer__social-link:hover .app-footer__tooltip,
+.app-footer__social-link:focus-visible .app-footer__tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 @media (max-width: 480px) {

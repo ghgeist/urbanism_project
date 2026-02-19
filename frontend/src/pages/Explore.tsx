@@ -59,7 +59,7 @@ export function Explore() {
       <header className="explore__header">
         <h1>Explore</h1>
         <p className="explore__tagline">
-          See how everyday convenience and transit viability vary around an address or area.
+          Explore walkability scores from the EPA National Walkability Index around any U.S. address or area.
         </p>
       </header>
 
@@ -107,7 +107,7 @@ export function Explore() {
               <SummaryCards summary={summary} />
               {summary.walkable_island?.is_island && (
                 <div className="explore__island">
-                  Walkable Island: high local NWI with lower surrounding context.
+                  <strong>Walkable Island:</strong> This area has a high NWI score (≥15.26) but is surrounded by block groups with lower scores (mean NWI ≤10.51). This may indicate an isolated walkable area rather than a walkable neighborhood.
                 </div>
               )}
               {summary.upgrade_potential?.found &&

@@ -33,3 +33,6 @@ wheels/
 # Environments
 .pythonlibs/
 *.local
+
+#docs
+docs/scratch/

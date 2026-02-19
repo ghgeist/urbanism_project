@@ -29,7 +29,7 @@ export const METRICS_CONFIG: MetricConfig[] = [
     key: "transit_viability",
     label: "Transit Viability",
     description: "Transit proximity rank (1–20)",
-    tooltip: "Transit rank: 1–20, higher = closer to transit",
+    tooltip: "D4A component rank: 1–20, higher = better transit access",
   },
   {
     key: "variation",
