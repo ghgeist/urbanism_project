@@ -85,7 +85,7 @@ describe("client", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     await expect(geocode("nowhere")).rejects.toThrow(
-      "Location not found. Try a city name or ZIP code."
+      "Location not found. Check your address and try again."
     );
   });
 
@@ -96,7 +96,7 @@ describe("client", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     await expect(geocode("x")).rejects.toThrow(
-      "Location not found. Try a city name or ZIP code."
+      "Location not found. Check your address and try again."
     );
   });
 

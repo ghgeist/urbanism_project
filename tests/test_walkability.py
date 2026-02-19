@@ -14,6 +14,7 @@ from services.walkability import (
     validate_location_input,
     validate_buffer_size,
     _geocode_census,
+    _normalize_us_street_spelling,
 )
 
 
@@ -75,6 +76,51 @@ class TestInputValidation:
         is_valid, error = validate_buffer_size("not a number")
         assert is_valid is False
         assert "number" in error.lower()
+
+
+class TestNormalizeUsStreetSpelling:
+    """Test UK→US spelling normalization for geocoding."""
+    
+    def test_normalizes_harbour_to_harbor(self):
+        """Normalize 'harbour' to 'harbor'."""
+        assert _normalize_us_street_spelling("1 Harbour Way") == "1 Harbor Way"
+        assert _normalize_us_street_spelling("Harbour Street") == "Harbor Street"
+    
+    def test_normalizes_centre_to_center(self):
+        """Normalize 'centre' to 'center'."""
+        assert _normalize_us_street_spelling("City Centre") == "City Center"
+        assert _normalize_us_street_spelling("Town Centre") == "Town Center"
+    
+    def test_normalizes_multiple_variants(self):
+        """Normalize multiple UK spellings in one string."""
+        result = _normalize_us_street_spelling("Harbour Centre, Favour Street")
+        assert result == "Harbor Center, Favor Street"
+    
+    def test_case_insensitive(self):
+        """Normalization is case-insensitive."""
+        assert _normalize_us_street_spelling("HARBOUR") == "HARBOR"
+        assert _normalize_us_street_spelling("Harbour") == "Harbor"
+        assert _normalize_us_street_spelling("harbour") == "harbor"
+    
+    def test_whole_word_only(self):
+        """Only replaces whole words, not substrings."""
+        assert _normalize_us_street_spelling("harbouring") == "harbouring"  # not "harboring"
+        assert _normalize_us_street_spelling("harbourite") == "harbourite"  # not "harborite"
+    
+    def test_handles_none_and_empty(self):
+        """Returns None/empty unchanged."""
+        assert _normalize_us_street_spelling(None) is None
+        assert _normalize_us_street_spelling("") == ""
+    
+    def test_handles_non_string(self):
+        """Returns non-string input unchanged."""
+        assert _normalize_us_street_spelling(123) == 123
+        assert _normalize_us_street_spelling([]) == []
+    
+    def test_preserves_unmatched_strings(self):
+        """Strings without UK spellings are unchanged."""
+        assert _normalize_us_street_spelling("123 Main St, Boston, MA") == "123 Main St, Boston, MA"
+        assert _normalize_us_street_spelling("Normal Street Name") == "Normal Street Name"
 
 
 class TestMilesToDegrees:
