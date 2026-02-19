@@ -27,8 +27,12 @@ def test_error_codes_sync():
     backend_codes = set()
     for line in docstring.split("\n"):
         line = line.strip()
-        if not line or line.startswith("-"):
+        if not line:
             continue
+        # Handle bullet point format: "- code: description" or "code: description"
+        # Strip leading "- " if present
+        if line.startswith("-"):
+            line = line[1:].strip()
         # Extract code from lines like "location_not_found: description"
         code_match = re.match(r"^(\w+):", line)
         if code_match:

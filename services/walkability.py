@@ -61,17 +61,35 @@ _US_STREET_SPELLING = [
 ]
 
 
+def _preserve_case_replacement(matched_text, replacement):
+    """
+    Preserve the case pattern of matched_text when applying replacement.
+    - "HARBOUR" → "HARBOR" (all uppercase)
+    - "Harbour" → "Harbor" (title case)
+    - "harbour" → "harbor" (lowercase)
+    """
+    if matched_text.isupper():
+        return replacement.upper()
+    elif matched_text[0].isupper() and matched_text[1:].islower():
+        return replacement.capitalize()
+    else:
+        return replacement.lower()
+
+
 def _normalize_us_street_spelling(location_string):
     """
     Normalize common UK spellings to US for geocoding (Nominatim/OSM often use US spelling in the US).
     Returns a new string; does not modify in place.
+    Preserves the case pattern of the original text.
     """
     if not location_string or not isinstance(location_string, str):
         return location_string
     s = location_string
     for uk, us in _US_STREET_SPELLING:
-        # Case-insensitive whole-word replacement (e.g. harbour → harbor)
-        s = re.sub(rf"\b{re.escape(uk)}\b", us, s, flags=re.IGNORECASE)
+        # Case-insensitive whole-word replacement with case preservation
+        def replacer(match):
+            return _preserve_case_replacement(match.group(0), us)
+        s = re.sub(rf"\b{re.escape(uk)}\b", replacer, s, flags=re.IGNORECASE)
     return s
 
 
