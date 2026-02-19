@@ -16,12 +16,12 @@ function getApiBase(): string {
 
 /** User-facing messages for API error codes. Canonical codes documented in api/schemas.py ErrorResponse. */
 const API_ERROR_MESSAGES: Record<string, string> = {
-  location_not_found: "Location not found. Try a city name or ZIP code.",
+  location_not_found: "Location not found. Check your address and try again.",
   invalid_request: "Invalid request. Check your input and try again.",
   validation_error: "Invalid parameters. Check your input and try again.",
   internal_error: "Something went wrong. Please try again later.",
   service_unavailable: "Database temporarily unavailable. Please retry.",
-  http_404: "Location not found. Try a city name or ZIP code.",
+  http_404: "Location not found. Check your address and try again.",
   http_422: "Invalid parameters. Check your input and try again.",
 };
 

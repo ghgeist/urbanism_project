@@ -5,6 +5,9 @@ import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from functools import lru_cache
 
 import geopandas as gpd
@@ -86,15 +89,62 @@ def _geocode_nominatim(query):
     return _geolocator.geocode(query, country_codes="us")
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=5),
+    retry=retry_if_exception_type(urllib.error.URLError),
+    reraise=True,
+)
+def _census_urlopen(url: str) -> bytes:
+    """HTTP wrapper for the Census API that tenacity can retry on transient network errors."""
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        return resp.read()
+
+
+def _geocode_census(query: str):
+    """
+    Fallback geocoder using the US Census Bureau Geocoding API.
+    Free, no API key required, comprehensive US street address coverage.
+    Returns (longitude, latitude) tuple or None if not found or on any error.
+    """
+    base = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
+    params = urllib.parse.urlencode({
+        "address": query,
+        "benchmark": "Public_AR_Current",
+        "format": "json",
+    })
+    url = f"{base}?{params}"
+    try:
+        raw = _census_urlopen(url)
+        data = json.loads(raw)
+        matches = data.get("result", {}).get("addressMatches", [])
+        if matches:
+            coords = matches[0]["coordinates"]
+            lon, lat = coords["x"], coords["y"]  # x=longitude, y=latitude
+            logging.info("Census geocoder resolved %r → (%.4f, %.4f)", query, lon, lat)
+            return lon, lat
+    except urllib.error.URLError:
+        logging.warning("Census geocoder network error for %r", query, exc_info=True)
+    except json.JSONDecodeError:
+        logging.warning("Census geocoder returned invalid JSON for %r", query)
+    except KeyError:
+        logging.warning("Census geocoder response missing expected fields for %r", query)
+    return None
+
+
 @lru_cache(maxsize=256)
 def get_location(location_string):
     """
-    Geocode the location string using Nominatim and return (longitude, latitude).
-    Tries the string as-is first; if not found, retries with US street spelling normalized
-    (e.g. harbour → harbor) so UK-spelled street names match OSM data.
+    Geocode the location string and return (longitude, latitude).
 
-    Results are cached (LRU, 256 entries) so repeated queries for the same
-    string avoid redundant network round-trips.
+    Strategy:
+    1. Nominatim (OpenStreetMap) — fast, good for cities, ZIPs, neighborhoods.
+    2. Nominatim again with US spelling normalization (harbour→harbor, etc.).
+    3. US Census Bureau Geocoder — comprehensive US street address coverage,
+       free, no API key required. Handles full addresses Nominatim misses.
+
+    Results are cached (LRU, 256 entries) so repeated queries avoid redundant
+    network round-trips.
     """
     location = _geocode_nominatim(location_string)
     if location:
@@ -104,6 +154,10 @@ def get_location(location_string):
         location = _geocode_nominatim(normalized)
         if location:
             return location.longitude, location.latitude
+    # Fallback: Census Bureau Geocoder handles US street addresses that OSM lacks.
+    result = _geocode_census(location_string)
+    if result:
+        return result
     logging.warning("Location not found (geocode returned no result)")
     return None
 

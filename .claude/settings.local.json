@@ -18,7 +18,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git rm:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/test_walkability.py -v)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/test_walkability.py -q)"
     ]
   }
 }
