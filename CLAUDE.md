@@ -128,5 +128,5 @@ See `agents/workflow-orchestration.md` for full details. Key points:
 
 ## Cursor Rules
 
-- `dev_log.mdc`: Dev notes use `YYYY_MM_DD_N.md` naming with Problem/Solution/Changes structure
-- `neondb.mdc`: Reference latest NeonDB docs when touching database/config
+- `dev_log.mdc`: Dev notes in `docs/dev_notes/` use `YYYY-MM-DD.md` naming (or legacy `YYYY_MM_DD_N.md`) with Problem/Solution/Changes structure
+- `neondb.mdc`: PostgreSQL + PostGIS database guidance (Neon, Replit, or self-hosted); reference provider docs when touching database/config

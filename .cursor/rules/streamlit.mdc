@@ -1,7 +1,0 @@
----
-description: creating and editing streamlit apps
-globs: 
----
-Always refer to the latest Streamlit documentation for guidance on developing your web application. [Streamlit Documentation](https://docs.streamlit.io/)
-
-When suggesting features for the user interface or interactive web components, ensure they align with the latest practices in the Streamlit documentation.

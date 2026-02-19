@@ -45,3 +45,43 @@ source /run/replit/env/latest
 - `npm run test` / `npm run test:run` – Vitest unit tests
 - `npm run e2e` / `npm run e2e:run` – Playwright E2E (starts dev server unless one is already running). First time: `npx playwright install chromium`
 - `npm run lint` – ESLint
+
+## Testing
+
+> **📖 For comprehensive testing documentation covering both backend and frontend, see [`docs/TESTING.md`](../docs/TESTING.md)**
+
+### Quick Start
+
+```bash
+# Unit tests (watch mode)
+npm run test
+
+# Unit tests (single run)
+npm run test:run
+
+# E2E tests (headless)
+npm run e2e:run
+```
+
+### Test Structure
+
+- **Unit Tests**: `src/**/*.test.ts` and `src/**/*.test.tsx` (Vitest + React Testing Library)
+- **E2E Tests**: `e2e/**/*.spec.ts` (Playwright)
+
+### Test Coverage
+
+- **Components**: `MapView`, `SummaryCards`, `CompareTable` (rendering, props, events)
+- **API Client**: Request/response handling, error mapping
+- **URL Parameters**: `exploreParams`, `compareParams`, `radiusParams` (parsing, validation)
+- **Hooks**: `useUrlDrivenSearch` (state management, URL sync)
+
+### Adding Tests
+
+When adding new functionality:
+
+1. Create test file: `ComponentName.test.tsx` or `utility.test.ts`
+2. Use React Testing Library: `render`, `screen`, `userEvent`
+3. Mock external dependencies: Leaflet, fetch, React Router
+4. Test user-facing behavior, not implementation details
+
+See `src/components/MapView.test.tsx` for examples.
