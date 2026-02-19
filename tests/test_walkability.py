@@ -12,7 +12,8 @@ from services.walkability import (
     get_walkability_data,
     query_walkability_by_coords,
     validate_location_input,
-    validate_buffer_size
+    validate_buffer_size,
+    _geocode_census,
 )
 
 
@@ -131,6 +132,83 @@ class TestGeocoding:
         result = get_location("1 Example Harbour Way, Springfield, IL")
         assert result == (-89.0, 40.0)
         assert mock_geocode.call_count == 2
+
+    @patch('services.walkability._geocode_census')
+    @patch('services.walkability._geocode_nominatim')
+    def test_get_location_census_fallback_on_nominatim_miss(self, mock_nominatim, mock_census):
+        """When Nominatim returns None, Census geocoder is tried and returns coords."""
+        mock_nominatim.return_value = None
+        mock_census.return_value = (-71.0589, 42.3601)  # Boston coords
+
+        result = get_location("123 Main St, Boston, MA 02101")
+        assert result == (-71.0589, 42.3601)
+        mock_census.assert_called_once_with("123 Main St, Boston, MA 02101")
+
+    @patch('services.walkability._geocode_census')
+    @patch('services.walkability._geocode_nominatim')
+    def test_get_location_nominatim_wins_census_not_called(self, mock_nominatim, mock_census):
+        """When Nominatim succeeds, Census geocoder is never called."""
+        mock_location = Mock()
+        mock_location.longitude = -83.9207
+        mock_location.latitude = 35.9606
+        mock_nominatim.return_value = mock_location
+
+        result = get_location("Knoxville, TN")
+        assert result == (-83.9207, 35.9606)
+        mock_census.assert_not_called()
+
+    @patch('services.walkability._geocode_census')
+    @patch('services.walkability._geocode_nominatim')
+    def test_get_location_both_geocoders_fail(self, mock_nominatim, mock_census):
+        """When both geocoders return None, get_location returns None."""
+        mock_nominatim.return_value = None
+        mock_census.return_value = None
+
+        result = get_location("Completely Nonexistent Place XYZ")
+        assert result is None
+
+    @patch('services.walkability._census_urlopen')
+    def test_geocode_census_success(self, mock_urlopen):
+        """Census geocoder parses coordinates from a successful API response."""
+        import json
+        payload = {
+            "result": {
+                "addressMatches": [
+                    {"coordinates": {"x": -77.0366, "y": 38.8971}}
+                ]
+            }
+        }
+        mock_urlopen.return_value = json.dumps(payload).encode()
+
+        result = _geocode_census("1600 Pennsylvania Ave NW, Washington, DC 20500")
+        assert result == (-77.0366, 38.8971)
+
+    @patch('services.walkability._census_urlopen')
+    def test_geocode_census_no_matches(self, mock_urlopen):
+        """Census geocoder returns None when API finds no address matches."""
+        import json
+        payload = {"result": {"addressMatches": []}}
+        mock_urlopen.return_value = json.dumps(payload).encode()
+
+        result = _geocode_census("9999 Fake Street, Nowhere, ZZ 00000")
+        assert result is None
+
+    @patch('services.walkability._census_urlopen')
+    def test_geocode_census_network_error(self, mock_urlopen):
+        """Census geocoder returns None gracefully after network error."""
+        import urllib.error
+        mock_urlopen.side_effect = urllib.error.URLError("Network unreachable")
+
+        result = _geocode_census("123 Main St, Boston, MA 02101")
+        assert result is None
+
+    @patch('services.walkability._census_urlopen')
+    def test_geocode_census_invalid_json(self, mock_urlopen):
+        """Census geocoder returns None gracefully when response is not valid JSON."""
+        mock_urlopen.return_value = b"not json"
+
+        result = _geocode_census("123 Main St, Boston, MA 02101")
+        assert result is None
 
 
 class TestWalkabilityData:
