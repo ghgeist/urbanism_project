@@ -20,7 +20,7 @@ This is a React + FastAPI application that visualizes the EPA's National Walkabi
 ```
 
 ## Tech Stack
-- **Frontend**: React 19, Vite, React-Leaflet
+- **Frontend**: React 19, Vite, React Router, Leaflet
 - **Backend**: FastAPI, Python 3.11+
 - **Database**: PostgreSQL with PostGIS extension
 - **Geospatial**: GeoPandas, Shapely, PyProj (backend); Leaflet (frontend)

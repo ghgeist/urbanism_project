@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-React + FastAPI geospatial application that visualizes the EPA's National Walkability Index (NWI) dataset. Users search any U.S. address, ZIP code, or city, apply buffer and search radii, and view an interactive map (React-Leaflet) and summary at the Census block group level. The API serves geocoding and NWI summary endpoints; the React frontend is the primary UI.
+React + FastAPI geospatial application that visualizes the EPA's National Walkability Index (NWI) dataset. Users search any U.S. address, ZIP code, or city, apply buffer and search radii, and view an interactive map (Leaflet) and summary at the Census block group level. The API serves geocoding and NWI summary endpoints; the React frontend is the primary UI.
 
 ## Tech Stack
 
 - **Runtime**: Python 3.11+ (backend), Node.js (frontend)
-- **Frontend**: React 19, Vite, React-Leaflet
+- **Frontend**: React 19, Vite, React Router, Leaflet
 - **API**: FastAPI, Uvicorn
 - **Geospatial**: GeoPandas, Shapely, PyProj (backend); Leaflet (frontend)
 - **Database**: PostgreSQL with PostGIS (Replit, Neon, or self-hosted)

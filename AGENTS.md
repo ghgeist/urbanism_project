@@ -20,7 +20,7 @@ Priority order when instructions conflict:
 
 - App type: React + FastAPI geospatial app for EPA National Walkability Index exploration
 - Core stack: React (Vite), FastAPI, Python, GeoPandas/Shapely, PostgreSQL + PostGIS, pytest
-- Frontend: `frontend/` (React, React-Leaflet)
+- Frontend: `frontend/` (React, React Router, Leaflet)
 - API entry: `api/main.py`
 - Core services: `services/db.py`, `services/walkability.py`
 

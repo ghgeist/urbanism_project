@@ -94,12 +94,14 @@ export interface WalkabilitySummary {
 }
 ```
 
-## React-Leaflet Integration
+## Leaflet Integration
 
-- Use React-Leaflet components for map rendering
+- Use Leaflet directly via imperative API (not React-Leaflet wrapper)
+- Create maps in `useEffect` hooks, manage lifecycle with refs
 - Center maps on geocoded coordinates
 - Display radius buffers as circles
-- Render block group geometries from API responses
+- Render block group geometries from API responses as GeoJSON layers
+- Clean up map instances on component unmount to prevent memory leaks
 
 ## Testing
 

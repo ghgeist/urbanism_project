@@ -68,9 +68,11 @@ def geocode_location(query: str) -> dict:
     # ...
 ```
 
-## React-Leaflet Patterns
+## Leaflet Patterns (Frontend)
 
-- Use React-Leaflet for interactive maps in the frontend
+- Use Leaflet directly via imperative API (not React-Leaflet wrapper)
+- Create maps in React `useEffect` hooks, manage lifecycle with refs
 - Center maps on geocoded coordinates
 - Display radius buffers as circles
-- Use GeoJSON for rendering block group geometries
+- Use GeoJSON for rendering block group geometries from PostGIS data
+- Clean up map instances on component unmount to prevent memory leaks
