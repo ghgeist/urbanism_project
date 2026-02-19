@@ -1,0 +1,81 @@
+---
+description: Testing patterns for pytest (backend) and Vitest/Playwright (frontend)
+globs: tests/**/*.py,frontend/src/**/*.test.ts,frontend/src/**/*.test.tsx,frontend/e2e/**/*
+alwaysApply: false
+---
+
+# Testing Patterns
+
+> **Note**: Testing approach may evolve. These patterns reflect current test strategy—adapt as needed.
+
+## Backend Testing (pytest)
+
+- Use `unittest.mock` throughout — no live database connection needed (enables fast, isolated tests)
+- Mock database connections and geocoding services
+- Test input validation, coordinate math, and error handling
+- Run `pytest` and `pytest -v` to verify tests pass
+
+```python
+# ✅ GOOD: Mock database connection
+from unittest.mock import Mock, patch
+
+@patch('services.walkability.get_db_connection')
+def test_get_walkability_data(mock_get_conn):
+    mock_conn = Mock()
+    mock_cursor = Mock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_get_conn.return_value = mock_conn
+    
+    # Test implementation
+```
+
+## Frontend Unit Testing (Vitest)
+
+- Use Vitest + React Testing Library for component tests
+- Test hooks, components, and pure logic modules
+- Mock API calls using `vi.mock()`
+- Run `cd frontend && npm run test:run`
+
+```typescript
+// ✅ GOOD: Component test with mocked API
+import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
+import * as apiClient from '../api/client';
+
+vi.mock('../api/client');
+
+test('renders geocode results', async () => {
+  vi.spyOn(apiClient, 'geocode').mockResolvedValue({
+    lat: 35.9606,
+    lon: -83.9207,
+    label: 'Knoxville, TN'
+  });
+  
+  render(<Explore />);
+  // Assertions
+});
+```
+
+## Frontend E2E Testing (Playwright)
+
+- Use Playwright for end-to-end browser tests
+- Test full user flows (search, map interaction, summary display)
+- Run `cd frontend && npm run e2e:run`
+
+## Test Coverage
+
+- Backend: Aim for comprehensive coverage of `services/` and `api/` modules
+- Frontend: Test critical user paths and edge cases
+- Run with coverage: `pytest --cov=services --cov-report=html`
+
+## Test Organization
+
+- Backend: `tests/test_db.py`, `tests/test_walkability.py`
+- Frontend: `*.test.ts` / `*.test.tsx` files colocated with source
+- E2E: `frontend/e2e/` directory
+
+## Verification Before Completion
+
+- Always run relevant tests before marking work complete
+- Fix failing tests before proceeding
+- Add tests for new functionality or bug fixes

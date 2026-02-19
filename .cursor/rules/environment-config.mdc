@@ -1,0 +1,68 @@
+---
+description: Environment variables, database configuration, and deployment patterns
+globs: **/*.py,**/*.ts,**/*.tsx,scripts/**/*
+alwaysApply: false
+---
+
+# Environment & Configuration
+
+> **Note**: Configuration patterns may change with deployment targets. Adapt as infrastructure evolves.
+
+## Database Configuration
+
+- Use `PG*` env vars (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) OR `DATABASE_URL`
+- Validate env vars before connecting using `validate_pg_env()` from `services/db.py` (prevents runtime errors)
+- Never hardcode database credentials
+
+```python
+# ✅ GOOD: Validate before connecting
+from services.db import validate_pg_env, get_db_connection
+
+missing = validate_pg_env()
+if missing:
+    raise ValueError(f"Missing required env vars: {missing}")
+
+conn = get_db_connection()
+```
+
+## Environment Variables
+
+- **Required**: `PG*` vars or `DATABASE_URL` for database connection
+- **Optional**: `API_CORS_ORIGINS` (comma-separated) for CORS in production
+- **Dev only**: `WALKABILITY_DEBUG_LOG=1` (never set in production)
+- **Frontend**: `VITE_API_URL` for API base URL (defaults to `http://127.0.0.1:8000`)
+
+## Database Setup
+
+- Run `python scripts/enable_postgis.py` first if PostGIS not enabled
+- Run `python scripts/create_neo_postgres_db.py` to load walkability data
+- Verify schema with `python scripts/validate_schema.py`
+- Check config with `python scripts/check_config.py`
+
+## PIP_NO_INDEX Handling
+
+- If `PIP_NO_INDEX=1` is set, unset it before installing from PyPI:
+  ```powershell
+  Remove-Item Env:PIP_NO_INDEX -ErrorAction SilentlyContinue
+  .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+  ```
+
+## Replit Deployment
+
+- On Replit, login shells load Node via `~/.bash_profile`
+- If using SSH and `node`/`npm` missing, reconnect or run `source /run/replit/env/latest`
+- Configure PostgreSQL via Replit Secrets
+- Single process serves both API and built React app (FastAPI mounts `frontend/dist`)
+
+## Production Checklist
+
+- Set `API_CORS_ORIGINS` to frontend origin(s)
+- Do NOT set `WALKABILITY_DEBUG_LOG` in production
+- Use HTTPS and secure secret handling
+- Periodically run `pip-audit` to check for vulnerabilities (optional, not blocking)
+
+## Configuration Validation
+
+- Run `python scripts/check_config.py` to validate env vars
+- Run `python scripts/validate_schema.py` to verify database schema
+- Both scripts should pass before deployment

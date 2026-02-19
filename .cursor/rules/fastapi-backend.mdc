@@ -1,0 +1,95 @@
+---
+description: FastAPI backend patterns, error handling, and database connections
+globs: api/**/*.py,services/**/*.py
+alwaysApply: false
+---
+
+# FastAPI Backend Patterns
+
+> **Note**: These patterns align with current architecture. Adapt as the project evolves.
+
+## Database Connections
+
+- Use `services/db.py` for all database connections (centralized connection management)
+- Prefer connection pooling (`get_pooled_connection()`) for production workloads
+- Validate `PG*` env vars or `DATABASE_URL` before connecting (prevents runtime errors)
+- Handle connection-closed detection properly
+
+```python
+# ✅ GOOD: Use connection factory
+from services.db import get_db_connection, validate_pg_env
+
+missing = validate_pg_env()
+if missing:
+    raise ValueError(f"Missing env vars: {missing}")
+
+conn = get_db_connection()
+try:
+    # Use connection
+finally:
+    conn.close()
+```
+
+## Error Handling
+
+- Return consistent JSON error envelope format:
+  ```json
+  {
+    "code": "error_code",
+    "message": "User-friendly message",
+    "details": { ... }
+  }
+  ```
+- Use appropriate HTTP status codes:
+  - `404` for `location_not_found`
+  - `400` for `invalid_request`
+  - `422` for `validation_error`
+
+```python
+# ✅ GOOD: Consistent error response
+from fastapi import HTTPException
+
+raise HTTPException(
+    status_code=404,
+    detail={
+        "code": "location_not_found",
+        "message": "Location not found.",
+        "details": {"query": query}
+    }
+)
+```
+
+## API Endpoints
+
+- Use FastAPI dependency injection for database connections
+- Validate input parameters with Pydantic models
+- Support both explicit coordinates and query-based endpoints (`/nwi/summary` vs `/nwi/summary/by-query`)
+
+```python
+# ✅ GOOD: Query-based endpoint with validation
+@app.get("/nwi/summary/by-query")
+async def get_summary_by_query(
+    q: str = Query(..., min_length=1, max_length=MAX_QUERY_LENGTH),
+    selected_radius_miles: float = Query(..., ge=MIN_RADIUS_MILES, le=MAX_RADIUS_MILES),
+    # ...
+):
+    # Geocode then fetch summary
+```
+
+## Debug Logging
+
+- Use structured JSON logging when `WALKABILITY_DEBUG_LOG=1` is set
+- Never enable debug logging in production
+- Include location, message, data, and timestamp in debug logs
+
+```python
+# ✅ GOOD: Conditional debug logging
+if os.environ.get("WALKABILITY_DEBUG_LOG") == "1":
+    log_debug("function_name", "message", data={"key": "value"})
+```
+
+## CORS Configuration
+
+- Set `API_CORS_ORIGINS` in production to frontend origin(s)
+- Defaults are localhost-only for development
+- Use comma-separated list for multiple origins

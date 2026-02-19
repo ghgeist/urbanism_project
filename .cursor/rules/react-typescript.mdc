@@ -1,0 +1,109 @@
+---
+description: React and TypeScript patterns for the frontend
+globs: frontend/src/**/*.ts,frontend/src/**/*.tsx
+alwaysApply: false
+---
+
+# React & TypeScript Patterns
+
+> **Note**: These patterns reflect current frontend architecture. Adapt as React patterns evolve or project needs change.
+
+## Component Structure
+
+- Use functional components with hooks (React 19 patterns)
+- Extract reusable logic into custom hooks (e.g., `useUrlDrivenSearch`)
+- Keep pure logic in `lib/` modules (no React imports) for testability
+- Route-level components go in `pages/`
+- Reusable UI components go in `components/`
+
+```typescript
+// ✅ GOOD: Custom hook for URL-driven state
+export function useUrlDrivenSearch<T>(
+  paramKey: string,
+  defaultValue: T,
+  parseFn: (value: string) => T | null
+): [T, (value: T) => void] {
+  // ...
+}
+
+// ✅ GOOD: Pure logic module (no React imports)
+export function canonicalRadius(radius: number): number {
+  // Pure function, no dependencies
+}
+```
+
+## API Client
+
+- Use `api/client.ts` for all API calls
+- Support `AbortSignal` for request cancellation
+- Handle errors consistently with typed error responses
+- Use environment variable `VITE_API_URL` for API base URL
+
+```typescript
+// ✅ GOOD: API client with abort support
+export async function geocode(
+  query: string,
+  signal?: AbortSignal
+): Promise<GeocodeResponse> {
+  const response = await fetch(`${API_BASE_URL}/geocode?q=${encodeURIComponent(query)}`, {
+    signal,
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new ApiError(error.code, error.message, error.details);
+  }
+  return response.json();
+}
+```
+
+## URL Parameter Handling
+
+- Parse and validate URL parameters in `lib/` modules (`exploreParams.ts`, `compareParams.ts`)
+- Use shared radius constants from `radiusParams.ts`
+- Validate parameters match API constraints (e.g., radius 0.1-3.0 miles)
+
+```typescript
+// ✅ GOOD: URL param parsing with validation
+export function parseExploreParams(searchParams: URLSearchParams): ExploreParams | null {
+  const radius = parseRadius(searchParams.get('radius'));
+  if (!radius || radius < MIN_RADIUS || radius > MAX_RADIUS) {
+    return null;
+  }
+  // ...
+}
+```
+
+## TypeScript Types
+
+- Define API response types in `types/api.ts`
+- Use strict type checking (`npx tsc --noEmit`)
+- Handle nullable/optional types explicitly
+
+```typescript
+// ✅ GOOD: Explicit API types
+export interface GeocodeResponse {
+  lat: number;
+  lon: number;
+  label: string;
+}
+
+export interface WalkabilitySummary {
+  geoid20: string;
+  d2a_ranked: number;
+  // ...
+}
+```
+
+## React-Leaflet Integration
+
+- Use React-Leaflet components for map rendering
+- Center maps on geocoded coordinates
+- Display radius buffers as circles
+- Render block group geometries from API responses
+
+## Testing
+
+- Use Vitest + React Testing Library for unit tests
+- Use Playwright for E2E tests
+- Test hooks, components, and pure logic modules separately
+- Run `npx tsc --noEmit && npm run lint` before marking work complete

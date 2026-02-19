@@ -1,0 +1,40 @@
+---
+description: How Cursor rules integrate with AGENTS.md workflow and session management
+alwaysApply: true
+---
+
+# Workflow Integration
+
+## Priority Order
+
+When instructions conflict, follow this priority:
+1. **Direct user request** (highest priority)
+2. Runtime safety/tooling constraints
+3. **AGENTS.md** (workflow orchestration, session management)
+4. **CLAUDE.md** (project-specific guidance)
+5. **Cursor rules** (implementation patterns)
+
+## Complementing AGENTS.md
+
+These Cursor rules complement `AGENTS.md` workflow patterns:
+
+- **AGENTS.md** covers: session management, planning, verification workflow, compounding fixes
+- **Cursor rules** cover: code patterns, implementation details, file-specific conventions
+- **Together**: Workflow guidance + implementation patterns = complete development guidance
+
+## Session Management
+
+- Cursor rules don't override session management from `AGENTS.md`
+- Follow session-first execution: check `docs/sessions/active/` before starting work
+- Update session progress as you work
+- Move completed sessions to `docs/sessions/completed/`
+
+## Lessons & Iteration
+
+- After bug fixes, update `docs/dev_notes/lessons.md` (per AGENTS.md)
+- If a Cursor rule conflicts with a lesson learned, update the rule
+- Rules should evolve with the project—don't treat them as immutable
+
+## Missing Rules
+
+CLAUDE.md references `neondb.mdc` for PostgreSQL + PostGIS database guidance. This can be created when needed, though `environment-config.mdc` already covers database configuration patterns. The `dev_log.mdc` mentioned in CLAUDE.md is handled by `agents/dev_note_agent.md` instead.

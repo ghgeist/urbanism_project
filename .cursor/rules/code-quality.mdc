@@ -1,0 +1,63 @@
+---
+description: Code quality standards, linting, and verification requirements
+globs: **/*.py,**/*.ts,**/*.tsx
+alwaysApply: true
+---
+
+# Code Quality Standards
+
+> **Note**: These rules complement `AGENTS.md` and `CLAUDE.md`. When instructions conflict, priority is: Direct user request > Runtime safety > AGENTS.md > Cursor rules. These rules are meant to guide, not constrain—iterate and adapt as the project evolves.
+
+## Iteration & Flexibility
+
+- Rules are guidelines, not absolutes—exceptions are acceptable when justified
+- When patterns change, update the rules to reflect new best practices
+- If a rule conflicts with a better approach, discuss and update rather than blindly follow
+
+## Python Linting
+
+- Use Ruff for Python linting: `python -m ruff check --no-cache api services scripts tests`
+- Fix lint errors before marking work complete
+- Use `--fix` flag for safe autofixes: `python -m ruff check --no-cache --fix api services scripts tests`
+
+## TypeScript/ESLint
+
+- Run `cd frontend && npx tsc --noEmit` for type checking
+- Run `cd frontend && npm run lint` for ESLint checks
+- Fix all errors before marking work complete
+- Note: `tsc` and ESLint use different parsers — a file can pass one and fail the other
+
+## Verification Before Completion
+
+- Run relevant tests (`pytest` for Python, `npm run test:run` for frontend)
+- Run lint checks for changed files
+- Validate behavior of changed paths
+- Confirm no avoidable regressions
+
+## Code Organization
+
+- **Backend**: `api/` for FastAPI routes, `services/` for business logic, `scripts/` for one-time setup
+- **Frontend**: `pages/` for routes, `components/` for reusable UI, `lib/` for pure logic, `hooks/` for React hooks
+- Keep pure logic modules free of React imports
+- Extract reusable logic into shared modules
+
+## Documentation
+
+- Add concise docstrings for functions/classes
+- Keep comments focused on "why," not "what"
+- Maintain clear README and project docs
+
+## Error Handling
+
+- Use structured try/catch blocks
+- Log detailed errors internally; show friendly messages to users
+- Implement consistent error handling patterns
+- Never expose sensitive information in errors
+
+## Security
+
+- Sanitize all user inputs
+- Use parameterized queries (PostGIS queries use `%s` placeholders)
+- Store sensitive tokens securely (env vars, not hardcoded)
+- Enable HTTPS for all connections in production
+- Follow data minimization principles

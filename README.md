@@ -31,7 +31,7 @@ The National Walkability Index (NWI) scores every U.S. census block group on a 1
 - Inspect component scores (d2a, d2b, d3b, d4a) and the composite NWI value.
 
 ## Project Highlights
-- **Geospatial stack**: PostGIS spatial queries (`ST_DWithin`), GeoPandas, latitude-aware distance conversion; React-Leaflet for the map.
+- **Geospatial stack**: PostGIS spatial queries (`ST_DWithin`), GeoPandas, latitude-aware distance conversion; Leaflet for interactive maps.
 - **Full-stack scope**: React (Vite) frontend, FastAPI backend with geocode + NWI summary endpoints.
 - **Production-minded**: Cached DB connections with reconnection handling, structured error responses, pytest coverage, schema and config validation scripts.
 - **Open data**: EPA NWI + FIPS and Smart Location Mapping; reproducible pipeline from source data to hosted PostGIS.
@@ -48,7 +48,7 @@ React (Vite) frontend              FastAPI
         PostgreSQL + PostGIS (national_walkability_index table)
 ```
 
-- **`frontend/`** — React app (Vite, React-Leaflet): search, radius/delta controls, map, and summary table.
+- **`frontend/`** — React app (Vite, React Router, Leaflet): search, radius/delta controls, interactive map, and summary table. Includes three routes: Explore (main search), Compare (side-by-side), and Method (documentation).
 - **`api/main.py`** — FastAPI app: health, geocode, and NWI summary endpoints consumed by the frontend.
 - **`services/db.py`** — Framework-agnostic DB connection factory (env vars only).
 - **`services/walkability.py`** — Geocoding (Nominatim), PostGIS queries, profile computation.
@@ -57,7 +57,7 @@ React (Vite) frontend              FastAPI
 ## Tech Stack
 | Area | Tools |
 | --- | --- |
-| Frontend | React 19, Vite, React-Leaflet |
+| Frontend | React 19, Vite, React Router, Leaflet |
 | API | FastAPI, Uvicorn |
 | Geospatial | GeoPandas, Shapely, PyProj, Tenacity (backend); Leaflet (frontend) |
 | Data / Infra | PostgreSQL with PostGIS (Neon, Replit, or self-hosted), SQLAlchemy, psycopg2 |
@@ -126,11 +126,18 @@ Open http://localhost:5173 (or the URL Vite prints). The frontend uses the API a
 **One-command option (Unix/macOS or Git Bash):** From the project root run `./scripts/run_dev.sh` (or `bash scripts/run_dev.sh`) to start both the API and the frontend; Ctrl+C stops both. On Windows without Bash, start the API and frontend in two terminals as above.
 
 ## Usage
-- Enter any U.S. address, ZIP code, or city in the search box.
+
+The app includes three main pages accessible via navigation:
+
+- **Explore** (`/`): Search any U.S. address, ZIP code, or city and view walkability metrics on an interactive map. Set buffer and search radii to explore nearby census block groups.
+- **Compare** (`/compare`): Side-by-side comparison of two locations with summary panels and metric differences.
+- **Method** (`/method`): Documentation about the National Walkability Index methodology and data sources.
+
+### Key Features
 - **Radius** (0.1-3.0 miles in current UI): area shown around the selected location.
 - **Search radius** (API parameter): optional context radius used for nearby-better detection; defaults to selected radius when omitted.
 - **Minimum NWI improvement delta**: filter/highlight threshold for nearby-better candidates.
-- The current map centers the selected location with a marker and radius context; summary and table views expose component ranks (`d2a`, `d2b`, `d3b`, `d4a`) and composite NWI metrics.
+- Interactive map centers on the selected location with a marker and radius context; summary and table views expose component ranks (`d2a`, `d2b`, `d3b`, `d4a`) and composite NWI metrics.
 
 ## API (FastAPI)
 ### Run locally
