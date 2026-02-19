@@ -112,10 +112,12 @@ class TestGeocoding:
         result = get_location("Knoxville, TN")
         assert result == (-83.9207, 35.9606)
 
+    @patch('services.walkability._geocode_census')
     @patch('services.walkability._geocode_nominatim')
-    def test_get_location_not_found(self, mock_geocode):
-        """Test geocoding failure returns None."""
-        mock_geocode.return_value = None
+    def test_get_location_not_found(self, mock_nominatim, mock_census):
+        """Test geocoding failure returns None when both geocoders find nothing."""
+        mock_nominatim.return_value = None
+        mock_census.return_value = None
 
         result = get_location("Nonexistent City, XX")
         assert result is None
