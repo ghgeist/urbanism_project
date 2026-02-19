@@ -34,6 +34,12 @@ pytest -v
 # Run Python lint checks
 python -m ruff check --no-cache api services scripts tests
 
+# Run frontend TypeScript type check (from project root)
+cd frontend && npx tsc --noEmit
+
+# Run frontend ESLint (from project root)
+cd frontend && npm run lint
+
 # Run a specific test class
 pytest tests/test_walkability.py::TestInputValidation
 
@@ -85,6 +91,8 @@ Tests use `unittest.mock` throughout — no live database connection needed. Two
 - `tests/test_walkability.py` — input validation, coordinate math, geocoding, data queries, connection checks, map creation
 
 When changing Python files, run `python -m ruff check --no-cache api services scripts tests` and fix lint errors before marking work complete.
+
+When changing TypeScript/TSX files, run `cd frontend && npx tsc --noEmit && npm run lint` and fix all errors before marking work complete. Note: `tsc` and ESLint use different parsers — a file can pass one and fail the other (e.g. `{/* */}` JSX comments between attributes are rejected by ESLint but accepted by `tsc`).
 
 ## Configuration
 
