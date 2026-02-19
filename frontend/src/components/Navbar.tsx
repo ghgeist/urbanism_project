@@ -8,6 +8,7 @@ import { NavLink } from "react-router-dom";
 const navLinks = [
   { to: "/", label: "Explore", end: true },
   { to: "/compare", label: "Compare", end: false },
+  { to: "/dashboard", label: "Dashboard", end: false },
   { to: "/method", label: "Method", end: false },
 ] as const;
 

@@ -34,6 +34,10 @@ export interface Metrics {
 export interface BlockGroupFeature {
   geoid20: string | null;
   natwalkind: number | null;
+  d2a_ranked: number | null; // Employment and Household Mix
+  d2b_ranked: number | null; // Employment Mix
+  d3b_ranked: number | null; // Street Intersection Density
+  d4a_ranked: number | null; // Proximity to Transit Stops
   geometry: GeoJSON.Geometry;
 }
 

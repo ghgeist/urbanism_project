@@ -794,3 +794,160 @@
   border-radius: 8px;
   font-size: 1.1rem;
 }
+
+/* Dashboard page styles */
+
+.dashboard {
+  max-width: 1200px;
+}
+
+.dashboard__header {
+  margin-bottom: 2rem;
+}
+
+.dashboard__header h1 {
+  font-size: 1.75rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.dashboard__tagline {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.dashboard__controls {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.dashboard__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard__form label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.dashboard__form input[type="text"] {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.dashboard__radius {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dashboard__radius input[type="range"] {
+  width: 100%;
+}
+
+.dashboard__form button {
+  padding: 0.75rem 1.5rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dashboard__form button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.dashboard__form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dashboard__error {
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  color: #991b1b;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard__empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #6b7280;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.dashboard__empty-hint {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.dashboard__visualizations {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.dashboard__section {
+  padding: 1.5rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.dashboard__section h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem 0;
+  color: #111;
+}
+
+.dashboard__section-description {
+  margin: 0 0 1.5rem 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.correlation-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.correlation-summary {
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.correlation-summary h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: #111;
+}
+
+.correlation-summary ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.correlation-summary li {
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-size: 0.9rem;
+}

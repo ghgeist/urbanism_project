@@ -13,9 +13,10 @@ from services.walkability import get_location, query_walkability_by_coords, vali
 _log = logging.getLogger(__name__)
 
 # Bumped when block_groups was added to the response payload.
+# Bumped again when component scores (d2a, d2b, d3b, d4a) were added to block_groups.
 # The API is always forward-compatible (new fields have defaults), so this
 # string is documentary only — the frontend does not gate on it.
-SCHEMA_VERSION = "2026-02-19"
+SCHEMA_VERSION = "2026-02-19-component-scores"
 
 
 def _validate_coordinates(lat: float, lon: float) -> tuple[float, float]:
@@ -148,13 +149,23 @@ def _build_response(
     if selected_gdf is not None and "geometry" in selected_gdf.columns:
         geoid_vals = selected_gdf["geoid20"].tolist() if "geoid20" in selected_gdf.columns else [None] * len(selected_gdf)
         nwi_vals = selected_gdf["natwalkind"].tolist() if "natwalkind" in selected_gdf.columns else [None] * len(selected_gdf)
-        for geoid20, natwalkind, geom in zip(geoid_vals, nwi_vals, selected_gdf["geometry"], strict=True):
+        d2a_vals = selected_gdf["d2a_ranked"].tolist() if "d2a_ranked" in selected_gdf.columns else [None] * len(selected_gdf)
+        d2b_vals = selected_gdf["d2b_ranked"].tolist() if "d2b_ranked" in selected_gdf.columns else [None] * len(selected_gdf)
+        d3b_vals = selected_gdf["d3b_ranked"].tolist() if "d3b_ranked" in selected_gdf.columns else [None] * len(selected_gdf)
+        d4a_vals = selected_gdf["d4a_ranked"].tolist() if "d4a_ranked" in selected_gdf.columns else [None] * len(selected_gdf)
+        for geoid20, natwalkind, d2a, d2b, d3b, d4a, geom in zip(
+            geoid_vals, nwi_vals, d2a_vals, d2b_vals, d3b_vals, d4a_vals, selected_gdf["geometry"], strict=True
+        ):
             geom_json = _geom_to_geojson(geom)
             if geom_json is None:
                 continue
             block_groups.append({
                 "geoid20": str(geoid20) if pd.notna(geoid20) else None,
                 "natwalkind": _safe_float(natwalkind),
+                "d2a_ranked": _safe_float(d2a),
+                "d2b_ranked": _safe_float(d2b),
+                "d3b_ranked": _safe_float(d3b),
+                "d4a_ranked": _safe_float(d4a),
                 "geometry": geom_json,
             })
 

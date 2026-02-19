@@ -44,6 +44,10 @@ class Metrics(BaseModel):
 class BlockGroupFeature(BaseModel):
     geoid20: str | None
     natwalkind: float | None
+    d2a_ranked: float | None  # Employment and Household Mix
+    d2b_ranked: float | None  # Employment Mix
+    d3b_ranked: float | None  # Street Intersection Density
+    d4a_ranked: float | None  # Proximity to Transit Stops
     geometry: dict[str, Any]  # GeoJSON geometry object (type + coordinates)
 
 
