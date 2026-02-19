@@ -90,16 +90,6 @@
   outline-offset: 2px;
 }
 
-.app-nav__github {
-  margin-left: auto;
-  font-size: 0.9rem;
-  color: #4b5563;
-  text-decoration: none;
-}
-
-.app-nav__github:hover {
-  color: #111;
-}
 
 /* Footer: attribution left, social icons right; stacks on mobile. */
 
@@ -132,14 +122,6 @@
   color: #d1d5db;
 }
 
-.app-footer__method {
-  color: #4b5563;
-  text-decoration: none;
-}
-
-.app-footer__method:hover {
-  color: #111;
-}
 
 /* Social icon links */
 

@@ -1,8 +1,7 @@
 /**
- * Footer: data attribution + social links (GitHub, Substack, website, email).
+ * Footer: data attribution + social links (GitHub, Substack, website).
  */
 
-import { Link } from "react-router-dom";
 import { Globe } from "lucide-react";
 
 const GitHubIcon = ({ size = 18, className }: { size?: number; className?: string }) => (
@@ -68,8 +67,6 @@ export function Footer() {
           <span className="app-footer__data">Data: EPA National Walkability Index</span>
           <span className="app-footer__sep" aria-hidden="true">·</span>
           <span className="app-footer__disclaimer">Not causal; descriptive only.</span>
-          <span className="app-footer__sep" aria-hidden="true">·</span>
-          <Link to="/method" className="app-footer__method">Method</Link>
           <span className="app-footer__sep" aria-hidden="true">·</span>
           <span className="app-footer__copy">© {currentYear} Grant Geist</span>
         </div>

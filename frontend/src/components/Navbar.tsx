@@ -1,11 +1,9 @@
 /**
- * Minimal top navigation: product name, Explore / Compare / Method, optional GitHub.
+ * Minimal top navigation: product name, Explore / Compare / Method.
  * Civic, neutral tone; active route highlighted subtly.
  */
 
 import { NavLink } from "react-router-dom";
-
-const GITHUB_URL = import.meta.env.VITE_GITHUB_URL as string | undefined;
 
 const navLinks = [
   { to: "/", label: "Explore", end: true },
@@ -41,16 +39,6 @@ export function Navbar() {
             </li>
           ))}
         </ul>
-        {GITHUB_URL ? (
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="app-nav__github"
-          >
-            GitHub
-          </a>
-        ) : null}
       </div>
     </nav>
   );
