@@ -1,10 +1,12 @@
 /**
- * Leaflet map centered on origin; no geometry tiles yet (evidence layer in Phase 1).
+ * Leaflet map centered on origin with a choropleth layer of block groups
+ * colored by walkability relative to the area mean NWI.
  */
 
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import type { BlockGroupFeature } from "../types/api";
 
 // Fix default marker icon with Vite/bundlers (images path is not available).
 const DefaultIcon = L.icon({
@@ -16,19 +18,49 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// NWI delta thresholds for the five-tier color scale.
+// NWI ranges 1–20. ±1 point captures the zone of statistical noise around
+// the local mean; ±3 points marks a tier of practical significance (roughly
+// one population std-dev in typical US metro census block groups).
+const NWI_TIER_HIGH = 3;
+const NWI_TIER_LOW  = 1;
+
+// Fill color for block groups where natwalkind or the area mean is unavailable.
+// Must be visually distinct from every NWI_TIERS color so users are never
+// misled into thinking an unknown block group is "Near avg".
+const NWI_NO_DATA_COLOR = "#9ca3af";  // neutral gray
+
+// Single source of truth for colors and labels. nwiDeltaColor and the legend
+// both iterate this array so they can never fall out of sync.
+const NWI_TIERS: Array<{ min: number; color: string; label: string }> = [
+  { min:  NWI_TIER_HIGH,  color: "#1a7d3e", label: `Well above avg (≥+${NWI_TIER_HIGH})` },
+  { min:  NWI_TIER_LOW,   color: "#5cb85c", label: `Above avg (+${NWI_TIER_LOW} to +${NWI_TIER_HIGH})` },
+  { min: -NWI_TIER_LOW,   color: "#f0ad4e", label: `Near avg (±${NWI_TIER_LOW})` },
+  { min: -NWI_TIER_HIGH,  color: "#e8622a", label: `Below avg (−${NWI_TIER_LOW} to −${NWI_TIER_HIGH})` },
+  { min: -Infinity,        color: "#c0392b", label: `Well below avg (<−${NWI_TIER_HIGH})` },
+];
+
+/** Color a block group by its NWI delta relative to the area mean. */
+function nwiDeltaColor(delta: number): string {
+  return NWI_TIERS.find((t) => delta >= t.min)?.color ?? "#c0392b";
+}
+
 interface MapViewProps {
   lat: number;
   lon: number;
   radiusMiles: number;
   label?: string | null;
+  blockGroups?: BlockGroupFeature[] | null;
+  nwiMean?: number | null;
   /** When true, container height is controlled by parent (e.g. split layout). */
   fillHeight?: boolean;
 }
 
-export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewProps) {
+export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fillHeight }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const blockGroupsLayerRef = useRef<L.GeoJSON | null>(null);
 
   // Create or update map when lat/lon/label change.
   useEffect(() => {
@@ -43,6 +75,7 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
       existingMap.remove();
       mapRef.current = null;
       markerRef.current = null;
+      blockGroupsLayerRef.current = null;
     }
 
     if (mapRef.current) {
@@ -74,17 +107,58 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
     // No cleanup here: reuse map on prop changes (update path above). Unmount cleanup is in the effect below.
   }, [lat, lon, label]);
 
+  // Add or replace the block group choropleth layer when data changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Remove existing choropleth layer.
+    if (blockGroupsLayerRef.current) {
+      blockGroupsLayerRef.current.remove();
+      blockGroupsLayerRef.current = null;
+    }
+    if (!blockGroups || blockGroups.length === 0) return;
+
+    const geojsonData = {
+      type: "FeatureCollection" as const,
+      features: blockGroups.map((bg) => ({
+        type: "Feature" as const,
+        properties: { geoid20: bg.geoid20, natwalkind: bg.natwalkind },
+        geometry: bg.geometry,
+      })),
+    };
+
+    const layer = L.geoJSON(geojsonData, {
+      style: (feature) => {
+        const nwi = (feature?.properties?.natwalkind as number | null) ?? null;
+        const hasData = nwi != null && nwiMean != null;
+        return {
+          fillColor: hasData ? nwiDeltaColor(nwi - nwiMean) : NWI_NO_DATA_COLOR,
+          fillOpacity: hasData ? 0.45 : 0.3,  // lower opacity flags missing data
+          color: "#444",
+          weight: 0.8,
+        };
+      },
+    });
+
+    layer.addTo(map);
+    layer.bringToBack();  // Z-order: tiles (bottom) → choropleth → marker (top).
+    blockGroupsLayerRef.current = layer;
+  }, [blockGroups, nwiMean]);
+
   // Teardown map on unmount so the Leaflet instance and listeners are always removed.
-  // (The effect above does not return a cleanup when it creates or updates the map.)
   useEffect(() => {
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
         markerRef.current = null;
+        blockGroupsLayerRef.current = null;
       }
     };
   }, []);
+
+  const showLegend = blockGroups && blockGroups.length > 0;
 
   return (
     <div className="map-view">
@@ -93,6 +167,20 @@ export function MapView({ lat, lon, radiusMiles, label, fillHeight }: MapViewPro
         className="map-view__container"
         style={fillHeight ? undefined : { height: "360px" }}
       />
+      {showLegend && (
+        <div className="map-view__legend">
+          {NWI_TIERS.map((tier) => (
+            <span key={tier.color} className="map-view__legend-item">
+              <span className="map-view__legend-swatch" style={{ background: tier.color }} />
+              {tier.label}
+            </span>
+          ))}
+          <span className="map-view__legend-item">
+            <span className="map-view__legend-swatch" style={{ background: NWI_NO_DATA_COLOR }} />
+            No data
+          </span>
+        </div>
+      )}
       <p className="map-view__caption">
         Center: {lat.toFixed(4)}, {lon.toFixed(4)} · Radius: {radiusMiles} mi
       </p>

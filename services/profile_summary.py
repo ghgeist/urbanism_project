@@ -1,14 +1,21 @@
 """Framework-agnostic profile summary service for API-first migration."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pandas as pd
+import shapely.geometry as sg
 
 from services.metrics import compute_full_profile
 from services.walkability import get_location, query_walkability_by_coords, validate_buffer_size
 
-SCHEMA_VERSION = "2026-02-14"
+_log = logging.getLogger(__name__)
+
+# Bumped when block_groups was added to the response payload.
+# The API is always forward-compatible (new fields have defaults), so this
+# string is documentary only — the frontend does not gate on it.
+SCHEMA_VERSION = "2026-02-19"
 
 
 def _validate_coordinates(lat: float, lon: float) -> tuple[float, float]:
@@ -63,6 +70,19 @@ def _safe_float(value: Any) -> float | None:
     if pd.isna(value):
         return None
     return value
+
+
+def _geom_to_geojson(geom) -> dict | None:
+    """Convert a Shapely geometry to a GeoJSON geometry dict, or None on failure."""
+    if geom is None:
+        return None
+    try:
+        if hasattr(geom, "is_empty") and geom.is_empty:
+            return None
+        return sg.mapping(geom)
+    except Exception as exc:
+        _log.warning("_geom_to_geojson: failed to convert geometry (%s): %s", type(geom).__name__, exc)
+        return None
 
 
 def _mean_column(gdf, column: str) -> float | None:
@@ -121,6 +141,23 @@ def _build_response(
     origin_label: str | None,
 ) -> dict[str, Any]:
     """Build canonical summary response payload."""
+    # Serialize selected block group geometries for choropleth map rendering.
+    # Iterate via zip over pre-extracted column lists to avoid per-row Series
+    # allocation from iterrows().
+    block_groups = []
+    if selected_gdf is not None and "geometry" in selected_gdf.columns:
+        geoid_vals = selected_gdf["geoid20"].tolist() if "geoid20" in selected_gdf.columns else [None] * len(selected_gdf)
+        nwi_vals = selected_gdf["natwalkind"].tolist() if "natwalkind" in selected_gdf.columns else [None] * len(selected_gdf)
+        for geoid20, natwalkind, geom in zip(geoid_vals, nwi_vals, selected_gdf["geometry"], strict=True):
+            geom_json = _geom_to_geojson(geom)
+            if geom_json is None:
+                continue
+            block_groups.append({
+                "geoid20": str(geoid20) if pd.notna(geoid20) else None,
+                "natwalkind": _safe_float(natwalkind),
+                "geometry": geom_json,
+            })
+
     return {
         "schema_version": SCHEMA_VERSION,
         "origin": {
@@ -132,7 +169,9 @@ def _build_response(
         "search_radius_miles": float(search_radius_miles),
         "min_delta": float(min_delta),
         "counts": {
-            "selected_block_groups": int(len(selected_gdf)) if selected_gdf is not None else 0,
+            # Use len(block_groups) so the count matches the array length exactly,
+            # even if a row was dropped because its geometry failed to serialize.
+            "selected_block_groups": len(block_groups),
             "context_block_groups": int(len(context_gdf)) if context_gdf is not None else 0,
         },
         "nwi": _build_nwi_stats(selected_gdf),
@@ -149,6 +188,7 @@ def _build_response(
         },
         "upgrade_potential": profile.get("upgrade_potential"),
         "walkable_island": profile.get("walkable_island"),
+        "block_groups": block_groups,
     }
 
 
