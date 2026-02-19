@@ -1,5 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true" role="img">
   <title>Walkability Explorer</title>
-  <!-- City skyline: buildings of varying heights -->
-  <path fill="#1e40af" d="M0 32h4V18H0v14zm6 0h4V12h-4v20zm8 0h4V8h-4v24zm6 0h4V14h-4v18zm8 0h4V6h-4v26zm6 0h4V10h-4v22zm6 0h6V14h-6v18z"/>
+  <!-- Creative cityscape with windows and varied building shapes -->
+  
+  <!-- Left building (shorter) -->
+  <rect x="2" y="20" width="5" height="10" fill="#2563eb"/>
+  <rect x="3" y="22" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="5" y="22" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="3" y="25" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="5" y="25" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  
+  <!-- Middle building (tallest) -->
+  <rect x="8" y="8" width="6" height="22" fill="#2563eb"/>
+  <!-- Windows on tall building -->
+  <rect x="9.5" y="12" width="1" height="1.5" fill="#ffffff" opacity="0.8"/>
+  <rect x="11.5" y="12" width="1" height="1.5" fill="#ffffff" opacity="0.8"/>
+  <rect x="9.5" y="15" width="1" height="1.5" fill="#ffffff" opacity="0.8"/>
+  <rect x="11.5" y="15" width="1" height="1.5" fill="#ffffff" opacity="0.8"/>
+  <rect x="9.5" y="18" width="1" height="1.5" fill="#ffffff" opacity="0.8"/>
+  <rect x="11.5" y="18" width="1" height="1.5" fill="#ffffff" opacity="0.8"/>
+  
+  <!-- Right building (medium height with slanted roof) -->
+  <rect x="15" y="16" width="5" height="14" fill="#2563eb"/>
+  <polygon points="15,16 17.5,12 20,16" fill="#1e40af"/>
+  <!-- Windows -->
+  <rect x="16" y="19" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="18" y="19" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="16" y="22" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="18" y="22" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  
+  <!-- Far right building (narrow, tall) -->
+  <rect x="22" y="12" width="3" height="18" fill="#2563eb"/>
+  <rect x="22.5" y="15" width="0.8" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="22.5" y="18" width="0.8" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="22.5" y="21" width="0.8" height="1" fill="#ffffff" opacity="0.8"/>
+  
+  <!-- Small building on far right -->
+  <rect x="26" y="24" width="4" height="6" fill="#2563eb"/>
+  <rect x="27" y="26" width="1" height="1" fill="#ffffff" opacity="0.8"/>
+  <rect x="28.5" y="26" width="1" height="1" fill="#ffffff" opacity="0.8"/>
 </svg>

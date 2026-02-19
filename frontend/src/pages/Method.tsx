@@ -47,16 +47,20 @@ export function Method() {
             the four components; higher means more walkable.
           </li>
           <li>
-            <strong>D2A (destinations)</strong> — Proximity to common destinations (e.g. retail, services).
+            <strong>D2A: Employment and Household Mix</strong> — The mix of employment types and occupied housing. 
+            A block group with diverse employment types (office, retail, service) plus many occupied housing units will have a higher score.
           </li>
           <li>
-            <strong>D2B (employment)</strong> — Employment density and mix.
+            <strong>D2B: Employment Mix</strong> — The mix of employment types in a block group (retail, office, industrial). 
+            Higher values indicate greater diversity of employment types.
           </li>
           <li>
-            <strong>D3B (connectivity)</strong> — Street network connectivity (intersection density, block size).
+            <strong>D3B: Street Intersection Density</strong> — The density of street intersections. 
+            Higher intersection density is correlated with more walk trips and better street connectivity.
           </li>
           <li>
-            <strong>D4A (transit)</strong> — Transit stop availability and frequency.
+            <strong>D4A: Proximity to Transit Stops</strong> — Distance from population center to nearest transit stop. 
+            Shorter distances (higher scores) correlate with more walk trips.
           </li>
         </ul>
       </section>
