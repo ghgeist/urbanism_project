@@ -299,6 +299,18 @@ describe("ComponentName", () => {
 
 ## CI/CD Integration
 
+### Automated CI (GitHub Actions)
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) automatically runs on every push and pull request:
+
+- ✅ **Frontend Type Check**: `cd frontend && npx tsc --noEmit`
+- ✅ **Frontend Lint**: `cd frontend && npm run lint`
+- ✅ **Frontend Tests**: `cd frontend && npm run test:run`
+- ✅ **Backend Lint**: `python -m ruff check --no-cache api services scripts tests`
+- ✅ **Backend Tests**: `pytest --tb=short`
+
+**Type errors will now be caught automatically in CI** before code is merged.
+
 ### Running Tests in CI
 
 Tests are designed to run in CI/CD pipelines without external dependencies:
@@ -314,12 +326,12 @@ cd frontend && npm run e2e:run
 
 ### Pre-commit Checklist
 
-Before committing code:
+Before committing code (or rely on CI to catch issues):
 
 - [ ] Backend tests pass: `pytest`
 - [ ] Frontend unit tests pass: `cd frontend && npm run test:run`
 - [ ] Python lint passes: `python -m ruff check --no-cache api services scripts tests`
-- [ ] TypeScript type check passes: `cd frontend && npx tsc --noEmit`
+- [ ] TypeScript type check passes: `cd frontend && npm run typecheck` (or `npx tsc --noEmit`)
 - [ ] ESLint passes: `cd frontend && npm run lint`
 - [ ] Error code sync test passes: `pytest tests/test_error_code_sync.py`
 

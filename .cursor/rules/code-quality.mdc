@@ -22,10 +22,11 @@ alwaysApply: true
 
 ## TypeScript/ESLint
 
-- Run `cd frontend && npx tsc --noEmit` for type checking
+- Run `cd frontend && npm run typecheck` for type checking (or `npx tsc --noEmit`)
 - Run `cd frontend && npm run lint` for ESLint checks
 - Fix all errors before marking work complete
 - Note: `tsc` and ESLint use different parsers — a file can pass one and fail the other
+- **CI automatically runs type checks** via GitHub Actions (`.github/workflows/ci.yml`) on every push/PR
 
 ## Verification Before Completion
 

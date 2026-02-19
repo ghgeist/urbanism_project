@@ -88,6 +88,10 @@ describe("MapView", () => {
       {
         geoid20: "123",
         natwalkind: 12.0,
+        d2a_ranked: null,
+        d2b_ranked: null,
+        d3b_ranked: null,
+        d4a_ranked: null,
         geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
       },
     ];
@@ -128,6 +132,10 @@ describe("MapView", () => {
       {
         geoid20: "123",
         natwalkind: 12.0,
+        d2a_ranked: null,
+        d2b_ranked: null,
+        d3b_ranked: null,
+        d4a_ranked: null,
         geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
       },
     ];
@@ -141,6 +149,10 @@ describe("MapView", () => {
       {
         geoid20: "123",
         natwalkind: null,
+        d2a_ranked: null,
+        d2b_ranked: null,
+        d3b_ranked: null,
+        d4a_ranked: null,
         geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
       },
     ];

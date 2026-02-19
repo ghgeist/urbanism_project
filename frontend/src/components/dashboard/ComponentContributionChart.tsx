@@ -37,7 +37,7 @@ export function ComponentContributionChart({ summary }: ComponentContributionCha
             domain={NWI_DOMAIN}
             aria-label="Average Score"
           />
-          <Tooltip formatter={(value: number) => value.toFixed(2)} />
+          <Tooltip formatter={(value: number | undefined) => (value ?? 0).toFixed(2)} />
           <Legend />
           <ReferenceLine
             y={nwiMean}

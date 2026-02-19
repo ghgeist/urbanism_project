@@ -20,8 +20,9 @@ A **portfolio project**: a geospatial web app that makes the EPA’s National Wa
 8. [Deployment](#deployment)
 9. [Data Pipeline](#data-pipeline)
 10. [Testing & Validation](#testing--validation)
-11. [Roadmap](#roadmap)
-12. [License](#license)
+11. [Contributing](#contributing)
+12. [Roadmap](#roadmap)
+13. [License](#license)
 
 ## Overview
 The National Walkability Index (NWI) scores every U.S. census block group on a 1–20 scale across four dimensions: land-use mix, employment mix, street connectivity, and transit access. This project wraps the dataset in a React app + FastAPI backend so planners, advocates, and curious residents can:
@@ -227,6 +228,27 @@ When deploying to a public URL (e.g. Replit, Vercel + your API host):
 - **Configuration check:** Run `python scripts/check_config.py` to validate required environment variables are present.
 - **Manual smoke test:** start the API and React app (see Quickstart), open the app in the browser, query "Knoxville, TN", and confirm the map and summary table populate.
 - **Data sanity checks:** inspect `walkability.log` for geocoding errors and verify `national_walkability_index` counts in Postgres (`SELECT COUNT(*) ...`).
+
+---
+
+## Contributing
+
+This is an **experimental project** designed for fast iteration while maintaining quality. Both humans and AI coding agents are welcome!
+
+**Quick start:**
+- See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development workflow
+- See [`AGENTS.md`](AGENTS.md) for AI agent guidelines
+- See [`CLAUDE.md`](CLAUDE.md) for project-specific context
+
+**Before committing:**
+- Run `./scripts/quick_check.sh` (Unix/macOS) or `.\scripts\quick_check.ps1` (Windows) to validate all checks
+- Or rely on CI - GitHub Actions will catch issues automatically on push/PR
+
+**Key principles:**
+- ✅ Fast iteration + automated safety nets
+- ✅ Type safety enforced by CI
+- ✅ Clear patterns documented in `docs/dev_notes/lessons.md`
+- ✅ Session-based work tracking in `docs/sessions/`
 
 ---
 

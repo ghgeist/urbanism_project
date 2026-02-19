@@ -118,8 +118,8 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
               />
               <Tooltip
                 cursor={{ strokeDasharray: "3 3" }}
-                formatter={(value: number) => value.toFixed(2)}
-                labelFormatter={(label: string) => `NWI: ${label}`}
+                formatter={(value: number | undefined) => (value ?? 0).toFixed(2)}
+                labelFormatter={(label: React.ReactNode) => `NWI: ${typeof label === "string" ? label : String(label ?? "")}`}
               />
               <Legend />
               <Scatter

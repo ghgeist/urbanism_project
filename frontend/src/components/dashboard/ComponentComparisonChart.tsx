@@ -2,6 +2,7 @@
  * Component comparison: side-by-side comparison of component means.
  */
 
+import React from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import type { NwiSummaryResponse } from "../../types/api";
 import { createComponentData, CHART_MARGINS, CHART_HEIGHTS, NWI_DOMAIN } from "../../lib/chartConfig";
@@ -45,10 +46,11 @@ export function ComponentComparisonChart({ summary }: ComponentComparisonChartPr
             aria-label="Average Score"
           />
           <Tooltip
-            formatter={(value: number) => value.toFixed(2)}
-            labelFormatter={(label: string) => {
-              const item = data.find((d) => d.name === label);
-              return item ? `${item.name}: ${item.label}` : label;
+            formatter={(value: number | undefined) => (value ?? 0).toFixed(2)}
+            labelFormatter={(label: React.ReactNode) => {
+              const labelStr = typeof label === "string" ? label : String(label ?? "");
+              const item = data.find((d) => d.name === labelStr);
+              return item ? `${item.name}: ${item.label}` : labelStr;
             }}
           />
           <Legend />

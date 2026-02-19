@@ -35,7 +35,8 @@ pytest -v
 python -m ruff check --no-cache api services scripts tests
 
 # Run frontend TypeScript type check (from project root)
-cd frontend && npx tsc --noEmit
+cd frontend && npm run typecheck
+# Or: cd frontend && npx tsc --noEmit
 
 # Run frontend ESLint (from project root)
 cd frontend && npm run lint
@@ -92,7 +93,9 @@ Tests use `unittest.mock` throughout — no live database connection needed. Two
 
 When changing Python files, run `python -m ruff check --no-cache api services scripts tests` and fix lint errors before marking work complete.
 
-When changing TypeScript/TSX files, run `cd frontend && npx tsc --noEmit && npm run lint` and fix all errors before marking work complete. Note: `tsc` and ESLint use different parsers — a file can pass one and fail the other (e.g. `{/* */}` JSX comments between attributes are rejected by ESLint but accepted by `tsc`).
+When changing TypeScript/TSX files, run `cd frontend && npm run typecheck && npm run lint` and fix all errors before marking work complete. Note: `tsc` and ESLint use different parsers — a file can pass one and fail the other (e.g. `{/* */}` JSX comments between attributes are rejected by ESLint but accepted by `tsc`).
+
+**CI automatically runs type checks** on every push and pull request via GitHub Actions (`.github/workflows/ci.yml`), so type errors will be caught before merging.
 
 ## Configuration
 
