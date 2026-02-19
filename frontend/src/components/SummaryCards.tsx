@@ -45,7 +45,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
         );
       })}
       
-      <div className="summary-card" title="Best nearby candidate meeting min NWI improvement delta.">
+      <div className="summary-card" title="Best nearby candidate meeting minimum NWI improvement threshold (default: 2.0 points).">
         <div
           className={
             upgradeVal.length > 12

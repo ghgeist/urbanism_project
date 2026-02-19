@@ -76,7 +76,7 @@ export function Compare() {
       <header className="compare__header">
         <h1>Compare</h1>
         <p className="compare__tagline">
-          Compare two locations side-by-side. Metrics for B show the difference vs A (neutral).
+          Compare two locations side-by-side. Metrics for B show the difference vs A (neutral). Uses EPA National Walkability Index scores within a configurable radius.
         </p>
       </header>
 

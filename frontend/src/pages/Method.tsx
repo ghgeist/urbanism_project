@@ -18,6 +18,7 @@ export function Method() {
           All scores come from the <strong>EPA National Walkability Index (NWI)</strong>.
           The NWI assigns every U.S. census block group a value from 1 to 20 (higher = more walkable)
           based on four components: land-use mix, employment mix, street connectivity, and transit access.
+          Data reflects conditions as of the 2020 Census and covers the 50 states, District of Columbia, and Puerto Rico.
           More information:{" "}
           <a
             href="https://www.epa.gov/smartgrowth/national-walkability-index-user-guide-and-methodology"
@@ -58,6 +59,15 @@ export function Method() {
             <strong>D4A (transit)</strong> — Transit stop availability and frequency.
           </li>
         </ul>
+      </section>
+
+      <section className="method-page__section">
+        <h2>Technical constraints</h2>
+        <p>
+          This tool queries block groups within a 0.1–3.0 mile radius of the selected location.
+          Geocoding accuracy depends on Nominatim results; some addresses may resolve to approximate locations.
+          Upgrade Potential candidates must meet a minimum NWI improvement threshold (default: 2.0 points) to be shown.
+        </p>
       </section>
     </div>
   );
