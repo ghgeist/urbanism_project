@@ -5,6 +5,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { BlockGroupFeature } from "../../types/api";
 import { COMPONENT_INFO } from "../../lib/componentLabels";
+import { ChartErrorBoundary } from "./ChartErrorBoundary";
 
 interface ComponentDistributionChartProps {
   blockGroups: BlockGroupFeature[];
@@ -36,18 +37,47 @@ export function ComponentDistributionChart({ blockGroups }: ComponentDistributio
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="score" label={{ value: "Component Score (1-20)", position: "insideBottom", offset: -5 }} />
-        <YAxis label={{ value: "Number of Block Groups", angle: -90, position: "insideLeft" }} />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="d2a" fill="#8884d8" name={`${COMPONENT_INFO.d2a_ranked.code}: ${COMPONENT_INFO.d2a_ranked.shortLabel}`} />
-        <Bar dataKey="d2b" fill="#82ca9d" name={`${COMPONENT_INFO.d2b_ranked.code}: ${COMPONENT_INFO.d2b_ranked.shortLabel}`} />
-        <Bar dataKey="d3b" fill="#ffc658" name={`${COMPONENT_INFO.d3b_ranked.code}: ${COMPONENT_INFO.d3b_ranked.shortLabel}`} />
-        <Bar dataKey="d4a" fill="#ff7300" name={`${COMPONENT_INFO.d4a_ranked.code}: ${COMPONENT_INFO.d4a_ranked.shortLabel}`} />
-      </BarChart>
-    </ResponsiveContainer>
+    <ChartErrorBoundary chartName="Component Distribution Chart">
+      <ResponsiveContainer width="100%" height={400} aria-label="Histogram showing distribution of component scores across block groups">
+        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis
+            dataKey="score"
+            label={{ value: "Component Score (1-20)", position: "insideBottom", offset: -5 }}
+            aria-label="Component Score"
+          />
+          <YAxis
+            label={{ value: "Number of Block Groups", angle: -90, position: "insideLeft" }}
+            aria-label="Number of Block Groups"
+          />
+          <Tooltip />
+          <Legend />
+          <Bar
+            dataKey="d2a"
+            fill="#8884d8"
+            name={`${COMPONENT_INFO.d2a_ranked.code}: ${COMPONENT_INFO.d2a_ranked.shortLabel}`}
+            aria-label={`${COMPONENT_INFO.d2a_ranked.shortLabel} distribution`}
+          />
+          <Bar
+            dataKey="d2b"
+            fill="#82ca9d"
+            name={`${COMPONENT_INFO.d2b_ranked.code}: ${COMPONENT_INFO.d2b_ranked.shortLabel}`}
+            aria-label={`${COMPONENT_INFO.d2b_ranked.shortLabel} distribution`}
+          />
+          <Bar
+            dataKey="d3b"
+            fill="#ffc658"
+            name={`${COMPONENT_INFO.d3b_ranked.code}: ${COMPONENT_INFO.d3b_ranked.shortLabel}`}
+            aria-label={`${COMPONENT_INFO.d3b_ranked.shortLabel} distribution`}
+          />
+          <Bar
+            dataKey="d4a"
+            fill="#ff7300"
+            name={`${COMPONENT_INFO.d4a_ranked.code}: ${COMPONENT_INFO.d4a_ranked.shortLabel}`}
+            aria-label={`${COMPONENT_INFO.d4a_ranked.shortLabel} distribution`}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartErrorBoundary>
   );
 }
