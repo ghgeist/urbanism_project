@@ -220,14 +220,14 @@ When deploying to a public URL (e.g. Replit, Vercel + your API host):
 > **📖 For comprehensive testing documentation, see [`docs/TESTING.md`](docs/TESTING.md)**
 
 - **Automated test suite:** 
-  - **Backend**: Run `pytest` for Python/FastAPI tests (70+ tests): input validation, distance conversion, geocoding, data fetching, API endpoints, and profile metric invariants. Tests use mocks and don't require a live database connection. See `tests/README.md` for backend-specific details.
+  - **Backend**: Run `pytest` for Python/FastAPI tests (100+ tests): input validation, distance conversion, geocoding, data fetching, API endpoints, and profile metric invariants. Tests use mocks and don't require a live database connection. See `tests/README.md` for backend-specific details.
   - **Frontend**: Run `cd frontend && npm run test:run` for React/TypeScript unit tests (Vitest + React Testing Library) and `npm run e2e:run` for E2E tests (Playwright).
 - **Python linting (Ruff):** Run `python -m ruff check --no-cache api services scripts tests` for lint checks. Use `python -m ruff check --no-cache --fix api services scripts tests` for safe autofixes.
 - **TypeScript/ESLint:** Run `cd frontend && npx tsc --noEmit && npm run lint` to check types and lint frontend code.
 - **Schema validation:** Run `python scripts/validate_schema.py` to verify database table structure, spatial indexes, and PostGIS extension.
 - **Configuration check:** Run `python scripts/check_config.py` to validate required environment variables are present.
 - **Manual smoke test:** start the API and React app (see Quickstart), open the app in the browser, query "Knoxville, TN", and confirm the map and summary table populate.
-- **Data sanity checks:** inspect `walkability.log` for geocoding errors and verify `national_walkability_index` counts in Postgres (`SELECT COUNT(*) ...`).
+- **Data sanity checks:** when `WALKABILITY_DEBUG_LOG=1` is set, inspect API stdout/logs for geocoding errors; verify `national_walkability_index` counts in Postgres (`SELECT COUNT(*) ...`).
 
 ---
 
