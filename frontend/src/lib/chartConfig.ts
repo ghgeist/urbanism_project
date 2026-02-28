@@ -3,7 +3,7 @@
  * Centralizes chart styling, colors, and common settings.
  */
 
-import { COMPONENT_INFO } from "./componentLabels";
+import { COMPONENT_INFO, formatComponentLabel } from "./componentLabels";
 
 /**
  * Component color scheme for consistent visualization across charts.
@@ -27,10 +27,20 @@ export function getComponentColor(componentKey: "d2a" | "d2b" | "d3b" | "d4a"): 
  * Common chart margin configuration.
  */
 export const CHART_MARGINS = {
-  top: 20,
-  right: 30,
-  left: 20,
-  bottom: 5,
+  top: 16,
+  right: 24,
+  left: 60,
+  bottom: 22,
+} as const;
+
+/**
+ * Shared axis spacing so labels stay readable and uncut on laptop viewports.
+ */
+export const CHART_AXIS = {
+  yAxisWidth: 72,
+  xAxisHeight: 44,
+  yAxisLabelOffset: 12,
+  axisLabelFontSize: 12,
 } as const;
 
 /**
@@ -42,8 +52,42 @@ export const NWI_DOMAIN = [0, 20] as const;
  * Common chart height configurations.
  */
 export const CHART_HEIGHTS = {
-  standard: 400,
-  compact: 300,
+  distribution: 320,
+  correlation: 300,
+  contribution: 280,
+} as const;
+
+export const CHART_LAYOUT_PRESETS = {
+  distribution: {
+    margin: {
+      ...CHART_MARGINS,
+      top: 12,
+      right: 12,
+      bottom: 28,
+    },
+    axis: {
+      ...CHART_AXIS,
+      xAxisHeight: 48,
+      yAxisWidth: 76,
+    },
+  },
+  contribution: {
+    margin: CHART_MARGINS,
+    axis: CHART_AXIS,
+  },
+  correlation: {
+    margin: {
+      ...CHART_MARGINS,
+      right: 16,
+      left: 52,
+      bottom: 26,
+    },
+    axis: {
+      ...CHART_AXIS,
+      yAxisWidth: 64,
+      xAxisHeight: 46,
+    },
+  },
 } as const;
 
 /**
@@ -61,28 +105,28 @@ export function createComponentData(summary: {
   return [
     {
       key: "d2a" as const,
-      component: COMPONENT_INFO.d2a_ranked.code,
+      component: formatComponentLabel(COMPONENT_INFO.d2a_ranked),
       label: COMPONENT_INFO.d2a_ranked.shortLabel,
       value: summary.components.employment_housing_mix_rank_mean,
       color: COMPONENT_COLORS.d2a,
     },
     {
       key: "d2b" as const,
-      component: COMPONENT_INFO.d2b_ranked.code,
+      component: formatComponentLabel(COMPONENT_INFO.d2b_ranked),
       label: COMPONENT_INFO.d2b_ranked.shortLabel,
       value: summary.components.employment_type_diversity_rank_mean,
       color: COMPONENT_COLORS.d2b,
     },
     {
       key: "d3b" as const,
-      component: COMPONENT_INFO.d3b_ranked.code,
+      component: formatComponentLabel(COMPONENT_INFO.d3b_ranked),
       label: COMPONENT_INFO.d3b_ranked.shortLabel,
       value: summary.components.intersection_density_rank_mean,
       color: COMPONENT_COLORS.d3b,
     },
     {
       key: "d4a" as const,
-      component: COMPONENT_INFO.d4a_ranked.code,
+      component: formatComponentLabel(COMPONENT_INFO.d4a_ranked),
       label: COMPONENT_INFO.d4a_ranked.shortLabel,
       value: summary.components.transit_proximity_rank_mean_proxy,
       color: COMPONENT_COLORS.d4a,

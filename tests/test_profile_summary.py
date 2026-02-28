@@ -7,7 +7,7 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import Point
 
-from services.profile_summary import build_summary_from_coords, build_summary_from_location_query
+from services.profile_summary import SCHEMA_VERSION, build_summary_from_coords, build_summary_from_location_query
 
 
 def _sample_gdf(include_dist: bool = True) -> gpd.GeoDataFrame:
@@ -42,7 +42,7 @@ class TestBuildSummaryFromCoords:
             )
 
         mock_query.assert_called_once_with(-83.92, 35.96, 2.0, conn=None)
-        assert result["schema_version"] == "2026-02-19"
+        assert result["schema_version"] == SCHEMA_VERSION
         assert result["origin"]["lat"] == pytest.approx(35.96)
         assert result["origin"]["lon"] == pytest.approx(-83.92)
         assert result["origin"]["label"] is None

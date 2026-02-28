@@ -10,6 +10,10 @@ export interface ComponentInfo {
   description: string;
 }
 
+export function formatComponentLabel(info: ComponentInfo): string {
+  return `${info.shortLabel} (${info.code})`;
+}
+
 export const COMPONENT_INFO: Record<string, ComponentInfo> = {
   d2a_ranked: {
     code: "D2A",

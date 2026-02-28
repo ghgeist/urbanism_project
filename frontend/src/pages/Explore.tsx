@@ -16,10 +16,22 @@ import {
   type ExploreParams,
 } from "../lib/exploreParams";
 import { useUrlDrivenSearch } from "../hooks/useUrlDrivenSearch";
+import { useEffect, useRef, useState } from "react";
 
 const { MIN_RADIUS, MAX_RADIUS, STEP } = EXPLORE_PARAMS;
+const WRIGLEY_FIELD_LAT = 41.9484;
+const WRIGLEY_FIELD_LON = -87.6553;
+const WRIGLEY_FIELD_ADDRESS = "1060 W Addison St, Chicago, IL 60613";
+const WRIGLEY_FIELD_PLACEHOLDER = "1060 W Addison St, Chicago";
+const DEFAULT_PRELOAD_RETRY_DELAY_MS = 1000;
+const MAX_DEFAULT_PRELOAD_RETRIES = 1;
 
 export function Explore() {
+  const [defaultSummary, setDefaultSummary] = useState<NwiSummaryResponse | null>(null);
+  const [preloadRetryTick, setPreloadRetryTick] = useState(0);
+  const preloadStatusRef = useRef<"idle" | "loading" | "success">("idle");
+  const preloadRetryCountRef = useRef(0);
+  const preloadRetryTimerRef = useRef<number | null>(null);
   const {
     params,
     result: summary,
@@ -36,6 +48,58 @@ export function Explore() {
     emptyFetchMessage: "Enter a location to get a summary.",
     trimParams: (p) => ({ ...p, q: p.q.trim() }),
   });
+  const initialPreloadRadiusRef = useRef(params.radius);
+
+  useEffect(() => {
+    // Preload default map overlays without refetching on radius slider edits.
+    if (summary || params.q.trim() !== "") return;
+    if (preloadStatusRef.current === "loading" || preloadStatusRef.current === "success") return;
+
+    preloadStatusRef.current = "loading";
+    const preloadRadius = initialPreloadRadiusRef.current;
+    const controller = new AbortController();
+    let ignore = false;
+    nwiSummaryByQuery(WRIGLEY_FIELD_ADDRESS, preloadRadius, { signal: controller.signal })
+      .then((res) => {
+        if (ignore) return;
+        setDefaultSummary(res);
+        preloadStatusRef.current = "success";
+      })
+      .catch((err: unknown) => {
+        if (ignore) return;
+        preloadStatusRef.current = "idle";
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setDefaultSummary(null);
+        if (
+          preloadRetryCountRef.current < MAX_DEFAULT_PRELOAD_RETRIES &&
+          preloadRetryTimerRef.current === null
+        ) {
+          preloadRetryCountRef.current += 1;
+          preloadRetryTimerRef.current = window.setTimeout(() => {
+            preloadRetryTimerRef.current = null;
+            setPreloadRetryTick((n) => n + 1);
+          }, DEFAULT_PRELOAD_RETRY_DELAY_MS);
+        }
+      });
+
+    return () => {
+      ignore = true;
+      if (preloadStatusRef.current === "loading") {
+        preloadStatusRef.current = "idle";
+      }
+      controller.abort();
+    };
+  }, [summary, params.q, preloadRetryTick]);
+
+  useEffect(() => {
+    return () => {
+      if (preloadRetryTimerRef.current !== null) {
+        window.clearTimeout(preloadRetryTimerRef.current);
+      }
+    };
+  }, []);
+
+  const mapSummary = summary ?? (params.q.trim() === "" ? defaultSummary : null);
 
   function handleQueryChange(value: string) {
     updateDraft({
@@ -67,16 +131,18 @@ export function Explore() {
         <div className="explore__left">
           <section className="explore__controls">
             <form onSubmit={handleSearch} className="explore__form">
-              <label htmlFor="search">Address, ZIP, or city</label>
-              <input
-                id="search"
-                type="text"
-                value={params.q}
-                onChange={(e) => handleQueryChange(e.target.value)}
-                placeholder="e.g. Cambridge, MA"
-                disabled={loading}
-                autoComplete="off"
-              />
+              <div className="explore__input-group">
+                <label htmlFor="search">Address, ZIP, or city</label>
+                <input
+                  id="search"
+                  type="text"
+                  value={params.q}
+                  onChange={(e) => handleQueryChange(e.target.value)}
+                  placeholder={WRIGLEY_FIELD_PLACEHOLDER}
+                  disabled={loading}
+                  autoComplete="off"
+                />
+              </div>
               <div className="explore__radius">
                 <label htmlFor="radius">Radius (miles): {params.radius.toFixed(1)}</label>
                 <input
@@ -141,23 +207,17 @@ export function Explore() {
         </div>
 
         <aside className="explore__right" aria-label="Spatial context">
-          {summary ? (
-            <div className="explore__map explore__map--split">
-              <MapView
-                lat={summary.origin.lat}
-                lon={summary.origin.lon}
-                radiusMiles={summary.selected_radius_miles}
-                label={summary.origin.label ?? undefined}
-                blockGroups={summary.block_groups}
-                nwiMean={summary.nwi.mean}
-                fillHeight
-              />
-            </div>
-          ) : (
-            <p className="explore__map-placeholder">
-              Enter a location to view spatial context.
-            </p>
-          )}
+          <div className="explore__map explore__map--split">
+            <MapView
+              lat={mapSummary?.origin.lat ?? WRIGLEY_FIELD_LAT}
+              lon={mapSummary?.origin.lon ?? WRIGLEY_FIELD_LON}
+              radiusMiles={mapSummary?.selected_radius_miles ?? params.radius}
+              label={mapSummary?.origin.label ?? WRIGLEY_FIELD_ADDRESS}
+              blockGroups={mapSummary?.block_groups}
+              nwiMean={mapSummary?.nwi.mean}
+              fillHeight
+            />
+          </div>
         </aside>
       </div>
     </div>
