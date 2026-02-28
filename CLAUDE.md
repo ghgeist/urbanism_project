@@ -75,7 +75,7 @@ services/
 
 **Connection handling**: The API uses `services/db.py` for connections. Structured JSON debug logging is available via `WALKABILITY_DEBUG_LOG=1`.
 
-**Database**: Single table `national_walkability_index` with columns: `geoid20` (PK), `d2a_ranked`, `d2b_ranked`, `d3b_ranked`, `d4a_ranked`, `natwalkind` (all NUMERIC(4,2)), and `geometry` (PostGIS GEOMETRY, SRID 4326). Loaded from `data/walkability_index_tabular.csv` (~203k rows).
+**Database**: Single table `national_walkability_index` with columns: `geoid20` (PK), `d2a_ranked`, `d2b_ranked`, `d3b_ranked`, `d4a_ranked`, `natwalkind` (all NUMERIC(4,2)), and `geometry` (PostGIS GEOMETRY, SRID 4326). Loaded from `data/walkability_index_geospatial.csv` (or `WALKABILITY_CSV_PATH`/`WALKABILITY_CSV_URL`); see README and `scripts/create_neo_postgres_db.py`. Tabular-only variant: `walkability_index_tabular.csv` (~203k rows) is used in some pipelines.
 
 ## Key Implementation Details
 
