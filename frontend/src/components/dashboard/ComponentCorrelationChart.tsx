@@ -130,16 +130,20 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
   const [activeComponent, setActiveComponent] = useState<ComponentKey>("d2a");
   const [showTrendLine, setShowTrendLine] = useState<boolean>(true);
 
-  const data = blockGroups
-    .filter((bg) => bg.natwalkind != null)
-    .map((bg) => ({
-      nwi: bg.natwalkind!,
-      d2a: bg.d2a_ranked,
-      d2b: bg.d2b_ranked,
-      d3b: bg.d3b_ranked,
-      d4a: bg.d4a_ranked,
-    }))
-    .filter((d) => d.d2a != null || d.d2b != null || d.d3b != null || d.d4a != null);
+  const data = useMemo(
+    () =>
+      blockGroups
+        .filter((bg) => bg.natwalkind != null)
+        .map((bg) => ({
+          nwi: bg.natwalkind!,
+          d2a: bg.d2a_ranked,
+          d2b: bg.d2b_ranked,
+          d3b: bg.d3b_ranked,
+          d4a: bg.d4a_ranked,
+        }))
+        .filter((d) => d.d2a != null || d.d2b != null || d.d3b != null || d.d4a != null),
+    [blockGroups]
+  );
 
   const scatterSeriesByComponent = useMemo(() => {
     return COMPONENT_KEYS.reduce<Record<ComponentKey, ScatterPoint[]>>((acc, key) => {

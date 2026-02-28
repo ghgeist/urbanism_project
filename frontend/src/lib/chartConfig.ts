@@ -55,7 +55,6 @@ export const CHART_HEIGHTS = {
   distribution: 320,
   correlation: 300,
   contribution: 280,
-  comparison: 280,
 } as const;
 
 export const CHART_LAYOUT_PRESETS = {
@@ -73,10 +72,6 @@ export const CHART_LAYOUT_PRESETS = {
     },
   },
   contribution: {
-    margin: CHART_MARGINS,
-    axis: CHART_AXIS,
-  },
-  comparison: {
     margin: CHART_MARGINS,
     axis: CHART_AXIS,
   },

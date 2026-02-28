@@ -41,14 +41,6 @@ The dashboard is accessible at `/dashboard` and allows users to:
 
 **Data Source:** Aggregated component means from the API summary response
 
-### 4. Component Comparison
-
-**Visualization:** Bar chart comparing component means, sorted by strength
-
-**Purpose:** Side-by-side comparison showing which components are strongest/weakest in the selected area. Automatically sorted by value (highest first).
-
-**Data Source:** Aggregated component means from the API summary response
-
 ## Architecture
 
 ### Components
@@ -58,7 +50,6 @@ All dashboard components are located in `frontend/src/components/dashboard/`:
 - `ComponentDistributionChart.tsx` - Histogram visualization
 - `ComponentCorrelationChart.tsx` - Scatter plot with component selector
 - `ComponentContributionChart.tsx` - Bar chart with NWI reference line
-- `ComponentComparisonChart.tsx` - Sorted comparison bar chart
 - `ChartErrorBoundary.tsx` - Error boundary wrapper for charts
 
 ### Shared Configuration
@@ -121,7 +112,7 @@ These are included in the API response starting with schema version `2026-02-19-
 2. Enter a location (address, ZIP code, or city)
 3. Adjust the radius slider (0.1-3.0 miles)
 4. Click "Analyze" to load component data
-5. View the four visualization sections
+5. View the dashboard visualization sections
 
 ### URL Parameters
 
