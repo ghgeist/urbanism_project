@@ -55,6 +55,16 @@ function makeSummary(): NwiSummaryResponse {
   };
 }
 
+function deferred<T>() {
+  let resolve: (value: T | PromiseLike<T>) => void = () => {};
+  let reject: (reason?: unknown) => void = () => {};
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("Explore page default preload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,13 +85,17 @@ describe("Explore page default preload", () => {
       params: { q: "", radius: 0.5 },
     };
     vi.mocked(useUrlDrivenSearch).mockImplementation(() => hookState as never);
+    const pendingPreload = deferred<NwiSummaryResponse>();
+    vi.mocked(nwiSummaryByQuery).mockReturnValueOnce(pendingPreload.promise);
 
     const { rerender } = render(<Explore />);
     await waitFor(() => expect(nwiSummaryByQuery).toHaveBeenCalledTimes(1));
 
     hookState.params = { q: "", radius: 2.0 };
     rerender(<Explore />);
+    expect(nwiSummaryByQuery).toHaveBeenCalledTimes(1);
 
+    pendingPreload.resolve(makeSummary());
     await waitFor(() => expect(nwiSummaryByQuery).toHaveBeenCalledTimes(1));
   });
 

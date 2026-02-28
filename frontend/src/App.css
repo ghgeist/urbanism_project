@@ -1270,6 +1270,14 @@
   flex-shrink: 0;
 }
 
+.distribution-chart-layout {
+  display: block;
+}
+
+.distribution-chart-layout__plot {
+  min-width: 0;
+}
+
 .chart-error {
   padding: 2rem;
   text-align: center;

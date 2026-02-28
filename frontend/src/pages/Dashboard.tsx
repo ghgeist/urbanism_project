@@ -163,14 +163,13 @@ export function Dashboard() {
             <>
               <section className="dashboard__summary-grid" aria-label="Top-level dashboard insights">
                 <article className="dashboard__summary-card">
-                  <h3>NWI Mean</h3>
+                  <h3>Average Score Across Block Groups</h3>
                   <p className="dashboard__summary-value">{formatScore(summary.nwi.mean)}</p>
-                  <p className="dashboard__summary-hint">Average score across the selected block groups.</p>
+                  <p className="dashboard__summary-hint">Scores range from 1–20. Higher = more walkable</p>
                 </article>
                 <article className="dashboard__summary-card">
-                  <h3>Block Groups</h3>
+                  <h3>Block Groups within Radius</h3>
                   <p className="dashboard__summary-value">{summary.counts.selected_block_groups}</p>
-                  <p className="dashboard__summary-hint">How many block groups are included in this radius.</p>
                 </article>
                 <article className="dashboard__summary-card">
                   <h3>Strongest Component</h3>

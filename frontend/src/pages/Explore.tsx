@@ -32,7 +32,6 @@ export function Explore() {
   const preloadStatusRef = useRef<"idle" | "loading" | "success">("idle");
   const preloadRetryCountRef = useRef(0);
   const preloadRetryTimerRef = useRef<number | null>(null);
-  const initialPreloadRadiusRef = useRef<number | null>(null);
   const {
     params,
     result: summary,
@@ -49,6 +48,7 @@ export function Explore() {
     emptyFetchMessage: "Enter a location to get a summary.",
     trimParams: (p) => ({ ...p, q: p.q.trim() }),
   });
+  const initialPreloadRadiusRef = useRef(params.radius);
 
   useEffect(() => {
     // Preload default map overlays without refetching on radius slider edits.
@@ -56,8 +56,7 @@ export function Explore() {
     if (preloadStatusRef.current === "loading" || preloadStatusRef.current === "success") return;
 
     preloadStatusRef.current = "loading";
-    const preloadRadius = initialPreloadRadiusRef.current ?? params.radius;
-    initialPreloadRadiusRef.current = preloadRadius;
+    const preloadRadius = initialPreloadRadiusRef.current;
     const controller = new AbortController();
     let ignore = false;
     nwiSummaryByQuery(WRIGLEY_FIELD_ADDRESS, preloadRadius, { signal: controller.signal })
@@ -90,7 +89,7 @@ export function Explore() {
       }
       controller.abort();
     };
-  }, [summary, params.q, params.radius, preloadRetryTick]);
+  }, [summary, params.q, preloadRetryTick]);
 
   useEffect(() => {
     return () => {
