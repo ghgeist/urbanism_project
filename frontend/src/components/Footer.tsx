@@ -66,8 +66,6 @@ export function Footer() {
         <div className="app-footer__left">
           <span className="app-footer__data">Data: EPA National Walkability Index</span>
           <span className="app-footer__sep" aria-hidden="true">·</span>
-          <span className="app-footer__disclaimer">Not causal; descriptive only.</span>
-          <span className="app-footer__sep" aria-hidden="true">·</span>
           <span className="app-footer__copy">© {currentYear} Grant Geist</span>
         </div>
 

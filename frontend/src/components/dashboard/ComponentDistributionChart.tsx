@@ -2,15 +2,23 @@
  * Component distribution histogram: shows distribution of each component score (1-20).
  */
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import type { BlockGroupFeature } from "../../types/api";
-import { COMPONENT_INFO } from "../../lib/componentLabels";
-import { COMPONENT_COLORS, CHART_MARGINS, CHART_HEIGHTS, NWI_DOMAIN } from "../../lib/chartConfig";
+import { COMPONENT_INFO, formatComponentLabel } from "../../lib/componentLabels";
+import { COMPONENT_COLORS, CHART_HEIGHTS, NWI_DOMAIN, CHART_LAYOUT_PRESETS } from "../../lib/chartConfig";
 import { ChartErrorBoundary } from "./ChartErrorBoundary";
 
 interface ComponentDistributionChartProps {
   blockGroups: BlockGroupFeature[];
 }
+
+const { margin: DISTRIBUTION_MARGINS, axis: DISTRIBUTION_AXIS } = CHART_LAYOUT_PRESETS.distribution;
+const distributionLegendItems = [
+  { key: "d2a", label: formatComponentLabel(COMPONENT_INFO.d2a_ranked), color: COMPONENT_COLORS.d2a },
+  { key: "d2b", label: formatComponentLabel(COMPONENT_INFO.d2b_ranked), color: COMPONENT_COLORS.d2b },
+  { key: "d3b", label: formatComponentLabel(COMPONENT_INFO.d3b_ranked), color: COMPONENT_COLORS.d3b },
+  { key: "d4a", label: formatComponentLabel(COMPONENT_INFO.d4a_ranked), color: COMPONENT_COLORS.d4a },
+] as const;
 
 export function ComponentDistributionChart({ blockGroups }: ComponentDistributionChartProps) {
   // Create histogram bins (1-20)
@@ -39,47 +47,77 @@ export function ComponentDistributionChart({ blockGroups }: ComponentDistributio
 
   return (
     <ChartErrorBoundary chartName="Component Distribution Chart">
-      <ResponsiveContainer width="100%" height={CHART_HEIGHTS.standard} aria-label="Histogram showing distribution of component scores across block groups">
-        <BarChart data={data} margin={CHART_MARGINS}>
+      <ResponsiveContainer
+        width="100%"
+        height={CHART_HEIGHTS.distribution}
+        aria-label="Histogram showing distribution of component scores across block groups"
+      >
+        <BarChart data={data} margin={DISTRIBUTION_MARGINS}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="score"
-            label={{ value: "Component Score (1-20)", position: "insideBottom", offset: -5 }}
+            height={DISTRIBUTION_AXIS.xAxisHeight}
+            label={{
+              value: "Component Score (1-20)",
+              position: "bottom",
+              offset: 10,
+              style: { fontSize: DISTRIBUTION_AXIS.axisLabelFontSize },
+            }}
             aria-label="Component Score"
             domain={NWI_DOMAIN}
+            interval={1}
+            tick={{ fontSize: 11 }}
           />
           <YAxis
-            label={{ value: "Number of Block Groups", angle: -90, position: "insideLeft" }}
+            width={DISTRIBUTION_AXIS.yAxisWidth}
+            label={{
+              value: "Number of Block Groups",
+              angle: -90,
+              position: "left",
+              offset: DISTRIBUTION_AXIS.yAxisLabelOffset,
+              style: { fontSize: DISTRIBUTION_AXIS.axisLabelFontSize },
+            }}
             aria-label="Number of Block Groups"
+            tick={{ fontSize: 11 }}
           />
-          <Tooltip />
-          <Legend />
+          <Tooltip
+            formatter={(value: number | undefined, name: string) => [`${value ?? 0}`, name]}
+            labelFormatter={(label: number | string) => `Score bucket: ${String(label)}`}
+          />
           <Bar
             dataKey="d2a"
             fill={COMPONENT_COLORS.d2a}
-            name={`${COMPONENT_INFO.d2a_ranked.code}: ${COMPONENT_INFO.d2a_ranked.shortLabel}`}
+            name={formatComponentLabel(COMPONENT_INFO.d2a_ranked)}
             aria-label={`${COMPONENT_INFO.d2a_ranked.shortLabel} distribution`}
           />
           <Bar
             dataKey="d2b"
             fill={COMPONENT_COLORS.d2b}
-            name={`${COMPONENT_INFO.d2b_ranked.code}: ${COMPONENT_INFO.d2b_ranked.shortLabel}`}
+            name={formatComponentLabel(COMPONENT_INFO.d2b_ranked)}
             aria-label={`${COMPONENT_INFO.d2b_ranked.shortLabel} distribution`}
           />
           <Bar
             dataKey="d3b"
             fill={COMPONENT_COLORS.d3b}
-            name={`${COMPONENT_INFO.d3b_ranked.code}: ${COMPONENT_INFO.d3b_ranked.shortLabel}`}
+            name={formatComponentLabel(COMPONENT_INFO.d3b_ranked)}
             aria-label={`${COMPONENT_INFO.d3b_ranked.shortLabel} distribution`}
           />
           <Bar
             dataKey="d4a"
             fill={COMPONENT_COLORS.d4a}
-            name={`${COMPONENT_INFO.d4a_ranked.code}: ${COMPONENT_INFO.d4a_ranked.shortLabel}`}
+            name={formatComponentLabel(COMPONENT_INFO.d4a_ranked)}
             aria-label={`${COMPONENT_INFO.d4a_ranked.shortLabel} distribution`}
           />
         </BarChart>
       </ResponsiveContainer>
+      <div className="dashboard-chart-legend" aria-label="Distribution chart component legend">
+        {distributionLegendItems.map((item) => (
+          <span key={item.key} className="dashboard-chart-legend__item">
+            <span className="dashboard-chart-legend__swatch" style={{ backgroundColor: item.color }} aria-hidden="true" />
+            {item.label}
+          </span>
+        ))}
+      </div>
     </ChartErrorBoundary>
   );
 }
