@@ -157,24 +157,15 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
     }, { d2a: [], d2b: [], d3b: [], d4a: [] });
   }, [data]);
 
-  const correlations = {
-    d2a: calculateCorrelation(
-      data.map((d) => d.d2a),
-      data.map((d) => d.nwi)
-    ),
-    d2b: calculateCorrelation(
-      data.map((d) => d.d2b),
-      data.map((d) => d.nwi)
-    ),
-    d3b: calculateCorrelation(
-      data.map((d) => d.d3b),
-      data.map((d) => d.nwi)
-    ),
-    d4a: calculateCorrelation(
-      data.map((d) => d.d4a),
-      data.map((d) => d.nwi)
-    ),
-  };
+  const correlations = useMemo(() => {
+    const nwiValues = data.map((d) => d.nwi);
+    return {
+      d2a: calculateCorrelation(data.map((d) => d.d2a), nwiValues),
+      d2b: calculateCorrelation(data.map((d) => d.d2b), nwiValues),
+      d3b: calculateCorrelation(data.map((d) => d.d3b), nwiValues),
+      d4a: calculateCorrelation(data.map((d) => d.d4a), nwiValues),
+    };
+  }, [data]);
 
   const selectedInfo = COMPONENT_INFO[`${activeComponent}_ranked` as keyof typeof COMPONENT_INFO];
   const selectedData = scatterSeriesByComponent[activeComponent];
