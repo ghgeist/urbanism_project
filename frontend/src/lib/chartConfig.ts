@@ -53,7 +53,7 @@ export const NWI_DOMAIN = [0, 20] as const;
  */
 export const CHART_HEIGHTS = {
   distribution: 320,
-  correlation: 250,
+  correlation: 300,
   contribution: 280,
   comparison: 280,
 } as const;
@@ -81,8 +81,17 @@ export const CHART_LAYOUT_PRESETS = {
     axis: CHART_AXIS,
   },
   correlation: {
-    margin: CHART_MARGINS,
-    axis: CHART_AXIS,
+    margin: {
+      ...CHART_MARGINS,
+      right: 16,
+      left: 52,
+      bottom: 26,
+    },
+    axis: {
+      ...CHART_AXIS,
+      yAxisWidth: 64,
+      xAxisHeight: 46,
+    },
   },
 } as const;
 

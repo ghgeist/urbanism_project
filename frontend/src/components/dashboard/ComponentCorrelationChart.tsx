@@ -27,11 +27,34 @@ type ComponentKey = "d2a" | "d2b" | "d3b" | "d4a";
 
 const COMPONENT_KEYS: ComponentKey[] = ["d2a", "d2b", "d3b", "d4a"];
 const { margin: CORRELATION_CHART_MARGINS, axis: CORRELATION_AXIS } = CHART_LAYOUT_PRESETS.correlation;
+const TREND_LINE_COLORS: Record<ComponentKey, string> = {
+  d2a: "#5b54b3",
+  d2b: "#3d8b5a",
+  d3b: "#a16207",
+  d4a: "#c2410c",
+};
 
 type ScatterPoint = {
   nwi: number;
   component: number;
 };
+
+function getCorrelationDescriptor(correlation: number): string {
+  const abs = Math.abs(correlation);
+  if (abs >= 0.8) {
+    return correlation >= 0 ? "Very strong positive relationship" : "Very strong negative relationship";
+  }
+  if (abs >= 0.6) {
+    return correlation >= 0 ? "Strong positive relationship" : "Strong negative relationship";
+  }
+  if (abs >= 0.4) {
+    return correlation >= 0 ? "Moderate positive relationship" : "Moderate negative relationship";
+  }
+  if (abs >= 0.2) {
+    return correlation >= 0 ? "Weak positive relationship" : "Weak negative relationship";
+  }
+  return "Little to no linear relationship";
+}
 
 function buildTrendLine(points: ScatterPoint[]): [{ x: number; y: number }, { x: number; y: number }] | null {
   if (points.length < 2) {
@@ -51,13 +74,56 @@ function buildTrendLine(points: ScatterPoint[]): [{ x: number; y: number }, { x:
 
   const slope = (n * sumXY - sumX * sumY) / denominator;
   const intercept = (sumY - slope * sumX) / n;
-  const xValues = points.map((p) => p.nwi);
-  const minX = Math.min(...xValues);
-  const maxX = Math.max(...xValues);
-  return [
-    { x: minX, y: intercept + slope * minX },
-    { x: maxX, y: intercept + slope * maxX },
-  ];
+
+  if (!Number.isFinite(slope) || !Number.isFinite(intercept)) {
+    return null;
+  }
+
+  const [minBound, maxBound] = NWI_DOMAIN;
+  const candidates: Array<{ x: number; y: number }> = [];
+
+  const yAtMinX = intercept + slope * minBound;
+  if (yAtMinX >= minBound && yAtMinX <= maxBound) {
+    candidates.push({ x: minBound, y: yAtMinX });
+  }
+
+  const yAtMaxX = intercept + slope * maxBound;
+  if (yAtMaxX >= minBound && yAtMaxX <= maxBound) {
+    candidates.push({ x: maxBound, y: yAtMaxX });
+  }
+
+  if (slope === 0) {
+    if (intercept >= minBound && intercept <= maxBound) {
+      candidates.push({ x: minBound, y: intercept });
+      candidates.push({ x: maxBound, y: intercept });
+    }
+  } else {
+    const xAtMinY = (minBound - intercept) / slope;
+    if (xAtMinY >= minBound && xAtMinY <= maxBound) {
+      candidates.push({ x: xAtMinY, y: minBound });
+    }
+
+    const xAtMaxY = (maxBound - intercept) / slope;
+    if (xAtMaxY >= minBound && xAtMaxY <= maxBound) {
+      candidates.push({ x: xAtMaxY, y: maxBound });
+    }
+  }
+
+  const unique = candidates.filter(
+    (point, index, arr) =>
+      arr.findIndex((p) => Math.abs(p.x - point.x) < 1e-6 && Math.abs(p.y - point.y) < 1e-6) === index
+  );
+
+  if (unique.length < 2) {
+    return null;
+  }
+
+  unique.sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
+  return [unique[0], unique[unique.length - 1]];
+}
+
+function getTrendLineColor(componentKey: ComponentKey): string {
+  return TREND_LINE_COLORS[componentKey];
 }
 
 export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationChartProps) {
@@ -110,6 +176,7 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
   const selectedData = scatterSeriesByComponent[activeComponent];
   const selectedCorrelation = correlations[activeComponent];
   const selectedTrendLine = useMemo(() => buildTrendLine(selectedData), [selectedData]);
+  const correlationDescriptor = getCorrelationDescriptor(selectedCorrelation);
 
   if (data.length === 0) {
     return <p>No data available for correlation analysis.</p>;
@@ -118,8 +185,21 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
   return (
     <ChartErrorBoundary chartName="Component Correlation Chart">
       <div className="correlation-charts">
-        <div className="correlation-intro">
-          <p>Focus on one component at a time to inspect how it moves with NWI.</p>
+        <div className="correlation-header">
+          <div className="correlation-header__title-group">
+            <p className="correlation-header__eyebrow">Focused relationship view</p>
+            <h3>
+              {formatComponentLabel(selectedInfo)} vs NWI
+            </h3>
+            <p className="correlation-header__hint">Switch components to compare trends quickly.</p>
+          </div>
+          <div className="correlation-header__metric" aria-live="polite">
+            <span className="correlation-header__metric-label">Correlation (r)</span>
+            <strong className="correlation-header__metric-value">{selectedCorrelation.toFixed(3)}</strong>
+            <span className="correlation-header__metric-description">{correlationDescriptor}</span>
+          </div>
+        </div>
+        <div className="correlation-controls">
           <div className="correlation-legend-toggles" role="radiogroup" aria-label="Select component for correlation chart">
             {COMPONENT_KEYS.map((key) => {
               const info = COMPONENT_INFO[`${key}_ranked` as keyof typeof COMPONENT_INFO];
@@ -144,29 +224,26 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
               );
             })}
           </div>
-          <div className="correlation-meta">
-            <span>
-              <strong>Correlation:</strong> r = {selectedCorrelation.toFixed(3)}
-            </span>
-            <button
-              type="button"
-              className={`correlation-trend-toggle ${showTrendLine ? "correlation-trend-toggle--active" : ""}`}
-              aria-pressed={showTrendLine}
-              onClick={() => setShowTrendLine((prev) => !prev)}
-            >
-              {showTrendLine ? "Trend line: On" : "Trend line: Off"}
-            </button>
-          </div>
+          <button
+            type="button"
+            className={`correlation-trend-toggle ${showTrendLine ? "correlation-trend-toggle--active" : ""}`}
+            aria-pressed={showTrendLine}
+            onClick={() => setShowTrendLine((prev) => !prev)}
+          >
+            {showTrendLine ? "Trend line on" : "Trend line off"}
+          </button>
         </div>
         <div className="correlation-chart-container" aria-label={`Scatter plot showing ${selectedInfo.shortLabel} versus NWI`}>
           <ResponsiveContainer width="100%" height={CHART_HEIGHTS.correlation}>
             <ScatterChart margin={CORRELATION_CHART_MARGINS}>
-              <CartesianGrid stroke="#d1d5db" strokeDasharray="2 4" />
+              <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 5" vertical={false} />
               <XAxis
                 type="number"
                 dataKey="nwi"
                 name="NWI Score"
                 height={CORRELATION_AXIS.xAxisHeight}
+                tick={{ fontSize: 12, fill: "#4b5563" }}
+                tickMargin={6}
                 label={{
                   value: "NWI Score",
                   position: "bottom",
@@ -181,6 +258,7 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
                 dataKey="component"
                 name={`${selectedInfo.code} Score`}
                 width={CORRELATION_AXIS.yAxisWidth}
+                tick={{ fontSize: 12, fill: "#4b5563" }}
                 label={{
                   value: `${selectedInfo.code} Score`,
                   angle: -90,
@@ -193,6 +271,11 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
               />
               <Tooltip
                 cursor={{ strokeDasharray: "3 3" }}
+                contentStyle={{
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  boxShadow: "0 6px 18px rgba(15, 23, 42, 0.08)",
+                }}
                 formatter={(value: number | undefined) => (value ?? 0).toFixed(2)}
                 labelFormatter={(label: React.ReactNode) => `NWI: ${typeof label === "string" ? label : String(label ?? "")}`}
               />
@@ -200,15 +283,18 @@ export function ComponentCorrelationChart({ blockGroups }: ComponentCorrelationC
                 name={formatComponentLabel(selectedInfo)}
                 data={selectedData}
                 fill={getComponentColor(activeComponent)}
-                fillOpacity={0.65}
+                fillOpacity={0.78}
+                stroke={getComponentColor(activeComponent)}
+                strokeOpacity={0.24}
                 legendType="none"
               />
               {showTrendLine && selectedTrendLine && (
                 <ReferenceLine
                   segment={selectedTrendLine}
-                  stroke={getComponentColor(activeComponent)}
-                  strokeWidth={2}
-                  strokeDasharray="6 4"
+                  stroke={getTrendLineColor(activeComponent)}
+                  strokeWidth={2.75}
+                  strokeDasharray="4 3"
+                  ifOverflow="extendDomain"
                 />
               )}
             </ScatterChart>
