@@ -12,10 +12,9 @@ interface ComponentDistributionChartProps {
   blockGroups: BlockGroupFeature[];
 }
 
-const { margin: DISTRIBUTION_MARGINS, axis: DISTRIBUTION_AXIS } = CHART_LAYOUT_PRESETS.distribution;
+const { axis: DISTRIBUTION_AXIS } = CHART_LAYOUT_PRESETS.distribution;
 const DISTRIBUTION_LAYOUT = {
   margin: {
-    ...DISTRIBUTION_MARGINS,
     top: 10,
     right: 10,
     bottom: 8,

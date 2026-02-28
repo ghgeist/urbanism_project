@@ -11,10 +11,9 @@ interface ComponentContributionChartProps {
   summary: NwiSummaryResponse;
 }
 
-const { margin: CONTRIBUTION_MARGINS, axis: CONTRIBUTION_AXIS } = CHART_LAYOUT_PRESETS.contribution;
+const { axis: CONTRIBUTION_AXIS } = CHART_LAYOUT_PRESETS.contribution;
 const CONTRIBUTION_LAYOUT = {
   margin: {
-    ...CONTRIBUTION_MARGINS,
     top: 12,
     right: 16,
     bottom: 8,
