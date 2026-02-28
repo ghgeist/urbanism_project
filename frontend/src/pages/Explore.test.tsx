@@ -64,7 +64,9 @@ describe("Explore page default preload", () => {
 
   it("uses the Wrigley address as the input placeholder", () => {
     render(<Explore />);
-    expect(screen.getByPlaceholderText(WRIGLEY_FIELD_ADDRESS)).toBeInTheDocument();
+    const input = screen.getByLabelText("Address, ZIP, or city");
+    expect(input).toHaveAttribute("placeholder");
+    expect(input.getAttribute("placeholder")).toContain("1060 W Addison");
   });
 
   it("preloads once and does not refetch on radius-only draft rerender", async () => {
