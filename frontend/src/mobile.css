@@ -984,6 +984,272 @@
   }
 }
 
+/* ----- Shared mobile primitives (sticky search, chips, radius sheet) -----
+   Reused by Explore, Compare, and Dashboard mobile layouts so the visual
+   language stays consistent. */
+
+.m-sticky-search,
+.m-search-row,
+.m-search-input,
+.m-search-go,
+.m-chip-row,
+.m-chip,
+.m-radius-scrim,
+.m-radius-sheet {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .m-sticky-search {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: #fff;
+    padding: 0.55rem 0.85rem 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: none;
+    transition: box-shadow 0.15s ease;
+  }
+
+  .m-sticky-search--scrolled {
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  }
+
+  .m-search-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 0.25rem 0.35rem 0.25rem 0.75rem;
+  }
+
+  .m-search-row + .m-search-row {
+    margin-top: 0.4rem;
+  }
+
+  .m-search-icon {
+    color: #6b7280;
+    display: inline-flex;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    min-width: 14px;
+    justify-content: center;
+  }
+
+  .m-search-input {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 16px; /* prevents iOS zoom-on-focus */
+    color: #111827;
+    padding: 0.5rem 0.25rem;
+    outline: none;
+  }
+
+  .m-search-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .m-search-go {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-width: 88px;
+    min-height: 44px;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+
+  .m-search-go:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  .m-search-go:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .m-chip-row {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    align-items: center;
+  }
+
+  .m-chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .m-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  .m-chip:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  .m-chip-row .m-search-go {
+    margin-left: auto;
+  }
+
+  .m-radius-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 1200;
+  }
+
+  .m-radius-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1201;
+    background: #fff;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.2);
+  }
+
+  .m-radius-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .m-radius-sheet-close {
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 44px;
+    min-width: 64px;
+  }
+
+  .m-radius-sheet input[type="range"] {
+    width: 100%;
+  }
+}
+
+/* ----- Compare mobile layout ----- */
+
+@media (max-width: 768px) {
+  .compare--mobile {
+    margin: -1rem -0.85rem 0;
+  }
+
+  .compare--mobile .compare__error {
+    margin: 0.85rem 0.85rem 0;
+  }
+
+  .compare__mobile-body {
+    padding: 0.85rem 0.85rem 0;
+  }
+
+  .compare__mobile-body .compare-placeholder {
+    margin-top: 0.5rem;
+  }
+}
+
+/* ----- Dashboard mobile layout ----- */
+
+@media (max-width: 768px) {
+  .dashboard--mobile {
+    margin: -1rem -0.85rem 0;
+  }
+
+  .dashboard--mobile .dashboard__error {
+    margin: 0.85rem 0.85rem 0;
+  }
+
+  .dashboard__mobile-body {
+    padding: 0.85rem 0.85rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .dashboard--mobile .dashboard__header {
+    padding: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .dashboard--mobile .dashboard__header h1 {
+    font-size: 1.15rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .dashboard--mobile .dashboard__tagline {
+    font-size: 0.85rem;
+  }
+
+  .dashboard--mobile .dashboard__summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .dashboard--mobile .dashboard__tabs {
+    margin: 0 -0.85rem;
+    padding: 0 0.85rem;
+  }
+
+  .dashboard--mobile .dashboard__section {
+    padding: 0.85rem;
+    min-width: 0;
+  }
+
+  /* Charts must stay inside the viewport, not overflow horizontally. */
+  .dashboard--mobile .dashboard__section svg,
+  .dashboard--mobile .dashboard__section canvas,
+  .dashboard--mobile .dashboard__section .recharts-wrapper,
+  .dashboard--mobile .dashboard__section .recharts-responsive-container {
+    max-width: 100%;
+  }
+}
+
 /* ----- Radius sheet (small bottom popover for the slider) ----- */
 
 .explore__radius-scrim,
