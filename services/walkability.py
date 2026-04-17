@@ -240,34 +240,80 @@ def _rows_to_gdf(rows, columns):
     return gdf
 
 _WAS_TABLE_NAME = "walkable_accessibility_score"
-# Process-level cache: True/False once we know, None while unknown.
-# Allows the API to start before the WAS table is loaded and transparently
-# begin returning was_2019 once the loader has run.
-_was_table_available: bool | None = None
+_WAS_CACHE_TTL_ENV = "WAS_CACHE_TTL_SECONDS"
+_WAS_CACHE_TTL_DEFAULT_SECONDS = 300.0
+
+# Process-level TTL cache for WAS table availability.
+# Stored as ``(value, expires_at_monotonic)`` or ``None`` when unknown.
+# A TTL avoids stale ``False`` entries after the WAS loader runs mid-process
+# (e.g. on Replit) without paying for a probe on every request. The
+# ``WAS_CACHE_TTL_SECONDS`` env var overrides the default for deployments.
+_was_table_cache: tuple[bool, float] | None = None
+
+
+def _get_was_cache_ttl_seconds() -> float:
+    """Read the WAS cache TTL from env, falling back to the default."""
+    raw = os.environ.get(_WAS_CACHE_TTL_ENV, "").strip()
+    if not raw:
+        return _WAS_CACHE_TTL_DEFAULT_SECONDS
+    try:
+        value = float(raw)
+    except ValueError:
+        logging.warning(
+            "Ignoring invalid %s=%r; using default %.0fs",
+            _WAS_CACHE_TTL_ENV, raw, _WAS_CACHE_TTL_DEFAULT_SECONDS,
+        )
+        return _WAS_CACHE_TTL_DEFAULT_SECONDS
+    if value < 0:
+        logging.warning(
+            "Ignoring negative %s=%r; using default %.0fs",
+            _WAS_CACHE_TTL_ENV, raw, _WAS_CACHE_TTL_DEFAULT_SECONDS,
+        )
+        return _WAS_CACHE_TTL_DEFAULT_SECONDS
+    return value
+
+
+def reset_was_cache() -> None:
+    """Clear the cached WAS-availability probe result.
+
+    Exposed publicly so tests can reset state between cases and any future
+    operational endpoint (e.g. ``/admin/reload``) can force a re-probe without
+    restarting the process.
+    """
+    global _was_table_cache
+    _was_table_cache = None
 
 
 def _check_was_table_available(conn) -> bool:
-    """Probe whether the WAS table exists. Result cached at module level."""
-    global _was_table_available
-    if _was_table_available is not None:
-        return _was_table_available
+    """Probe whether the WAS table exists. Result cached with a short TTL."""
+    global _was_table_cache
+    now = time.monotonic()
+    if _was_table_cache is not None:
+        value, expires_at = _was_table_cache
+        if now < expires_at:
+            return value
+
     try:
         with conn.cursor() as cursor:
             cursor.execute(
                 "SELECT to_regclass(%s) IS NOT NULL;",
                 (_WAS_TABLE_NAME,),
             )
-            _was_table_available = bool(cursor.fetchone()[0])
+            available = bool(cursor.fetchone()[0])
     except psycopg2.Error:
-        # Don't cache a failed probe; next call will retry.
+        # Don't cache a failed probe; next call will retry immediately.
         conn.rollback()
         return False
-    if not _was_table_available:
+
+    ttl = _get_was_cache_ttl_seconds()
+    _was_table_cache = (available, now + ttl)
+    if not available:
         logging.warning(
-            "Table %s not found; queries will return NULL was_2019 until loader runs.",
-            _WAS_TABLE_NAME,
+            "Table %s not found; queries will return NULL was_2019 until loader runs "
+            "(will re-probe in %.0fs).",
+            _WAS_TABLE_NAME, ttl,
         )
-    return _was_table_available
+    return available
 
 
 def _build_walkability_query(include_was: bool) -> str:

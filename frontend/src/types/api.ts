@@ -30,20 +30,30 @@ export interface WasStats {
   spread: number | null;
 }
 
+/**
+ * Amenity Richness labels. Must match ``AMENITY_RICHNESS_LABELS`` in
+ * ``services/metrics.py`` and the ``AmenityRichnessLabel`` Literal in
+ * ``api/schemas.py``.
+ */
+export type AmenityRichnessLabel =
+  | "Full Amenity Access"
+  | "Moderate Amenity Access"
+  | "Destination Sparse"
+  | "Unavailable";
+
+/** Hollow Neighborhood banner label (singleton). */
+export type HollowNeighborhoodLabel = "Hollow Neighborhood";
+
 /** Human-readable interpretation of the mean WAS score. */
 export interface AmenityRichness {
   value: number | null;
-  label:
-    | "Full Amenity Access"
-    | "Moderate Amenity Access"
-    | "Destination Sparse"
-    | "Unavailable";
+  label: AmenityRichnessLabel;
 }
 
 /** Hollow Neighborhood signal: high NWI + low WAS = walkable bones, few destinations. */
 export interface HollowNeighborhood {
   is_hollow: boolean;
-  label: string | null;
+  label: HollowNeighborhoodLabel | null;
   nwi_threshold: number;
   was_threshold: number;
 }

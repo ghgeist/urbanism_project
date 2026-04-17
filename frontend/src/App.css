@@ -518,8 +518,25 @@
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
   background: #e7f1ff;
+  border-left: 4px solid #3b82f6;
   border-radius: 6px;
   font-size: 0.9rem;
+}
+
+/*
+ * Hollow Neighborhood banner: visually distinct from Walkable Island so
+ * that an area that triggers both signals renders two separate stripes
+ * rather than two identical blue blocks. Amber reads as "caution / mixed
+ * signal" (good bones, missing amenities) without implying a warning.
+ */
+.explore__hollow {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: #fff7e6;
+  border-left: 4px solid #d97706;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #7a4a00;
 }
 
 .explore__nearby {

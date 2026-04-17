@@ -1,9 +1,21 @@
 """Pydantic schemas for the FastAPI contract."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+# Literal unions derived from ``services.metrics.AMENITY_RICHNESS_LABELS`` and
+# ``HOLLOW_NEIGHBORHOOD_LABEL``. The schema deliberately hard-codes the strings
+# so the wire contract stays resilient to accidental renames; a contract test
+# enforces that these match the runtime constants.
+AmenityRichnessLabel = Literal[
+    "Full Amenity Access",
+    "Moderate Amenity Access",
+    "Destination Sparse",
+    "Unavailable",
+]
+HollowNeighborhoodLabel = Literal["Hollow Neighborhood"]
 
 
 class HealthResponse(BaseModel):
@@ -45,14 +57,14 @@ class AmenityRichness(BaseModel):
     """Human-readable interpretation of the mean WAS score."""
 
     value: float | None
-    label: str  # Full Amenity Access | Moderate Amenity Access | Destination Sparse | Unavailable
+    label: AmenityRichnessLabel
 
 
 class HollowNeighborhood(BaseModel):
     """Hollow Neighborhood signal: high NWI + low WAS = walkable bones, few destinations."""
 
     is_hollow: bool
-    label: str | None
+    label: HollowNeighborhoodLabel | None
     nwi_threshold: float
     was_threshold: float
 

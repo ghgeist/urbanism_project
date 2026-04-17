@@ -40,10 +40,54 @@
 - User to create `.env` with remote Postgres creds, then run `python scripts/load_walkable_accessibility_score.py` once to actually ingest the data.
 - Post-ingest: run `python scripts/validate_schema.py` and rerun `scripts/inspect_was_shapefile.py` to capture the real naive join rate.
 
+### 2026-04-17 — Polish pass
+
+Plan: `c:\Users\grant\.cursor\plans\was_integration_polish_pass_1e286cf8.plan.md` (all 20 todos complete).
+
+- Citation added to Method page (new WAS subsection + glossary entries for Amenity Richness and Hollow Neighborhood), Footer (compact `EPA NWI · Credit et al. WAS 2019`), Amenity Richness card tooltip, README Data section, and `services/metrics.py` module + function docstrings.
+- Single-sourced labels: `AMENITY_RICHNESS_LABELS` / `HOLLOW_NEIGHBORHOOD_LABEL` in `services/metrics.py`; Pydantic schemas narrowed to `Literal[...]`; frontend union in `types/api.ts` mirrors the same set. New test asserts the three sides stay in lock-step.
+- Refactors: `_build_column_stats` helper collapses NWI/WAS stat builders; `get_sqlalchemy_url()` in `services/db.py` de-duplicates the URL logic and is reused by the loader.
+- Loader retry: `_insert_chunk_with_retry` wraps `chunk.to_postgis` with `tenacity.retry` on `psycopg2.OperationalError` / SQLAlchemy `OperationalError`. Five tests in `tests/test_load_walkable_accessibility_score.py` (fast — tenacity sleep monkeypatched).
+- Cache TTL: `_was_table_cache` is now `(value, expires_at_monotonic)` with a 5-min default TTL (overridable via `WAS_CACHE_TTL_SECONDS`). Public `reset_was_cache()` replaces direct attribute mutation; the `test_walkability.py` `autouse` fixture calls it. New tests cover caching, expiry, reset, and the invalid-env fallback.
+- UI: new `.explore__hollow` CSS (amber stripe) decouples the Hollow banner from Walkable Island styling so dual-signal areas render two distinct banners.
+- Docs: `.env.example` (created with full WAS section), README "WAS setup (one-time)" subsection, CLAUDE.md + AGENTS.md database description updated to describe both tables, two new lessons.md entries (Replit-internal hostnames, `.env` autoload placement), and this "Paper findings" + completion entry.
+- Verification: ruff clean (0), 126 backend tests pass, 87 frontend tests pass, TypeScript + ESLint clean.
+
 ## Open Questions
 
 - GEOID vintage confirmed by inference (almost certainly 2010); actual join rate vs. `geoid20` won't be measurable until `.env` + load are in place.
 - Amenity Richness label thresholds use rough quartiles (≥20 / 10–20 / <10). Worth revisiting once real distribution is observable (a follow-up task for a later session).
+
+## Paper findings (Credit et al. 2025)
+
+Read-through of `docs/research/a-spatially-granular-open-source-measure-of-walkability-for.pdf`
+and the [GitHub repo](https://github.com/kcredit/Walkable-Accessibility-Score):
+
+- **Score range confirmed: 0–30.** The paper caps WAS at 30 by construction
+  (sum of logistic-decay-weighted destination counts across the defined
+  categories). Observed max across the continental US is 29.641, consistent
+  with the inspection output (local max 29.0 on the sample).
+- **Non-zero coverage.** Roughly 169,003 block groups across the continental
+  US have non-zero WAS in 2019; most of the rest genuinely have no
+  qualifying destinations within walking distance, i.e. `was = 0` is real
+  signal, not a null.
+- **Census vintage: 2010 block groups.** The paper explicitly uses 2015
+  block-group population centroids as the demand units, which are the 2010
+  Census block groups. This confirms our inspection-script assumption and
+  the need to live with a partial join against NWI's 2020-vintage GEOID20
+  (roughly 88% match expected).
+- **NWI / WAS complementarity.** In the paper's §Conclusions the authors
+  tested combining NWI and WAS and found it did not improve fit with
+  commercial Walk Score®. That's the formal backing for surfacing them as
+  independent signals in this app (and for the Hollow Neighborhood flag
+  treating the high-NWI/low-WAS combination as informative rather than
+  contradictory).
+- **Distribution is heavy-tailed.** The top-50 block groups are concentrated
+  in Manhattan and a handful of dense urban cores. The current Amenity
+  Richness thresholds (≥20 Full / 10-20 Moderate / <10 Sparse) are
+  eyeballed quartiles and are very likely miscalibrated — most US block
+  groups will fall in "Sparse". Recheck after a real load and consider
+  percentile-based cutoffs derived from the observed distribution.
 
 ## Carried-forward tasks (next session)
 

@@ -88,6 +88,33 @@ def get_pg_env():
     }
 
 
+def get_sqlalchemy_url() -> str:
+    """Return a SQLAlchemy-compatible PostgreSQL URL built from env vars.
+
+    Uses DATABASE_URL when set (rewriting ``postgres://`` to ``postgresql://``
+    for SQLAlchemy compatibility). Otherwise falls back to the PG* variables.
+    Intended for ETL scripts and any caller that needs ``create_engine(url)``.
+
+    Raises:
+        EnvironmentError: if required env vars are missing.
+        ValueError: if PGPORT is not a valid integer.
+    """
+    if _has_database_url():
+        url = os.environ['DATABASE_URL'].strip()
+        # SQLAlchemy 2.x dropped the ``postgres://`` scheme; normalize for callers.
+        if url.startswith('postgres://'):
+            url = 'postgresql://' + url[len('postgres://'):]
+        return url
+
+    env = get_pg_env()
+    from urllib.parse import quote_plus
+
+    return (
+        f"postgresql://{quote_plus(env['user'])}:{quote_plus(env['password'])}"
+        f"@{env['host']}:{env['port']}/{env['database']}"
+    )
+
+
 def get_db_connection():
     """Create a PostgreSQL connection using environment variables.
 

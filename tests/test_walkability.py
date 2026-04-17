@@ -5,6 +5,7 @@ These tests use mocks to avoid requiring a live database connection.
 import pytest
 from unittest.mock import Mock, patch
 import geopandas as gpd
+import psycopg2
 from shapely.geometry import Point
 from services import walkability as walkability_module
 from services.walkability import (
@@ -22,9 +23,9 @@ from services.walkability import (
 @pytest.fixture(autouse=True)
 def _reset_was_cache():
     """Reset the module-level WAS-availability cache between tests to avoid pollution."""
-    walkability_module._was_table_available = None
+    walkability_module.reset_was_cache()
     yield
-    walkability_module._was_table_available = None
+    walkability_module.reset_was_cache()
 
 
 class TestInputValidation:
@@ -411,6 +412,63 @@ class TestWalkabilityData:
         last_sql = mock_cursor.execute.call_args.args[0]
         assert "LEFT JOIN walkable_accessibility_score" not in last_sql
         assert "FROM national_walkability_index" in last_sql
+
+
+class TestWasCacheTtl:
+    """Cache TTL + reset_was_cache() smoke tests."""
+
+    def _make_probe_cursor(self, probe_result: bool):
+        cursor = Mock()
+        cursor.__enter__ = Mock(return_value=cursor)
+        cursor.__exit__ = Mock(return_value=None)
+        cursor.fetchone.return_value = (probe_result,)
+        conn = Mock()
+        conn.cursor.return_value = cursor
+        return conn, cursor
+
+    def test_probe_result_is_cached_within_ttl(self):
+        conn, cursor = self._make_probe_cursor(True)
+        assert walkability_module._check_was_table_available(conn) is True
+        assert walkability_module._check_was_table_available(conn) is True
+        # Second call should hit the cache, not re-probe.
+        assert cursor.execute.call_count == 1
+
+    def test_reset_was_cache_forces_reprobe(self):
+        conn, cursor = self._make_probe_cursor(True)
+        walkability_module._check_was_table_available(conn)
+        assert cursor.execute.call_count == 1
+        walkability_module.reset_was_cache()
+        walkability_module._check_was_table_available(conn)
+        assert cursor.execute.call_count == 2
+
+    def test_cache_expires_after_ttl(self, monkeypatch):
+        # Force a zero TTL so the cache expires immediately between calls.
+        monkeypatch.setenv("WAS_CACHE_TTL_SECONDS", "0")
+        walkability_module.reset_was_cache()
+        conn, cursor = self._make_probe_cursor(False)
+        walkability_module._check_was_table_available(conn)
+        walkability_module._check_was_table_available(conn)
+        assert cursor.execute.call_count == 2
+
+    def test_failed_probe_is_not_cached(self):
+        """A SQL error during probe should not poison the cache."""
+        cursor = Mock()
+        cursor.__enter__ = Mock(return_value=cursor)
+        cursor.__exit__ = Mock(return_value=None)
+        cursor.execute.side_effect = psycopg2.Error("boom")
+        conn = Mock()
+        conn.cursor.return_value = cursor
+
+        assert walkability_module._check_was_table_available(conn) is False
+        # Cache state should remain None (unknown), not (False, ...).
+        assert walkability_module._was_table_cache is None
+
+    def test_invalid_ttl_env_falls_back_to_default(self, monkeypatch):
+        monkeypatch.setenv("WAS_CACHE_TTL_SECONDS", "not-a-number")
+        assert (
+            walkability_module._get_was_cache_ttl_seconds()
+            == walkability_module._WAS_CACHE_TTL_DEFAULT_SECONDS
+        )
 
 
 class TestWalkabilityDataConnectionCheck:

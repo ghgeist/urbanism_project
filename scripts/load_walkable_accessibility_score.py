@@ -37,10 +37,19 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import geopandas as gpd  # noqa: E402
+import psycopg2  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError  # noqa: E402
+from tenacity import (  # noqa: E402
+    RetryError,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 from tqdm import tqdm  # noqa: E402
 
-from services.db import get_db_connection, get_pg_env  # noqa: E402
+from services.db import get_db_connection, get_pg_env, get_sqlalchemy_url  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("load_was")
@@ -48,6 +57,27 @@ log = logging.getLogger("load_was")
 DEFAULT_SHAPEFILE_PATH = "US_WAS_1997_2019.shp.zip"
 TABLE_NAME = "walkable_accessibility_score"
 CHUNK_SIZE = 1000
+CHUNK_RETRY_ATTEMPTS = 3
+# Treat both psycopg2 and SQLAlchemy transient connection errors as retryable;
+# ``to_postgis`` runs through SQLAlchemy so failures surface as SQLAlchemy errors.
+_RETRYABLE_ERRORS = (psycopg2.OperationalError, SQLAlchemyOperationalError)
+
+
+@retry(
+    stop=stop_after_attempt(CHUNK_RETRY_ATTEMPTS),
+    wait=wait_exponential(multiplier=1, min=1, max=8),
+    retry=retry_if_exception_type(_RETRYABLE_ERRORS),
+    reraise=True,
+)
+def _insert_chunk_with_retry(chunk: gpd.GeoDataFrame, engine) -> None:
+    """Write one chunk to PostGIS with exponential backoff on transient errors.
+
+    ``DROP TABLE IF EXISTS`` at the top of the loader makes a full re-run the
+    canonical recovery path, so chunk-level retries only need to cover blips
+    (network hiccup, Postgres failover). A non-retryable error or a failure
+    after ``CHUNK_RETRY_ATTEMPTS`` propagates up and aborts the load.
+    """
+    chunk.to_postgis(TABLE_NAME, engine, if_exists="append", index=False)
 
 # Source shapefile column names (confirmed via scripts/inspect_was_shapefile.py).
 SRC_GEOID_COL = "ID"
@@ -209,7 +239,12 @@ def _execute_load(gdf: gpd.GeoDataFrame) -> None:
         with tqdm(total=total_chunks, desc="WAS insert", unit="chunk") as pbar:
             for i in range(total_chunks):
                 chunk = gdf.iloc[i * CHUNK_SIZE : (i + 1) * CHUNK_SIZE]
-                chunk.to_postgis(TABLE_NAME, engine, if_exists="append", index=False)
+                try:
+                    _insert_chunk_with_retry(chunk, engine)
+                except RetryError as exc:  # pragma: no cover — reraise=True means we rarely see this
+                    raise RuntimeError(
+                        f"Chunk {i + 1}/{total_chunks} failed after {CHUNK_RETRY_ATTEMPTS} attempts."
+                    ) from exc
                 pbar.update(1)
     finally:
         engine.dispose()
@@ -228,17 +263,8 @@ def _execute_load(gdf: gpd.GeoDataFrame) -> None:
 
 
 def _build_engine():
-    """Create a SQLAlchemy engine using the same env-var contract as services/db.py."""
-    url = os.environ.get("DATABASE_URL", "").strip()
-    if url:
-        # SQLAlchemy wants 'postgresql://' not 'postgres://'.
-        if url.startswith("postgres://"):
-            url = "postgresql://" + url[len("postgres://") :]
-        return create_engine(url)
-    env = get_pg_env()
-    return create_engine(
-        f"postgresql://{env['user']}:{env['password']}@{env['host']}:{env['port']}/{env['database']}"
-    )
+    """Create a SQLAlchemy engine from the env-var contract in services/db.py."""
+    return create_engine(get_sqlalchemy_url())
 
 
 if __name__ == "__main__":

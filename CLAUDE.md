@@ -75,7 +75,9 @@ services/
 
 **Connection handling**: The API uses `services/db.py` for connections. Structured JSON debug logging is available via `WALKABILITY_DEBUG_LOG=1`.
 
-**Database**: Single table `national_walkability_index` with columns: `geoid20` (PK), `d2a_ranked`, `d2b_ranked`, `d3b_ranked`, `d4a_ranked`, `natwalkind` (all NUMERIC(4,2)), and `geometry` (PostGIS GEOMETRY, SRID 4326). Loaded from `data/walkability_index_geospatial.csv` (or `WALKABILITY_CSV_PATH`/`WALKABILITY_CSV_URL`); see README and `scripts/create_neo_postgres_db.py`. Tabular-only variant: `walkability_index_tabular.csv` (~203k rows) is used in some pipelines.
+**Database**: Two tables.
+- `national_walkability_index` (primary): `geoid20` (PK), `d2a_ranked`, `d2b_ranked`, `d3b_ranked`, `d4a_ranked`, `natwalkind` (all NUMERIC(4,2)), and `geometry` (PostGIS GEOMETRY, SRID 4326). Loaded from `data/walkability_index_geospatial.csv` (or `WALKABILITY_CSV_PATH`/`WALKABILITY_CSV_URL`); see README and `scripts/create_neo_postgres_db.py`. Tabular-only variant: `walkability_index_tabular.csv` (~203k rows) is used in some pipelines.
+- `walkable_accessibility_score` (supplementary): `geoid` (VARCHAR(12) PK, 2010-Census vintage), `was_2019` (NUMERIC(5,2), 0-30 scale), and `geometry` (PostGIS GEOMETRY, SRID 4326). Loaded from `US_WAS_1997_2019.shp.zip` via `scripts/load_walkable_accessibility_score.py`. Left-joined into walkability queries when present; the API tolerates the table being absent and transparently starts using it once the loader runs (probe result cached with a 5-minute TTL, override via `WAS_CACHE_TTL_SECONDS`).
 
 ## Key Implementation Details
 

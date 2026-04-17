@@ -1,13 +1,18 @@
 """Unit tests for pure profile metric calculations."""
 
+import typing
+
 import geopandas as gpd
 from shapely.geometry import Point
 
+from api.schemas import AmenityRichness, AmenityRichnessLabel, HollowNeighborhoodLabel
 from services.metrics import (
+    AMENITY_RICHNESS_LABELS,
     DEFAULT_HOLLOW_NWI_THRESHOLD,
     DEFAULT_HOLLOW_WAS_THRESHOLD,
     DEFAULT_ISLAND_HIGH_THRESHOLD,
     DEFAULT_ISLAND_LOW_THRESHOLD,
+    HOLLOW_NEIGHBORHOOD_LABEL,
     amenity_richness_label,
     check_hollow_neighborhood,
     check_walkable_island,
@@ -249,3 +254,28 @@ class TestHollowNeighborhood:
             was_mean=DEFAULT_HOLLOW_WAS_THRESHOLD,
         )
         assert result["is_hollow"] is True
+
+
+class TestLabelConstantsMatchSchema:
+    """The Amenity/Hollow labels live in three places (Python constant,
+    Pydantic Literal, frontend union). The Python constant is the single
+    source of truth; this test keeps the Pydantic Literal in lock-step so a
+    rename in ``services.metrics`` can never silently break the wire
+    contract without failing CI.
+    """
+
+    def test_amenity_richness_label_values_match_pydantic_literal(self):
+        literal_values = set(typing.get_args(AmenityRichnessLabel))
+        assert set(AMENITY_RICHNESS_LABELS.values()) == literal_values
+
+    def test_hollow_neighborhood_constant_matches_pydantic_literal(self):
+        literal_values = set(typing.get_args(HollowNeighborhoodLabel))
+        assert {HOLLOW_NEIGHBORHOOD_LABEL} == literal_values
+
+    def test_every_labeller_output_passes_schema_validation(self):
+        # Exercise every branch of amenity_richness_label and confirm each
+        # value round-trips through the Pydantic schema.
+        for raw_value in [None, 5.0, 15.0, 25.0]:
+            label = amenity_richness_label(raw_value)
+            payload = AmenityRichness(value=raw_value, label=label)
+            assert payload.label == label

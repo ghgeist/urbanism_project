@@ -1,4 +1,15 @@
-"""Pure metric computation helpers for walkability profile summaries."""
+"""Pure metric computation helpers for walkability profile summaries.
+
+WAS-derived metrics (``compute_amenity_richness``, ``check_hollow_neighborhood``)
+are built on top of the Walkable Accessibility Score dataset published by:
+
+    Credit, K., Farah, I., Talen, E., Anselin, L., & Ghomrawi, H. (2025).
+    The Walkable Accessibility Score (WAS): A spatially-granular open-source
+    measure of walkability for the continental US from 1997-2019.
+    Environment and Planning B. https://doi.org/10.1177/23998083251377116
+
+Source code and data: https://github.com/kcredit/Walkable-Accessibility-Score
+"""
 from __future__ import annotations
 
 from typing import Any
@@ -12,6 +23,19 @@ DEFAULT_ISLAND_LOW_THRESHOLD = 10.51
 # may be refined after we see the real distribution in production data.
 AMENITY_FULL_THRESHOLD = 20.0
 AMENITY_MODERATE_THRESHOLD = 10.0
+
+# Single source of truth for Amenity Richness label strings. Pydantic
+# schemas narrow to these exact values via Literal[...]; the frontend
+# type union mirrors the same set. Any change here must also be reflected
+# in ``api/schemas.py`` and ``frontend/src/types/api.ts``.
+AMENITY_RICHNESS_LABELS: dict[str, str] = {
+    "full": "Full Amenity Access",
+    "moderate": "Moderate Amenity Access",
+    "sparse": "Destination Sparse",
+    "unavailable": "Unavailable",
+}
+
+HOLLOW_NEIGHBORHOOD_LABEL = "Hollow Neighborhood"
 
 # "Hollow Neighborhood" = high NWI connectivity + low WAS destination density.
 # Thresholds loosely align with the Walkable Island high cutoff on the NWI side
@@ -74,6 +98,11 @@ def compute_transit_viability(gdf) -> float | None:
 def compute_amenity_richness(gdf) -> float | None:
     """Mean WAS 2019 score (0-30) for selected block groups.
 
+    The Walkable Accessibility Score is defined on a 0-30 scale by Credit et al.
+    (2025); see the module docstring for the full citation. Higher values mean
+    more reachable destinations (groceries, shops, schools, parks, food
+    services) within ~1,600 m, weighted by logistic distance decay.
+
     Returns None if the column is absent or has no non-null values (e.g. the
     WAS table hasn't been loaded yet, or the selected area is outside US WAS
     coverage). Callers should treat None as "data unavailable" rather than
@@ -95,12 +124,12 @@ def amenity_richness_label(value: float | None) -> str:
     - value is None    -> "Unavailable"
     """
     if value is None:
-        return "Unavailable"
+        return AMENITY_RICHNESS_LABELS["unavailable"]
     if value >= AMENITY_FULL_THRESHOLD:
-        return "Full Amenity Access"
+        return AMENITY_RICHNESS_LABELS["full"]
     if value >= AMENITY_MODERATE_THRESHOLD:
-        return "Moderate Amenity Access"
-    return "Destination Sparse"
+        return AMENITY_RICHNESS_LABELS["moderate"]
+    return AMENITY_RICHNESS_LABELS["sparse"]
 
 
 def check_hollow_neighborhood(
@@ -110,6 +139,12 @@ def check_hollow_neighborhood(
     was_threshold: float = DEFAULT_HOLLOW_WAS_THRESHOLD,
 ) -> dict[str, Any]:
     """Detect "Hollow Neighborhood" signal: high NWI (good bones) + low WAS (few destinations).
+
+    NWI measures the form of the built environment (street design, density,
+    mix); WAS measures destination density. The Credit et al. (2025) paper
+    (see module docstring) found the two signals are intentionally
+    complementary — combining them did not improve fit with commercial Walk
+    Score®, so we surface them as a combined flag rather than a composite.
 
     Returns a structured dict mirroring check_walkable_island's shape for UI consistency.
     If either input is None (e.g. WAS table not loaded), returns is_hollow=False with
@@ -128,7 +163,7 @@ def check_hollow_neighborhood(
     is_hollow = nwi >= nwi_threshold and was <= was_threshold
     return {
         "is_hollow": is_hollow,
-        "label": "Hollow Neighborhood" if is_hollow else None,
+        "label": HOLLOW_NEIGHBORHOOD_LABEL if is_hollow else None,
         "nwi_threshold": nwi_threshold,
         "was_threshold": was_threshold,
     }

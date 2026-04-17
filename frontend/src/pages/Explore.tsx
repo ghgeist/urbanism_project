@@ -220,7 +220,7 @@ export function Explore() {
             </div>
           )}
           {summary.hollow_neighborhood?.is_hollow && (
-            <div className="explore__island">
+            <div className="explore__hollow" role="note">
               <strong>Hollow Neighborhood:</strong> The area has walkable street design (mean NWI ≥
               {summary.hollow_neighborhood.nwi_threshold.toFixed(1)}) but few nearby
               destinations (mean WAS ≤

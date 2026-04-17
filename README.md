@@ -88,6 +88,25 @@ The loader script:
 
 After the load completes, you can remove the CSV file if you do not need to keep a local copy.
 
+#### WAS setup (one-time)
+The Walkable Accessibility Score (WAS) 2019 snapshot is loaded into a second table, `walkable_accessibility_score`, and left-joined into every query. The API and tests both tolerate the table being absent (they fall back to NWI-only responses), so this step is optional for local development but required for the Amenity Richness card and the Hollow Neighborhood banner to return real values.
+
+1. Download the shapefile bundle from the [Credit et al. GitHub repo](https://github.com/kcredit/Walkable-Accessibility-Score) and place `US_WAS_1997_2019.shp.zip` at the repo root (or set `WAS_SHAPEFILE_PATH` / `WAS_SHAPEFILE_URL`).
+2. Inspect the file without touching the database:
+   ```bash
+   python scripts/inspect_was_shapefile.py
+   ```
+3. Run the loader. It uses the same credential contract as the NWI loader and requires confirmation before it drops and rebuilds the table (use `--yes` or `WAS_LOADER_CONFIRM=1` in non-interactive environments):
+   ```bash
+   python scripts/load_walkable_accessibility_score.py
+   ```
+4. Validate both tables:
+   ```bash
+   python scripts/validate_schema.py
+   ```
+
+**Connecting from your laptop vs. a managed runtime:** if your Postgres is hosted on Replit or Neon, the "internal" hostname (e.g. `helium`) does not resolve off-platform. Use the external/public URL from the Neon console or Replit's "External URL" setting when running the loader locally, or run the loader from within the Replit environment where the internal hostname does resolve.
+
 ### 5. Run the app locally
 With the virtual environment activated, start the API from the project root:
 ```bash
@@ -183,11 +202,16 @@ If you deploy this publicly:
 
 ## Data Pipeline
 - Source datasets:
-  - [Walkability Index](https://catalog.data.gov/dataset/walkability-index3)
+  - [Walkability Index](https://catalog.data.gov/dataset/walkability-index3) — EPA NWI (primary).
   - [FIPS Codes](https://transition.fcc.gov/oet/info/maps/census/fips/fips.txt)
   - [Smart Location Mapping](https://www.epa.gov/smartgrowth/smart-location-mapping#walkability)
+  - [Walkable Accessibility Score (WAS) 1997-2019](https://github.com/kcredit/Walkable-Accessibility-Score) — used here as a complementary amenity-density signal. Only the 2019 snapshot is loaded today.
 - `notebooks/compress_walkability_df.ipynb` simplifies geometries, drops unneeded rows, and reduces the table size before loading.
 - Files in `data/` feed the ingestion script.
+
+### Citing the data
+- **EPA NWI:** EPA Office of Sustainable Communities, *National Walkability Index User Guide and Methodology* (2021).
+- **WAS:** Credit, K., Farah, I., Talen, E., Anselin, L., & Ghomrawi, H. (2025). The Walkable Accessibility Score (WAS): A spatially-granular open-source measure of walkability for the continental US from 1997-2019. *Environment and Planning B*. DOI: [10.1177/23998083251377116](https://doi.org/10.1177/23998083251377116). Source: [github.com/kcredit/Walkable-Accessibility-Score](https://github.com/kcredit/Walkable-Accessibility-Score).
 
 ## Testing & Validation
 

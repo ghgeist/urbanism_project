@@ -102,50 +102,49 @@ def _mean_column(gdf, column: str) -> float | None:
     return _safe_float(series.mean())
 
 
-def _build_nwi_stats(selected_gdf) -> dict[str, float | None]:
-    """Return selected-radius NWI aggregate stats."""
-    if selected_gdf is None or "natwalkind" not in selected_gdf.columns:
-        return {"mean": None, "min": None, "max": None, "spread": None}
+_EMPTY_STATS: dict[str, float | None] = {
+    "mean": None,
+    "min": None,
+    "max": None,
+    "spread": None,
+}
 
-    nwi = _safe_numeric(selected_gdf["natwalkind"])
-    if nwi.empty:
-        return {"mean": None, "min": None, "max": None, "spread": None}
 
-    nwi_min = _safe_float(nwi.min())
-    nwi_max = _safe_float(nwi.max())
-    spread = None
-    if nwi_min is not None and nwi_max is not None:
-        spread = nwi_max - nwi_min
+def _build_column_stats(selected_gdf, column: str) -> dict[str, float | None]:
+    """Return ``{mean, min, max, spread}`` for a numeric column, or all-None.
+
+    Shared helper for per-column aggregate blocks (NWI ``natwalkind``, WAS
+    ``was_2019``, etc.). Returns a dict with every value set to ``None`` when
+    the column is missing or contains no numeric values so callers never need
+    to branch on "column exists".
+    """
+    if selected_gdf is None or column not in selected_gdf.columns:
+        return dict(_EMPTY_STATS)
+
+    series = _safe_numeric(selected_gdf[column])
+    if series.empty:
+        return dict(_EMPTY_STATS)
+
+    col_min = _safe_float(series.min())
+    col_max = _safe_float(series.max())
+    spread = col_max - col_min if col_min is not None and col_max is not None else None
 
     return {
-        "mean": _safe_float(nwi.mean()),
-        "min": nwi_min,
-        "max": nwi_max,
+        "mean": _safe_float(series.mean()),
+        "min": col_min,
+        "max": col_max,
         "spread": _safe_float(spread),
     }
+
+
+def _build_nwi_stats(selected_gdf) -> dict[str, float | None]:
+    """Return selected-radius NWI aggregate stats."""
+    return _build_column_stats(selected_gdf, "natwalkind")
 
 
 def _build_was_stats(selected_gdf) -> dict[str, float | None]:
     """Return selected-radius WAS 2019 aggregate stats. All None if column absent."""
-    if selected_gdf is None or "was_2019" not in selected_gdf.columns:
-        return {"mean": None, "min": None, "max": None, "spread": None}
-
-    was = _safe_numeric(selected_gdf["was_2019"])
-    if was.empty:
-        return {"mean": None, "min": None, "max": None, "spread": None}
-
-    was_min = _safe_float(was.min())
-    was_max = _safe_float(was.max())
-    spread = None
-    if was_min is not None and was_max is not None:
-        spread = was_max - was_min
-
-    return {
-        "mean": _safe_float(was.mean()),
-        "min": was_min,
-        "max": was_max,
-        "spread": _safe_float(spread),
-    }
+    return _build_column_stats(selected_gdf, "was_2019")
 
 
 def _split_selected_context(full_gdf, selected_radius_miles: float):

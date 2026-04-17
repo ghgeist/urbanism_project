@@ -57,7 +57,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
 
       <div
         className="summary-card"
-        title="Mean Walkable Accessibility Score (WAS) 2019, 0-30. Higher = more reachable destinations (jobs, groceries, services) within a comfortable walk."
+        title="Mean Walkable Accessibility Score (WAS) 2019, 0-30. Higher = more reachable destinations (groceries, shops, schools, parks, food) within a comfortable walk. Source: Credit et al. (2025). See the Method page for the full citation."
       >
         <div className="summary-card__value">{formatMetricValue(amenityValue)}</div>
         <div className="summary-card__label">Amenity Richness</div>
