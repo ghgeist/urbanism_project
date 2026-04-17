@@ -1,4 +1,11 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import {
+  currentSheetSnap,
+  fakeSummary,
+  installApiMocks,
+  waitForMapReady,
+  waitForSheetSnap,
+} from "./helpers";
 
 /**
  * Mobile-viewport E2E coverage for the Zillow-inspired redesign.
@@ -6,52 +13,11 @@ import { test, expect, type Page } from "@playwright/test";
  * Runs under the "mobile" project (Pixel 5 viewport, ~393x851). These
  * tests exercise structural mobile behaviors only — the API is mocked so
  * the suite does not require the FastAPI backend.
+ *
+ * The ``/nwi/summary`` mock and all deterministic wait primitives live in
+ * ``./helpers.ts`` so future flows reuse the same surface and a schema
+ * bump only requires touching one file.
  */
-
-/** Stable mocked summary used by every test that triggers a search. */
-function fakeSummary(label: string, lat: number, lon: number) {
-  return {
-    schema_version: "1.0",
-    origin: { lat, lon, label },
-    selected_radius_miles: 0.5,
-    search_radius_miles: 1.5,
-    min_delta: 2,
-    counts: { selected_block_groups: 5, context_block_groups: 25 },
-    nwi: { mean: 13.2, min: 10.0, max: 16.0, spread: 6.0 },
-    components: {
-      employment_housing_mix_rank_mean: 12.0,
-      employment_type_diversity_rank_mean: 11.5,
-      intersection_density_rank_mean: 14.0,
-      transit_proximity_rank_mean_proxy: 13.0,
-    },
-    metrics: { everyday_convenience: 13.2, variation: 6.0, transit_viability: 13.0 },
-    upgrade_potential: { found: false, candidates: [], selected_mean_nwi: 13.2, message: "No nearby upgrade." },
-    walkable_island: { is_island: false, label: null, high_threshold: 15.26, low_threshold: 5.76 },
-    block_groups: [],
-  };
-}
-
-/** Mock /health and /nwi/summary so tests don't depend on the backend.
- *  The summary mock echoes back the queried `q` so we can assert the
- *  "Search this area" flow re-submits with the new center coordinates. */
-async function installApiMocks(page: Page) {
-  await page.route(/\/health/, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) }),
-  );
-  await page.route(/\/nwi\/summary/, (route) => {
-    const url = new URL(route.request().url());
-    const q = url.searchParams.get("q") ?? "Wrigley Field";
-    // If the query looks like "lat, lon" use those coords; otherwise default.
-    const m = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-    const lat = m ? parseFloat(m[1]) : 41.9484;
-    const lon = m ? parseFloat(m[2]) : -87.6553;
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(fakeSummary(q, lat, lon)),
-    });
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Drawer (a11y)
@@ -167,16 +133,6 @@ test.describe("Mobile Explore search", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("Mobile bottom sheet", () => {
-  /** Returns the snap modifier ("peek" | "half") currently on the sheet. */
-  async function currentSnap(page: Page): Promise<string | null> {
-    return page.evaluate(() => {
-      const el = document.querySelector(".mobile-sheet");
-      if (!el) return null;
-      const m = el.className.match(/mobile-sheet--(peek|half)/);
-      return m ? m[1] : null;
-    });
-  }
-
   test("tapping the handle toggles peek <-> half; dragging snaps to nearest and does not also toggle", async ({ page }) => {
     await installApiMocks(page);
     await page.goto("/");
@@ -185,16 +141,13 @@ test.describe("Mobile bottom sheet", () => {
     await expect(sheet).toBeVisible({ timeout: 15_000 });
 
     // Initial snap when there's no summary is "peek".
-    expect(await currentSnap(page)).toBe("peek");
+    expect(await currentSheetSnap(page)).toBe("peek");
 
     const handle = page.locator(".mobile-sheet__handle");
 
     // Tap (no movement) → toggle peek → half.
     await handle.click();
-    expect(await currentSnap(page)).toBe("half");
-    // Wait for the height transition (CSS 0.18s) to finish so the handle's
-    // bounding box reflects the post-snap position before we drag from it.
-    await page.waitForTimeout(250);
+    await waitForSheetSnap(page, "half");
 
     // Drag the handle upward by ~250px. There is no longer a "full" snap, so
     // the closest snap point is still "half" — the sheet should stay at half
@@ -211,12 +164,11 @@ test.describe("Mobile bottom sheet", () => {
     await page.mouse.move(startX, startY - 250, { steps: 10 });
     await page.mouse.up();
 
-    expect(await currentSnap(page)).toBe("half");
+    await waitForSheetSnap(page, "half");
 
     // A second tap should toggle back to peek.
-    await page.waitForTimeout(250);
     await handle.click();
-    expect(await currentSnap(page)).toBe("peek");
+    await waitForSheetSnap(page, "peek");
   });
 });
 
@@ -239,19 +191,12 @@ test.describe("Mobile map: Search this area", () => {
     });
 
     await page.goto("/");
-
-    // Wait for the map to be initialized (Leaflet attribution is a reliable
-    // marker that tiles + the map instance are ready).
-    await expect(page.locator(".map-view__container .leaflet-control-attribution")).toBeVisible({
-      timeout: 20_000,
-    });
+    await waitForMapReady(page);
 
     // Pan the map. We can't drive Leaflet's drag handler with synthetic
     // mouse events on a touch device profile, so call panBy directly via
-    // the dev-only window hook. Wait briefly first so any in-flight
-    // programmatic setView (from React effects) finishes settling.
-    await page.waitForFunction(() => !!(window as unknown as { __leafletMap?: unknown }).__leafletMap);
-    await page.waitForTimeout(300);
+    // the dev-only window hook. ``waitForMapReady`` guarantees any
+    // programmatic setView from React effects has already settled.
     await page.evaluate(() => {
       type Map = { panBy: (xy: [number, number], opts?: { animate?: boolean }) => void };
       const map = (window as unknown as { __leafletMap: Map }).__leafletMap;
@@ -312,27 +257,21 @@ test.describe("Mobile Compare layout", () => {
         message: "No nearby upgrade.",
       },
     });
-    await page.route(/\/nwi\/summary/, async (route) => {
-      const url = new URL(route.request().url());
-      const q = url.searchParams.get("q") ?? "";
-      const isB = /somerville/i.test(q);
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          isB
-            ? compareSummary("Somerville, MA", 42.3876, -71.0995, {
-                everyday_convenience: 14.2,
-                transit_viability: 13.8,
-                variation: 4.1,
-              })
-            : compareSummary("Cambridge, MA", 42.3736, -71.1097, {
-                everyday_convenience: 12.5,
-                transit_viability: 11.2,
-                variation: 2.4,
-              }),
-        ),
-      });
+    await installApiMocks(page, {
+      summaryFor: (url) => {
+        const q = url.searchParams.get("q") ?? "";
+        return /somerville/i.test(q)
+          ? compareSummary("Somerville, MA", 42.3876, -71.0995, {
+              everyday_convenience: 14.2,
+              transit_viability: 13.8,
+              variation: 4.1,
+            })
+          : compareSummary("Cambridge, MA", 42.3736, -71.1097, {
+              everyday_convenience: 12.5,
+              transit_viability: 11.2,
+              variation: 2.4,
+            });
+      },
     });
 
     await page.goto("/compare");

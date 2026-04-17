@@ -267,6 +267,158 @@ class TestWasIntegration:
         assert was_by_geoid["C"] == pytest.approx(24.0)
 
 
+class TestWasEdgeCases:
+    """Edge cases for the WAS LEFT JOIN and downstream hollow-neighborhood signal.
+
+    These exercise the three ways a selected area can look "unusual":
+
+    1. A block group has a real WAS value of exactly 0 (destination-sparse,
+       not unavailable) — the aggregate and the UI label must distinguish
+       ``0`` from ``None``.
+    2. Some BGs in the selected area have no matching WAS row (NWI geoids
+       that don't exist in the WAS table, e.g. water tracts or 2020 geoids
+       with no 2010 equivalent) — the aggregate must compute over the
+       available subset, and per-BG ``was_2019`` must serialize as ``null``.
+    3. A BG's ``geoid20`` is stored as a numeric-looking value by the DB
+       driver — the serializer must coerce it back to a 12-character string
+       so the frontend never has to re-zero-pad it.
+    """
+
+    def test_zero_was_is_distinct_from_unavailable(self):
+        """was_2019 = 0.0 is a real "destination sparse" signal, not unavailable.
+
+        A BG that legitimately has zero reachable destinations feeds the
+        aggregate (mean, min, max) and the Amenity Richness label — it must
+        not be collapsed to the "Unavailable" null path.
+        """
+        gdf = gpd.GeoDataFrame(
+            {
+                "geoid20": ["Z1", "Z2"],
+                "natwalkind": [15.0, 16.0],
+                "d2a_ranked": [12.0, 13.0],
+                "d2b_ranked": [10.0, 11.0],
+                "d3b_ranked": [9.0, 10.0],
+                "d4a_ranked": [8.0, 9.0],
+                "was_2019": [0.0, 0.0],
+                "geometry": [
+                    Point(-83.92, 35.96).buffer(0.01),
+                    Point(-83.93, 35.97).buffer(0.01),
+                ],
+                "dist_miles": [0.2, 0.4],
+            },
+            crs="EPSG:4326",
+        )
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=1.0,
+                search_radius_miles=1.0,
+                min_delta=2.0,
+            )
+
+        assert result["was"]["mean"] == pytest.approx(0.0)
+        assert result["was"]["min"] == pytest.approx(0.0)
+        assert result["was"]["max"] == pytest.approx(0.0)
+        assert result["amenity_richness"]["value"] == pytest.approx(0.0)
+        assert result["amenity_richness"]["label"] == "Destination Sparse"
+        # High NWI + zero WAS is exactly the Hollow Neighborhood archetype.
+        assert result["hollow_neighborhood"]["is_hollow"] is True
+        assert result["hollow_neighborhood"]["label"] == "Hollow Neighborhood"
+        # Per-BG passthrough: 0.0 survives as 0.0, not null.
+        assert all(bg["was_2019"] == 0.0 for bg in result["block_groups"])
+
+    def test_missing_was_row_mixes_with_present_was_rows(self):
+        """A mix of joined/unjoined BGs still computes aggregate over the covered subset.
+
+        Two BGs have WAS rows, two don't (NaN in the joined frame). The aggregate
+        stats must be computed over the two covered rows only; the two uncovered
+        BGs must serialize with ``was_2019 = null``.
+        """
+        gdf = gpd.GeoDataFrame(
+            {
+                "geoid20": ["P1", "P2", "M1", "M2"],
+                "natwalkind": [12.0, 14.0, 10.0, 11.0],
+                "d2a_ranked": [9.0, 11.0, 5.0, 6.0],
+                "d2b_ranked": [8.0, 10.0, 4.0, 5.0],
+                "d3b_ranked": [7.0, 9.0, 3.0, 4.0],
+                "d4a_ranked": [5.0, 15.0, 2.0, 3.0],
+                "was_2019": [10.0, 20.0, None, None],
+                "geometry": [
+                    Point(-83.92, 35.96).buffer(0.01),
+                    Point(-83.93, 35.97).buffer(0.01),
+                    Point(-83.94, 35.98).buffer(0.01),
+                    Point(-83.95, 35.99).buffer(0.01),
+                ],
+                "dist_miles": [0.1, 0.3, 0.5, 0.7],
+            },
+            crs="EPSG:4326",
+        )
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=1.0,
+                search_radius_miles=1.0,
+                min_delta=2.0,
+            )
+
+        assert result["was"]["mean"] == pytest.approx(15.0)
+        assert result["was"]["min"] == pytest.approx(10.0)
+        assert result["was"]["max"] == pytest.approx(20.0)
+        assert result["was"]["spread"] == pytest.approx(10.0)
+
+        was_by_geoid = {bg["geoid20"]: bg["was_2019"] for bg in result["block_groups"]}
+        assert was_by_geoid["P1"] == pytest.approx(10.0)
+        assert was_by_geoid["P2"] == pytest.approx(20.0)
+        assert was_by_geoid["M1"] is None
+        assert was_by_geoid["M2"] is None
+
+    def test_geoid_coerced_to_string_even_if_numeric(self):
+        """Numeric-looking GEOIDs are serialized as strings, preserving leading zeros.
+
+        Some psycopg2 type-casters (or a mis-configured column) could surface
+        a geoid as ``int``/``Decimal``. The serializer must always emit a
+        string so the frontend never needs to re-pad; the per-BG value must
+        match the original digit sequence the DB stored.
+        """
+        gdf = gpd.GeoDataFrame(
+            {
+                # Mix of string-with-leading-zero and an integer-like GEOID to
+                # exercise both coercion paths through ``str(...)``.
+                "geoid20": ["060014301013", 170318238011],
+                "natwalkind": [12.0, 14.0],
+                "d2a_ranked": [9.0, 11.0],
+                "d2b_ranked": [8.0, 10.0],
+                "d3b_ranked": [7.0, 9.0],
+                "d4a_ranked": [5.0, 15.0],
+                "was_2019": [8.0, 0.0],
+                "geometry": [
+                    Point(-83.92, 35.96).buffer(0.01),
+                    Point(-83.93, 35.97).buffer(0.01),
+                ],
+                "dist_miles": [0.2, 0.5],
+            },
+            crs="EPSG:4326",
+        )
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=1.0,
+                search_radius_miles=1.0,
+                min_delta=2.0,
+            )
+
+        geoids = [bg["geoid20"] for bg in result["block_groups"]]
+        assert all(isinstance(g, str) for g in geoids)
+        # The leading-zero string is preserved verbatim.
+        assert "060014301013" in geoids
+        # The integer-looking geoid is stringified; the upstream DB stores
+        # 12-digit strings, so this guards against a future dtype regression.
+        assert "170318238011" in geoids
+
+
 class TestBuildSummaryFromLocationQuery:
     def test_returns_none_when_geocode_fails(self):
         with patch("services.profile_summary.get_location", return_value=None):
