@@ -48,10 +48,8 @@ body {
   width: 100%;
 }
 
-h1 {
-  font-size: 2rem;
-  line-height: 1.15;
-}
+/* Page-level h1 sizes are set per page (e.g. .explore__header h1).
+   No global h1 override here so default browser sizing is preserved. */
 
 button {
   border-radius: 8px;

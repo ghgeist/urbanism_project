@@ -16,7 +16,20 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:5000",
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      // Desktop project skips the mobile-only suite.
+      testIgnore: /mobile\.spec\.ts/,
+    },
+    {
+      name: "mobile",
+      use: { ...devices["Pixel 5"] },
+      // Mobile project only runs the mobile-only suite.
+      testMatch: /mobile\.spec\.ts/,
+    },
+  ],
   webServer: {
     command: "npm run dev",
     url: "http://127.0.0.1:5000",
