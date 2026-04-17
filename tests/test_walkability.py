@@ -5,7 +5,9 @@ These tests use mocks to avoid requiring a live database connection.
 import pytest
 from unittest.mock import Mock, patch
 import geopandas as gpd
+import psycopg2
 from shapely.geometry import Point
+from services import walkability as walkability_module
 from services.walkability import (
     miles_to_degrees,
     get_location,
@@ -16,6 +18,14 @@ from services.walkability import (
     _geocode_census,
     _normalize_us_street_spelling,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_was_cache():
+    """Reset the module-level WAS-availability cache between tests to avoid pollution."""
+    walkability_module.reset_was_cache()
+    yield
+    walkability_module.reset_was_cache()
 
 
 class TestInputValidation:
@@ -274,8 +284,9 @@ class TestWalkabilityData:
                 mock_cursor.__enter__ = Mock(return_value=mock_cursor)
                 mock_cursor.__exit__ = Mock(return_value=None)
                 mock_conn.cursor.return_value = mock_cursor
-                
-                # Mock query result
+
+                # Probe call runs first; return False so main query omits the WAS JOIN.
+                mock_cursor.fetchone.return_value = (False,)
                 mock_cursor.description = [
                     ('geoid20',), ('d2a_ranked',), ('d2b_ranked',), 
                     ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
@@ -308,8 +319,8 @@ class TestWalkabilityData:
                 mock_cursor.__enter__ = Mock(return_value=mock_cursor)
                 mock_cursor.__exit__ = Mock(return_value=None)
                 mock_conn.cursor.return_value = mock_cursor
-                
-                # Mock query result with memoryview objects (as psycopg2 returns)
+
+                mock_cursor.fetchone.return_value = (False,)
                 mock_cursor.description = [
                     ('geoid20',), ('d2a_ranked',), ('d2b_ranked',), 
                     ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
@@ -346,6 +357,43 @@ class TestWalkabilityData:
         mock_cursor.__exit__ = Mock(return_value=None)
         mock_conn.cursor.return_value = mock_cursor
 
+        # Probe query runs first (returns [True]), then main query's fetchall.
+        mock_cursor.fetchone.return_value = (True,)
+        mock_cursor.description = [
+            ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
+            ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('was_2019',),
+            ('geometry',), ('dist_miles',)
+        ]
+        from shapely import wkb
+        mock_poly = Point(-83.9207, 35.9606).buffer(0.01)
+        mock_cursor.fetchall.return_value = [
+            ('123456789012', 10, 12, 8, 15, 11.25, 17.5, wkb.dumps(mock_poly), 0.25)
+        ]
+
+        result = query_walkability_by_coords(-83.9207, 35.9606, 2.0, conn=mock_conn)
+
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert 'dist_miles' in result.columns
+        assert 'was_2019' in result.columns
+        assert result['dist_miles'].iloc[0] == 0.25
+        assert result['was_2019'].iloc[0] == 17.5
+        # The last execute call is the main query; assert its shape.
+        last_sql = mock_cursor.execute.call_args.args[0]
+        last_params = mock_cursor.execute.call_args.args[1]
+        assert "LEFT JOIN walkable_accessibility_score" in last_sql
+        assert "was.was_2019" in last_sql
+        assert len(last_params) == 8
+
+    def test_query_falls_back_to_nwi_only_when_was_table_missing(self):
+        """If the WAS table probe returns False, query uses NWI-only SQL."""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+        mock_cursor.__exit__ = Mock(return_value=None)
+        mock_conn.cursor.return_value = mock_cursor
+
+        # Probe returns False; main query runs without the JOIN.
+        mock_cursor.fetchone.return_value = (False,)
         mock_cursor.description = [
             ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
             ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
@@ -359,12 +407,68 @@ class TestWalkabilityData:
         result = query_walkability_by_coords(-83.9207, 35.9606, 2.0, conn=mock_conn)
 
         assert isinstance(result, gpd.GeoDataFrame)
-        assert 'dist_miles' in result.columns
-        assert result['dist_miles'].iloc[0] == 0.25
-        executed_sql = mock_cursor.execute.call_args.args[0]
-        executed_params = mock_cursor.execute.call_args.args[1]
-        assert "geometry && ST_Expand" in executed_sql
-        assert len(executed_params) == 8
+        assert 'was_2019' not in result.columns
+        # Last execute call is the NWI-only main query; it must not JOIN.
+        last_sql = mock_cursor.execute.call_args.args[0]
+        assert "LEFT JOIN walkable_accessibility_score" not in last_sql
+        assert "FROM national_walkability_index" in last_sql
+
+
+class TestWasCacheTtl:
+    """Cache TTL + reset_was_cache() smoke tests."""
+
+    def _make_probe_cursor(self, probe_result: bool):
+        cursor = Mock()
+        cursor.__enter__ = Mock(return_value=cursor)
+        cursor.__exit__ = Mock(return_value=None)
+        cursor.fetchone.return_value = (probe_result,)
+        conn = Mock()
+        conn.cursor.return_value = cursor
+        return conn, cursor
+
+    def test_probe_result_is_cached_within_ttl(self):
+        conn, cursor = self._make_probe_cursor(True)
+        assert walkability_module._check_was_table_available(conn) is True
+        assert walkability_module._check_was_table_available(conn) is True
+        # Second call should hit the cache, not re-probe.
+        assert cursor.execute.call_count == 1
+
+    def test_reset_was_cache_forces_reprobe(self):
+        conn, cursor = self._make_probe_cursor(True)
+        walkability_module._check_was_table_available(conn)
+        assert cursor.execute.call_count == 1
+        walkability_module.reset_was_cache()
+        walkability_module._check_was_table_available(conn)
+        assert cursor.execute.call_count == 2
+
+    def test_cache_expires_after_ttl(self, monkeypatch):
+        # Force a zero TTL so the cache expires immediately between calls.
+        monkeypatch.setenv("WAS_CACHE_TTL_SECONDS", "0")
+        walkability_module.reset_was_cache()
+        conn, cursor = self._make_probe_cursor(False)
+        walkability_module._check_was_table_available(conn)
+        walkability_module._check_was_table_available(conn)
+        assert cursor.execute.call_count == 2
+
+    def test_failed_probe_is_not_cached(self):
+        """A SQL error during probe should not poison the cache."""
+        cursor = Mock()
+        cursor.__enter__ = Mock(return_value=cursor)
+        cursor.__exit__ = Mock(return_value=None)
+        cursor.execute.side_effect = psycopg2.Error("boom")
+        conn = Mock()
+        conn.cursor.return_value = cursor
+
+        assert walkability_module._check_was_table_available(conn) is False
+        # Cache state should remain None (unknown), not (False, ...).
+        assert walkability_module._was_table_cache is None
+
+    def test_invalid_ttl_env_falls_back_to_default(self, monkeypatch):
+        monkeypatch.setenv("WAS_CACHE_TTL_SECONDS", "not-a-number")
+        assert (
+            walkability_module._get_was_cache_ttl_seconds()
+            == walkability_module._WAS_CACHE_TTL_DEFAULT_SECONDS
+        )
 
 
 class TestWalkabilityDataConnectionCheck:
@@ -394,6 +498,7 @@ class TestWalkabilityDataConnectionCheck:
         mock_cursor.__exit__ = Mock(return_value=None)
         open_conn.cursor.return_value = mock_cursor
 
+        mock_cursor.fetchone.return_value = (False,)
         mock_cursor.description = [
             ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
             ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)

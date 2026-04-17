@@ -4,6 +4,7 @@ tenacity>=8.0.1
 pyproj
 shapely
 psycopg2-binary
+python-dotenv>=1.0.0
 SQLAlchemy
 pytest>=7.0.0
 pytest-mock>=3.10.0
@@ -11,3 +12,4 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 httpx>=0.27.0
 ruff>=0.15.1
+tqdm>=4.67.0

@@ -23,6 +23,7 @@ Priority order when instructions conflict:
 - Frontend: `frontend/` (React, React Router, Leaflet)
 - API entry: `api/main.py`
 - Core services: `services/db.py`, `services/walkability.py`
+- Data tables (PostGIS): `national_walkability_index` (EPA NWI, 2020 Census, loaded via `scripts/create_neo_postgres_db.py`) and `walkable_accessibility_score` (Credit et al. WAS 2019, 2010 Census, loaded via `scripts/load_walkable_accessibility_score.py`). Walkability queries `LEFT JOIN` the WAS table when present and transparently fall back to NWI-only otherwise; see `services/walkability.py`.
 
 ## Common Commands
 

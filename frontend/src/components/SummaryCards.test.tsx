@@ -36,11 +36,12 @@ function minimalSummary(overrides: Partial<NwiSummaryResponse> = {}): NwiSummary
 }
 
 describe("SummaryCards", () => {
-  it("renders four card labels", () => {
+  it("renders five card labels including Amenity Richness", () => {
     render(<SummaryCards summary={minimalSummary()} />);
     expect(screen.getByText("Everyday Convenience")).toBeInTheDocument();
     expect(screen.getByText("Transit Viability")).toBeInTheDocument();
     expect(screen.getByText("Variation")).toBeInTheDocument();
+    expect(screen.getByText("Amenity Richness")).toBeInTheDocument();
     expect(screen.getByText("Upgrade Potential")).toBeInTheDocument();
   });
 
@@ -69,5 +70,24 @@ describe("SummaryCards", () => {
     });
     render(<SummaryCards summary={summary} />);
     expect(screen.getByText("+2.5")).toBeInTheDocument();
+  });
+
+  it("shows amenity richness value and label when WAS data is available", () => {
+    const summary = minimalSummary({
+      amenity_richness: { value: 17.5, label: "Moderate Amenity Access" },
+    });
+    render(<SummaryCards summary={summary} />);
+    expect(screen.getByText("17.50")).toBeInTheDocument();
+    expect(screen.getByText("Moderate Amenity Access")).toBeInTheDocument();
+  });
+
+  it("shows graceful fallback when amenity richness is unavailable", () => {
+    const summary = minimalSummary({
+      amenity_richness: { value: null, label: "Unavailable" },
+    });
+    render(<SummaryCards summary={summary} />);
+    // Amenity Richness label still renders; value shows as em-dash.
+    expect(screen.getByText("Amenity Richness")).toBeInTheDocument();
+    expect(screen.getByText("WAS 2019 data unavailable for this area")).toBeInTheDocument();
   });
 });

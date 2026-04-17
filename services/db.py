@@ -5,6 +5,11 @@ Reads PostgreSQL credentials from either:
 - DATABASE_URL (single connection string), or
 - PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD.
 
+When imported, this module attempts to load a local `.env` file (via python-dotenv)
+so dev scripts and the API pick up credentials automatically. In environments where
+credentials are injected via the platform (e.g. Replit Secrets), .env is absent and
+the loader silently no-ops.
+
 Provides both raw connections (get_db_connection) and a process-level
 connection pool (get_pool / get_pooled_connection) to avoid per-request
 TCP handshake overhead on cloud-hosted Postgres.
@@ -17,6 +22,15 @@ import threading
 
 import psycopg2
 from psycopg2 import pool as _pg_pool
+
+# Best-effort .env autoload. If python-dotenv is not installed or no .env exists,
+# this is a no-op — existing process env vars still take precedence.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+
+    _load_dotenv(override=False)
+except ImportError:  # pragma: no cover — dotenv is a declared dep but guard anyway
+    pass
 
 REQUIRED_PG_VARS = ['PGDATABASE', 'PGHOST', 'PGPASSWORD', 'PGPORT', 'PGUSER']
 
@@ -72,6 +86,33 @@ def get_pg_env():
         'user': os.environ['PGUSER'],
         'password': os.environ['PGPASSWORD'],
     }
+
+
+def get_sqlalchemy_url() -> str:
+    """Return a SQLAlchemy-compatible PostgreSQL URL built from env vars.
+
+    Uses DATABASE_URL when set (rewriting ``postgres://`` to ``postgresql://``
+    for SQLAlchemy compatibility). Otherwise falls back to the PG* variables.
+    Intended for ETL scripts and any caller that needs ``create_engine(url)``.
+
+    Raises:
+        EnvironmentError: if required env vars are missing.
+        ValueError: if PGPORT is not a valid integer.
+    """
+    if _has_database_url():
+        url = os.environ['DATABASE_URL'].strip()
+        # SQLAlchemy 2.x dropped the ``postgres://`` scheme; normalize for callers.
+        if url.startswith('postgres://'):
+            url = 'postgresql://' + url[len('postgres://'):]
+        return url
+
+    env = get_pg_env()
+    from urllib.parse import quote_plus
+
+    return (
+        f"postgresql://{quote_plus(env['user'])}:{quote_plus(env['password'])}"
+        f"@{env['host']}:{env['port']}/{env['database']}"
+    )
 
 
 def get_db_connection():

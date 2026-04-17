@@ -1,5 +1,6 @@
 /**
- * Four summary cards: Everyday Convenience, Transit Viability, Variation, Upgrade Potential.
+ * Five summary cards: Everyday Convenience, Transit Viability, Variation,
+ * Amenity Richness (WAS), Upgrade Potential.
  * Neutral descriptors only; no moral color coding per product plan.
  */
 
@@ -11,7 +12,7 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ summary }: SummaryCardsProps) {
-  const { metrics, upgrade_potential } = summary;
+  const { metrics, upgrade_potential, amenity_richness } = summary;
 
   let upgradeVal: string;
   let upgradeCaption: string | null = null;
@@ -32,6 +33,15 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
     upgradeVal = upgrade_potential?.message ?? "None found";
   }
 
+  // Amenity Richness: mean WAS score + human-readable bucket. Render "—" when
+  // the WAS table isn't loaded or no selected BGs are in WAS coverage.
+  const amenityValue = amenity_richness?.value;
+  const amenityLabel = amenity_richness?.label;
+  const amenityCaption =
+    amenityLabel && amenityLabel !== "Unavailable"
+      ? amenityLabel
+      : "WAS 2019 data unavailable for this area";
+
   return (
     <section className="summary-cards" aria-label="Profile summary">
       {METRICS_CONFIG.map((config) => {
@@ -44,7 +54,16 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
           </div>
         );
       })}
-      
+
+      <div
+        className="summary-card"
+        title="Mean Walkable Accessibility Score (WAS) 2019, 0-30. Higher = more reachable destinations (groceries, shops, schools, parks, food) within a comfortable walk. Source: Credit et al. (2025). See the Method page for the full citation."
+      >
+        <div className="summary-card__value">{formatMetricValue(amenityValue)}</div>
+        <div className="summary-card__label">Amenity Richness</div>
+        <div className="summary-card__hint">{amenityCaption}</div>
+      </div>
+
       <div className="summary-card" title="Best nearby candidate meeting minimum NWI improvement threshold (default: 2.0 points).">
         <div
           className={

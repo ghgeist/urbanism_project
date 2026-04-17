@@ -1,0 +1,24 @@
+3:37:23 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16)
+3:37:23 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) (x2)
+3:37:29 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) (x3)
+3:37:29 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) (x4)
+3:37:39 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) (x5)
+3:37:39 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) (x6)
+3:37:46 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) (x7)
+3:37:46 PM [vite] http proxy error: /nwi/summary/by-query?q=1060+W+Addison+St%2C+Chicago%2C+IL+60613&selected_radius_miles=0.5&min_delta=2&top_n=3
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) (x8)

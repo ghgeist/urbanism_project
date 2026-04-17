@@ -10,7 +10,7 @@ from shapely.geometry import Point
 from services.profile_summary import SCHEMA_VERSION, build_summary_from_coords, build_summary_from_location_query
 
 
-def _sample_gdf(include_dist: bool = True) -> gpd.GeoDataFrame:
+def _sample_gdf(include_dist: bool = True, include_was: bool = False) -> gpd.GeoDataFrame:
     data = {
         "geoid20": ["A", "B", "C"],
         "natwalkind": [10.0, 14.0, 18.0],
@@ -26,6 +26,8 @@ def _sample_gdf(include_dist: bool = True) -> gpd.GeoDataFrame:
     }
     if include_dist:
         data["dist_miles"] = [0.2, 0.8, 1.6]
+    if include_was:
+        data["was_2019"] = [6.0, 12.0, 24.0]
     return gpd.GeoDataFrame(data, crs="EPSG:4326")
 
 
@@ -172,6 +174,97 @@ class TestBuildSummaryFromCoords:
     def test_validates_inputs(self, kwargs, message):
         with pytest.raises(ValueError, match=message):
             build_summary_from_coords(**kwargs)
+
+
+class TestWasIntegration:
+    def test_was_fields_absent_gracefully_when_column_missing(self):
+        """If the JOIN returned no was_2019 column (e.g. WAS table not loaded), response still builds."""
+        full_gdf = _sample_gdf(include_dist=True, include_was=False)
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=full_gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=1.0,
+                search_radius_miles=2.0,
+                min_delta=2.0,
+            )
+        assert result["was"] == {"mean": None, "min": None, "max": None, "spread": None}
+        assert result["amenity_richness"]["value"] is None
+        assert result["amenity_richness"]["label"] == "Unavailable"
+        assert result["hollow_neighborhood"]["is_hollow"] is False
+        # block_groups still render; was_2019 is None per feature
+        for bg in result["block_groups"]:
+            assert bg["was_2019"] is None
+
+    def test_was_stats_computed_over_selected_only(self):
+        """WAS stats reflect the selected-radius subset, matching NWI stats convention."""
+        full_gdf = _sample_gdf(include_dist=True, include_was=True)
+        # selected_radius=1.0 -> rows with dist<=1.0 (A:0.2, B:0.8) have was 6.0, 12.0
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=full_gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=1.0,
+                search_radius_miles=2.0,
+                min_delta=2.0,
+            )
+        assert result["was"]["mean"] == pytest.approx(9.0)
+        assert result["was"]["min"] == pytest.approx(6.0)
+        assert result["was"]["max"] == pytest.approx(12.0)
+        assert result["was"]["spread"] == pytest.approx(6.0)
+
+        assert result["amenity_richness"]["value"] == pytest.approx(9.0)
+        assert result["amenity_richness"]["label"] == "Destination Sparse"
+
+        # Selected NWI mean = (10+14)/2 = 12 (>= hollow threshold 13? no), WAS mean = 9
+        # NWI mean 12 < 13, so not hollow even though WAS is low.
+        assert result["hollow_neighborhood"]["is_hollow"] is False
+
+    def test_hollow_neighborhood_detected_when_high_nwi_low_was(self):
+        """A high-NWI, low-WAS selection triggers the hollow signal."""
+        gdf = gpd.GeoDataFrame(
+            {
+                "geoid20": ["A", "B"],
+                "natwalkind": [15.0, 17.0],
+                "d2a_ranked": [9.0, 11.0],
+                "d2b_ranked": [8.0, 10.0],
+                "d3b_ranked": [7.0, 9.0],
+                "d4a_ranked": [5.0, 15.0],
+                "was_2019": [3.0, 5.0],
+                "geometry": [
+                    Point(-83.92, 35.96).buffer(0.01),
+                    Point(-83.93, 35.97).buffer(0.01),
+                ],
+                "dist_miles": [0.2, 0.5],
+            },
+            crs="EPSG:4326",
+        )
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=1.0,
+                search_radius_miles=1.0,
+                min_delta=2.0,
+            )
+        assert result["hollow_neighborhood"]["is_hollow"] is True
+        assert result["hollow_neighborhood"]["label"] == "Hollow Neighborhood"
+
+    def test_block_group_was_2019_passes_through(self):
+        """Per-block-group was_2019 values survive serialization."""
+        full_gdf = _sample_gdf(include_dist=True, include_was=True)
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=full_gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=2.0,
+                search_radius_miles=2.0,
+                min_delta=2.0,
+            )
+        was_by_geoid = {bg["geoid20"]: bg["was_2019"] for bg in result["block_groups"]}
+        assert was_by_geoid["A"] == pytest.approx(6.0)
+        assert was_by_geoid["B"] == pytest.approx(12.0)
+        assert was_by_geoid["C"] == pytest.approx(24.0)
 
 
 class TestBuildSummaryFromLocationQuery:
