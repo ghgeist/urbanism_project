@@ -7,16 +7,23 @@ from typing import Any
 import pandas as pd
 import shapely.geometry as sg
 
-from services.metrics import compute_full_profile
+from services.metrics import (
+    amenity_richness_label,
+    check_hollow_neighborhood,
+    compute_amenity_richness,
+    compute_full_profile,
+)
 from services.walkability import get_location, query_walkability_by_coords, validate_buffer_size
 
 _log = logging.getLogger(__name__)
 
 # Bumped when block_groups was added to the response payload.
 # Bumped again when component scores (d2a, d2b, d3b, d4a) were added to block_groups.
+# Bumped again when WAS 2019 fields (was, amenity_richness, hollow_neighborhood,
+# and per-block-group was_2019) were added.
 # The API is always forward-compatible (new fields have defaults), so this
 # string is documentary only — the frontend does not gate on it.
-SCHEMA_VERSION = "2026-02-19-component-scores"
+SCHEMA_VERSION = "2026-04-17-was-integration"
 
 
 def _validate_coordinates(lat: float, lon: float) -> tuple[float, float]:
@@ -118,6 +125,29 @@ def _build_nwi_stats(selected_gdf) -> dict[str, float | None]:
     }
 
 
+def _build_was_stats(selected_gdf) -> dict[str, float | None]:
+    """Return selected-radius WAS 2019 aggregate stats. All None if column absent."""
+    if selected_gdf is None or "was_2019" not in selected_gdf.columns:
+        return {"mean": None, "min": None, "max": None, "spread": None}
+
+    was = _safe_numeric(selected_gdf["was_2019"])
+    if was.empty:
+        return {"mean": None, "min": None, "max": None, "spread": None}
+
+    was_min = _safe_float(was.min())
+    was_max = _safe_float(was.max())
+    spread = None
+    if was_min is not None and was_max is not None:
+        spread = was_max - was_min
+
+    return {
+        "mean": _safe_float(was.mean()),
+        "min": was_min,
+        "max": was_max,
+        "spread": _safe_float(spread),
+    }
+
+
 def _split_selected_context(full_gdf, selected_radius_miles: float):
     """Split full search results into selected-radius and full-context frames."""
     if full_gdf is None:
@@ -153,8 +183,9 @@ def _build_response(
         d2b_vals = selected_gdf["d2b_ranked"].tolist() if "d2b_ranked" in selected_gdf.columns else [None] * len(selected_gdf)
         d3b_vals = selected_gdf["d3b_ranked"].tolist() if "d3b_ranked" in selected_gdf.columns else [None] * len(selected_gdf)
         d4a_vals = selected_gdf["d4a_ranked"].tolist() if "d4a_ranked" in selected_gdf.columns else [None] * len(selected_gdf)
-        for geoid20, natwalkind, d2a, d2b, d3b, d4a, geom in zip(
-            geoid_vals, nwi_vals, d2a_vals, d2b_vals, d3b_vals, d4a_vals, selected_gdf["geometry"], strict=True
+        was_vals = selected_gdf["was_2019"].tolist() if "was_2019" in selected_gdf.columns else [None] * len(selected_gdf)
+        for geoid20, natwalkind, d2a, d2b, d3b, d4a, was_2019, geom in zip(
+            geoid_vals, nwi_vals, d2a_vals, d2b_vals, d3b_vals, d4a_vals, was_vals, selected_gdf["geometry"], strict=True
         ):
             geom_json = _geom_to_geojson(geom)
             if geom_json is None:
@@ -166,8 +197,21 @@ def _build_response(
                 "d2b_ranked": _safe_float(d2b),
                 "d3b_ranked": _safe_float(d3b),
                 "d4a_ranked": _safe_float(d4a),
+                "was_2019": _safe_float(was_2019),
                 "geometry": geom_json,
             })
+
+    was_stats = _build_was_stats(selected_gdf)
+    amenity_value = compute_amenity_richness(selected_gdf)
+    amenity_block = {
+        "value": amenity_value,
+        "label": amenity_richness_label(amenity_value),
+    }
+    nwi_stats = _build_nwi_stats(selected_gdf)
+    hollow_block = check_hollow_neighborhood(
+        nwi_mean=nwi_stats["mean"],
+        was_mean=was_stats["mean"],
+    )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -185,7 +229,8 @@ def _build_response(
             "selected_block_groups": len(block_groups),
             "context_block_groups": int(len(context_gdf)) if context_gdf is not None else 0,
         },
-        "nwi": _build_nwi_stats(selected_gdf),
+        "nwi": nwi_stats,
+        "was": was_stats,
         "components": {
             "employment_housing_mix_rank_mean": _mean_column(selected_gdf, "d2a_ranked"),
             "employment_type_diversity_rank_mean": _mean_column(selected_gdf, "d2b_ranked"),
@@ -197,8 +242,10 @@ def _build_response(
             "variation": profile.get("variation"),
             "transit_viability": profile.get("transit_viability"),
         },
+        "amenity_richness": amenity_block,
         "upgrade_potential": profile.get("upgrade_potential"),
         "walkable_island": profile.get("walkable_island"),
+        "hollow_neighborhood": hollow_block,
         "block_groups": block_groups,
     }
 

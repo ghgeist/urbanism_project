@@ -4,9 +4,14 @@ import geopandas as gpd
 from shapely.geometry import Point
 
 from services.metrics import (
+    DEFAULT_HOLLOW_NWI_THRESHOLD,
+    DEFAULT_HOLLOW_WAS_THRESHOLD,
     DEFAULT_ISLAND_HIGH_THRESHOLD,
     DEFAULT_ISLAND_LOW_THRESHOLD,
+    amenity_richness_label,
+    check_hollow_neighborhood,
     check_walkable_island,
+    compute_amenity_richness,
     compute_everyday_convenience,
     compute_full_profile,
     compute_transit_viability,
@@ -180,3 +185,67 @@ class TestIslandAndFullProfile:
         assert profile["everyday_convenience"] is None
         assert profile["variation"] is None
         assert profile["upgrade_potential"]["found"] is False
+
+
+class TestAmenityRichness:
+    def test_compute_amenity_richness_mean(self):
+        gdf = _gdf([{"was_2019": 5.0}, {"was_2019": 15.0}, {"was_2019": 25.0}])
+        assert compute_amenity_richness(gdf) == 15.0
+
+    def test_compute_amenity_richness_missing_column_returns_none(self):
+        gdf = _gdf([{"natwalkind": 12}])
+        assert compute_amenity_richness(gdf) is None
+
+    def test_compute_amenity_richness_all_nan_returns_none(self):
+        gdf = _gdf([{"was_2019": None}, {"was_2019": "bad"}])
+        assert compute_amenity_richness(gdf) is None
+
+    def test_amenity_richness_label_thresholds(self):
+        assert amenity_richness_label(None) == "Unavailable"
+        assert amenity_richness_label(5.0) == "Destination Sparse"
+        assert amenity_richness_label(9.99) == "Destination Sparse"
+        assert amenity_richness_label(10.0) == "Moderate Amenity Access"
+        assert amenity_richness_label(15.0) == "Moderate Amenity Access"
+        assert amenity_richness_label(19.99) == "Moderate Amenity Access"
+        assert amenity_richness_label(20.0) == "Full Amenity Access"
+        assert amenity_richness_label(29.5) == "Full Amenity Access"
+
+
+class TestHollowNeighborhood:
+    def test_high_nwi_low_was_is_hollow(self):
+        result = check_hollow_neighborhood(nwi_mean=15.0, was_mean=5.0)
+        assert result["is_hollow"] is True
+        assert result["label"] == "Hollow Neighborhood"
+        assert result["nwi_threshold"] == DEFAULT_HOLLOW_NWI_THRESHOLD
+        assert result["was_threshold"] == DEFAULT_HOLLOW_WAS_THRESHOLD
+
+    def test_low_nwi_low_was_is_not_hollow(self):
+        result = check_hollow_neighborhood(nwi_mean=8.0, was_mean=5.0)
+        assert result["is_hollow"] is False
+        assert result["label"] is None
+
+    def test_high_nwi_high_was_is_not_hollow(self):
+        result = check_hollow_neighborhood(nwi_mean=18.0, was_mean=22.0)
+        assert result["is_hollow"] is False
+        assert result["label"] is None
+
+    def test_none_inputs_return_not_hollow(self):
+        assert check_hollow_neighborhood(None, 5.0)["is_hollow"] is False
+        assert check_hollow_neighborhood(15.0, None)["is_hollow"] is False
+        assert check_hollow_neighborhood(None, None)["is_hollow"] is False
+
+    def test_custom_thresholds(self):
+        result = check_hollow_neighborhood(
+            nwi_mean=11.0, was_mean=5.0, nwi_threshold=10.0, was_threshold=6.0
+        )
+        assert result["is_hollow"] is True
+        assert result["nwi_threshold"] == 10.0
+        assert result["was_threshold"] == 6.0
+
+    def test_boundary_exactly_at_thresholds_is_hollow(self):
+        # Semantics: nwi >= threshold and was <= threshold -> hollow
+        result = check_hollow_neighborhood(
+            nwi_mean=DEFAULT_HOLLOW_NWI_THRESHOLD,
+            was_mean=DEFAULT_HOLLOW_WAS_THRESHOLD,
+        )
+        assert result["is_hollow"] is True

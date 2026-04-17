@@ -28,6 +28,35 @@ class NwiStats(BaseModel):
     spread: float | None
 
 
+class WasStats(BaseModel):
+    """Aggregate Walkable Accessibility Score (WAS, 0-30) stats over selected block groups.
+
+    All fields are optional so clients can render "unavailable" states when the
+    WAS table is not loaded or no block groups in the selected area have WAS data.
+    """
+
+    mean: float | None
+    min: float | None
+    max: float | None
+    spread: float | None
+
+
+class AmenityRichness(BaseModel):
+    """Human-readable interpretation of the mean WAS score."""
+
+    value: float | None
+    label: str  # Full Amenity Access | Moderate Amenity Access | Destination Sparse | Unavailable
+
+
+class HollowNeighborhood(BaseModel):
+    """Hollow Neighborhood signal: high NWI + low WAS = walkable bones, few destinations."""
+
+    is_hollow: bool
+    label: str | None
+    nwi_threshold: float
+    was_threshold: float
+
+
 class Components(BaseModel):
     employment_housing_mix_rank_mean: float | None
     employment_type_diversity_rank_mean: float | None
@@ -48,6 +77,7 @@ class BlockGroupFeature(BaseModel):
     d2b_ranked: float | None  # Employment Mix
     d3b_ranked: float | None  # Street Intersection Density
     d4a_ranked: float | None  # Proximity to Transit Stops
+    was_2019: float | None = None  # Walkable Accessibility Score 2019 (0-30), None if unavailable
     geometry: dict[str, Any]  # GeoJSON geometry object (type + coordinates)
 
 
@@ -86,10 +116,13 @@ class NwiSummaryResponse(BaseModel):
     min_delta: float
     counts: Counts
     nwi: NwiStats
+    was: WasStats | None = None
     components: Components
     metrics: Metrics
+    amenity_richness: AmenityRichness | None = None
     upgrade_potential: UpgradePotential
     walkable_island: WalkableIsland
+    hollow_neighborhood: HollowNeighborhood | None = None
     block_groups: list[BlockGroupFeature] = Field(default_factory=list)
 
 

@@ -18,6 +18,36 @@ export interface NwiStats {
   spread: number | null;
 }
 
+/**
+ * Aggregate Walkable Accessibility Score (WAS, 0-30) stats over the selected radius.
+ * All fields are nullable — the server returns this block with all nulls when the
+ * WAS table is not loaded or no selected block groups have WAS data.
+ */
+export interface WasStats {
+  mean: number | null;
+  min: number | null;
+  max: number | null;
+  spread: number | null;
+}
+
+/** Human-readable interpretation of the mean WAS score. */
+export interface AmenityRichness {
+  value: number | null;
+  label:
+    | "Full Amenity Access"
+    | "Moderate Amenity Access"
+    | "Destination Sparse"
+    | "Unavailable";
+}
+
+/** Hollow Neighborhood signal: high NWI + low WAS = walkable bones, few destinations. */
+export interface HollowNeighborhood {
+  is_hollow: boolean;
+  label: string | null;
+  nwi_threshold: number;
+  was_threshold: number;
+}
+
 export interface Components {
   employment_housing_mix_rank_mean: number | null;
   employment_type_diversity_rank_mean: number | null;
@@ -38,6 +68,7 @@ export interface BlockGroupFeature {
   d2b_ranked: number | null; // Employment Mix
   d3b_ranked: number | null; // Street Intersection Density
   d4a_ranked: number | null; // Proximity to Transit Stops
+  was_2019: number | null; // Walkable Accessibility Score 2019 (0-30), null if unavailable
   geometry: GeoJSON.Geometry;
 }
 
@@ -70,10 +101,13 @@ export interface NwiSummaryResponse {
   min_delta: number;
   counts: Counts;
   nwi: NwiStats;
+  was?: WasStats | null;
   components: Components;
   metrics: Metrics;
+  amenity_richness?: AmenityRichness | null;
   upgrade_potential: UpgradePotential;
   walkable_island: WalkableIsland;
+  hollow_neighborhood?: HollowNeighborhood | null;
   block_groups: BlockGroupFeature[];
 }
 

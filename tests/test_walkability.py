@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import Mock, patch
 import geopandas as gpd
 from shapely.geometry import Point
+from services import walkability as walkability_module
 from services.walkability import (
     miles_to_degrees,
     get_location,
@@ -16,6 +17,14 @@ from services.walkability import (
     _geocode_census,
     _normalize_us_street_spelling,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_was_cache():
+    """Reset the module-level WAS-availability cache between tests to avoid pollution."""
+    walkability_module._was_table_available = None
+    yield
+    walkability_module._was_table_available = None
 
 
 class TestInputValidation:
@@ -274,8 +283,9 @@ class TestWalkabilityData:
                 mock_cursor.__enter__ = Mock(return_value=mock_cursor)
                 mock_cursor.__exit__ = Mock(return_value=None)
                 mock_conn.cursor.return_value = mock_cursor
-                
-                # Mock query result
+
+                # Probe call runs first; return False so main query omits the WAS JOIN.
+                mock_cursor.fetchone.return_value = (False,)
                 mock_cursor.description = [
                     ('geoid20',), ('d2a_ranked',), ('d2b_ranked',), 
                     ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
@@ -308,8 +318,8 @@ class TestWalkabilityData:
                 mock_cursor.__enter__ = Mock(return_value=mock_cursor)
                 mock_cursor.__exit__ = Mock(return_value=None)
                 mock_conn.cursor.return_value = mock_cursor
-                
-                # Mock query result with memoryview objects (as psycopg2 returns)
+
+                mock_cursor.fetchone.return_value = (False,)
                 mock_cursor.description = [
                     ('geoid20',), ('d2a_ranked',), ('d2b_ranked',), 
                     ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
@@ -346,6 +356,43 @@ class TestWalkabilityData:
         mock_cursor.__exit__ = Mock(return_value=None)
         mock_conn.cursor.return_value = mock_cursor
 
+        # Probe query runs first (returns [True]), then main query's fetchall.
+        mock_cursor.fetchone.return_value = (True,)
+        mock_cursor.description = [
+            ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
+            ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('was_2019',),
+            ('geometry',), ('dist_miles',)
+        ]
+        from shapely import wkb
+        mock_poly = Point(-83.9207, 35.9606).buffer(0.01)
+        mock_cursor.fetchall.return_value = [
+            ('123456789012', 10, 12, 8, 15, 11.25, 17.5, wkb.dumps(mock_poly), 0.25)
+        ]
+
+        result = query_walkability_by_coords(-83.9207, 35.9606, 2.0, conn=mock_conn)
+
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert 'dist_miles' in result.columns
+        assert 'was_2019' in result.columns
+        assert result['dist_miles'].iloc[0] == 0.25
+        assert result['was_2019'].iloc[0] == 17.5
+        # The last execute call is the main query; assert its shape.
+        last_sql = mock_cursor.execute.call_args.args[0]
+        last_params = mock_cursor.execute.call_args.args[1]
+        assert "LEFT JOIN walkable_accessibility_score" in last_sql
+        assert "was.was_2019" in last_sql
+        assert len(last_params) == 8
+
+    def test_query_falls_back_to_nwi_only_when_was_table_missing(self):
+        """If the WAS table probe returns False, query uses NWI-only SQL."""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+        mock_cursor.__exit__ = Mock(return_value=None)
+        mock_conn.cursor.return_value = mock_cursor
+
+        # Probe returns False; main query runs without the JOIN.
+        mock_cursor.fetchone.return_value = (False,)
         mock_cursor.description = [
             ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
             ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)
@@ -359,12 +406,11 @@ class TestWalkabilityData:
         result = query_walkability_by_coords(-83.9207, 35.9606, 2.0, conn=mock_conn)
 
         assert isinstance(result, gpd.GeoDataFrame)
-        assert 'dist_miles' in result.columns
-        assert result['dist_miles'].iloc[0] == 0.25
-        executed_sql = mock_cursor.execute.call_args.args[0]
-        executed_params = mock_cursor.execute.call_args.args[1]
-        assert "geometry && ST_Expand" in executed_sql
-        assert len(executed_params) == 8
+        assert 'was_2019' not in result.columns
+        # Last execute call is the NWI-only main query; it must not JOIN.
+        last_sql = mock_cursor.execute.call_args.args[0]
+        assert "LEFT JOIN walkable_accessibility_score" not in last_sql
+        assert "FROM national_walkability_index" in last_sql
 
 
 class TestWalkabilityDataConnectionCheck:
@@ -394,6 +440,7 @@ class TestWalkabilityDataConnectionCheck:
         mock_cursor.__exit__ = Mock(return_value=None)
         open_conn.cursor.return_value = mock_cursor
 
+        mock_cursor.fetchone.return_value = (False,)
         mock_cursor.description = [
             ('geoid20',), ('d2a_ranked',), ('d2b_ranked',),
             ('d3b_ranked',), ('d4a_ranked',), ('natwalkind',), ('geometry',), ('dist_miles',)

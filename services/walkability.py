@@ -231,7 +231,7 @@ def _rows_to_gdf(rows, columns):
     geometry_data = df['geometry'].apply(lambda x: bytes(x) if isinstance(x, memoryview) else x)
     gdf = gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkb(geometry_data))
 
-    numeric_columns = ['d2a_ranked', 'd2b_ranked', 'd3b_ranked', 'd4a_ranked', 'natwalkind', 'dist_miles']
+    numeric_columns = ['d2a_ranked', 'd2b_ranked', 'd3b_ranked', 'd4a_ranked', 'natwalkind', 'was_2019', 'dist_miles']
     for col in numeric_columns:
         if col in gdf.columns:
             gdf[col] = pd.to_numeric(gdf[col], errors='coerce')
@@ -239,12 +239,102 @@ def _rows_to_gdf(rows, columns):
     gdf.set_crs(epsg=4326, inplace=True)
     return gdf
 
+_WAS_TABLE_NAME = "walkable_accessibility_score"
+# Process-level cache: True/False once we know, None while unknown.
+# Allows the API to start before the WAS table is loaded and transparently
+# begin returning was_2019 once the loader has run.
+_was_table_available: bool | None = None
+
+
+def _check_was_table_available(conn) -> bool:
+    """Probe whether the WAS table exists. Result cached at module level."""
+    global _was_table_available
+    if _was_table_available is not None:
+        return _was_table_available
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT to_regclass(%s) IS NOT NULL;",
+                (_WAS_TABLE_NAME,),
+            )
+            _was_table_available = bool(cursor.fetchone()[0])
+    except psycopg2.Error:
+        # Don't cache a failed probe; next call will retry.
+        conn.rollback()
+        return False
+    if not _was_table_available:
+        logging.warning(
+            "Table %s not found; queries will return NULL was_2019 until loader runs.",
+            _WAS_TABLE_NAME,
+        )
+    return _was_table_available
+
+
+def _build_walkability_query(include_was: bool) -> str:
+    """Return the SELECT query, optionally with the WAS LEFT JOIN."""
+    if include_was:
+        return """
+            SELECT
+                nwi.geoid20,
+                nwi.d2a_ranked,
+                nwi.d2b_ranked,
+                nwi.d3b_ranked,
+                nwi.d4a_ranked,
+                nwi.natwalkind,
+                was.was_2019,
+                ST_AsBinary(nwi.geometry) AS geometry,
+                ST_Distance(
+                    nwi.geometry::geography,
+                    ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+                ) / 1609.344 AS dist_miles
+            FROM national_walkability_index AS nwi
+            LEFT JOIN walkable_accessibility_score AS was ON was.geoid = nwi.geoid20
+            WHERE nwi.geometry && ST_Expand(
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326),
+                %s
+            )
+            AND ST_DWithin(
+                nwi.geometry::geography,
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+                %s
+            );
+        """
+    return """
+        SELECT
+            geoid20,
+            d2a_ranked,
+            d2b_ranked,
+            d3b_ranked,
+            d4a_ranked,
+            natwalkind,
+            ST_AsBinary(geometry) AS geometry,
+            ST_Distance(
+                geometry::geography,
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+            ) / 1609.344 AS dist_miles
+        FROM national_walkability_index
+        WHERE geometry && ST_Expand(
+            ST_SetSRID(ST_MakePoint(%s, %s), 4326),
+            %s
+        )
+        AND ST_DWithin(
+            geometry::geography,
+            ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+            %s
+        );
+    """
+
+
 def query_walkability_by_coords(lon, lat, radius_miles, conn=None):
     """
     Query walkability block groups around a lon/lat point using geography distance.
 
     Distance is computed by PostGIS as the minimum distance from origin point to
     polygon boundary in miles (0 if the point lies inside the polygon).
+
+    LEFT JOINs walkable_accessibility_score when the table is available so the
+    result includes a was_2019 column. Falls back to an NWI-only query if the
+    WAS table is missing (e.g. loader hasn't run yet).
     """
     is_valid, error_msg = validate_buffer_size(radius_miles)
     if not is_valid:
@@ -265,30 +355,8 @@ def query_walkability_by_coords(lon, lat, radius_miles, conn=None):
         if _is_connection_closed(conn):
             raise psycopg2.InterfaceError("Connection is closed")
 
-        query = """
-            SELECT
-                geoid20,
-                d2a_ranked,
-                d2b_ranked,
-                d3b_ranked,
-                d4a_ranked,
-                natwalkind,
-                ST_AsBinary(geometry) AS geometry,
-                ST_Distance(
-                    geometry::geography,
-                    ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
-                ) / 1609.344 AS dist_miles
-            FROM national_walkability_index
-            WHERE geometry && ST_Expand(
-                ST_SetSRID(ST_MakePoint(%s, %s), 4326),
-                %s
-            )
-            AND ST_DWithin(
-                geometry::geography,
-                ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
-                %s
-            );
-        """
+        include_was = _check_was_table_available(conn)
+        query = _build_walkability_query(include_was=include_was)
 
         with conn.cursor() as cursor:
             cursor.execute(

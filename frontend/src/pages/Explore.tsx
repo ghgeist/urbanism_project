@@ -219,6 +219,16 @@ export function Explore() {
               <strong>Walkable Island:</strong> This area has a high NWI score (≥15.26) but is surrounded by block groups with lower scores (mean NWI ≤10.51). This may indicate an isolated walkable area rather than a walkable neighborhood.
             </div>
           )}
+          {summary.hollow_neighborhood?.is_hollow && (
+            <div className="explore__island">
+              <strong>Hollow Neighborhood:</strong> The area has walkable street design (mean NWI ≥
+              {summary.hollow_neighborhood.nwi_threshold.toFixed(1)}) but few nearby
+              destinations (mean WAS ≤
+              {summary.hollow_neighborhood.was_threshold.toFixed(1)}). Good bones,
+              missing amenities — a candidate for infill retail/services rather than
+              street redesign.
+            </div>
+          )}
           {summary.upgrade_potential?.found &&
             summary.upgrade_potential.candidates?.length > 0 && (
               <section className="explore__nearby">

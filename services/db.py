@@ -5,6 +5,11 @@ Reads PostgreSQL credentials from either:
 - DATABASE_URL (single connection string), or
 - PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD.
 
+When imported, this module attempts to load a local `.env` file (via python-dotenv)
+so dev scripts and the API pick up credentials automatically. In environments where
+credentials are injected via the platform (e.g. Replit Secrets), .env is absent and
+the loader silently no-ops.
+
 Provides both raw connections (get_db_connection) and a process-level
 connection pool (get_pool / get_pooled_connection) to avoid per-request
 TCP handshake overhead on cloud-hosted Postgres.
@@ -17,6 +22,15 @@ import threading
 
 import psycopg2
 from psycopg2 import pool as _pg_pool
+
+# Best-effort .env autoload. If python-dotenv is not installed or no .env exists,
+# this is a no-op — existing process env vars still take precedence.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+
+    _load_dotenv(override=False)
+except ImportError:  # pragma: no cover — dotenv is a declared dep but guard anyway
+    pass
 
 REQUIRED_PG_VARS = ['PGDATABASE', 'PGHOST', 'PGPASSWORD', 'PGPORT', 'PGUSER']
 

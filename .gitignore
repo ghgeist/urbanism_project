@@ -36,3 +36,7 @@ wheels/
 
 #docs
 docs/scratch/
+
+# WAS shapefile (large, regenerated via loader)
+US_WAS_1997_2019*
+data/was/
