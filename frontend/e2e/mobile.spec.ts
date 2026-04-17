@@ -281,26 +281,36 @@ test.describe("Mobile map: Search this area", () => {
 
 test.describe("Mobile Compare layout", () => {
   test("compare results render as stacked, labeled cards (mocked API)", async ({ page }) => {
-    const compareSummary = (label: string, lat: number, lon: number) => ({
-      origin: { lat, lon, label, geocoder: "mock", confidence: 1 },
-      area: { selected_radius_miles: 0.5, n_block_groups: 1, total_population: 1000, area_sq_miles: 0.79 },
+    const compareSummary = (
+      label: string,
+      lat: number,
+      lon: number,
       metrics: {
-        nwi_mean: 12.5,
-        nwi_p25: 11.0,
-        nwi_p50: 12.5,
-        nwi_p75: 14.0,
-        nwi_min: 10.0,
-        nwi_max: 15.0,
-        intersections_per_sqmi: 80,
-        d3a_mean: 80,
-        d2a_jobpop_mean: 0.5,
-        d2b_e8mixa_mean: 0.4,
-        d4a_mean: 30,
-        pct_high_walk: 0.3,
-        pct_low_walk: 0.1,
+        everyday_convenience: number;
+        transit_viability: number;
+        variation: number;
       },
-      block_groups: [],
-      upgrade_potential: { found: false, candidates: [] },
+    ): ReturnType<typeof fakeSummary> => ({
+      ...fakeSummary(label, lat, lon),
+      metrics,
+      nwi: {
+        mean: metrics.everyday_convenience,
+        min: metrics.everyday_convenience - 2,
+        max: metrics.everyday_convenience + 2,
+        spread: 4,
+      },
+      components: {
+        employment_housing_mix_rank_mean: metrics.everyday_convenience - 1,
+        employment_type_diversity_rank_mean: metrics.everyday_convenience - 0.5,
+        intersection_density_rank_mean: metrics.variation + 10,
+        transit_proximity_rank_mean_proxy: metrics.transit_viability,
+      },
+      upgrade_potential: {
+        found: false,
+        candidates: [],
+        selected_mean_nwi: metrics.everyday_convenience,
+        message: "No nearby upgrade.",
+      },
     });
     await page.route(/\/nwi\/summary/, async (route) => {
       const url = new URL(route.request().url());
@@ -311,8 +321,16 @@ test.describe("Mobile Compare layout", () => {
         contentType: "application/json",
         body: JSON.stringify(
           isB
-            ? compareSummary("Somerville, MA", 42.3876, -71.0995)
-            : compareSummary("Cambridge, MA", 42.3736, -71.1097),
+            ? compareSummary("Somerville, MA", 42.3876, -71.0995, {
+                everyday_convenience: 14.2,
+                transit_viability: 13.8,
+                variation: 4.1,
+              })
+            : compareSummary("Cambridge, MA", 42.3736, -71.1097, {
+                everyday_convenience: 12.5,
+                transit_viability: 11.2,
+                variation: 2.4,
+              }),
         ),
       });
     });
@@ -328,6 +346,10 @@ test.describe("Mobile Compare layout", () => {
     const labeledCell = page.locator(".compare-table tbody td[data-label]").first();
     await expect(labeledCell).toBeVisible();
     await expect(labeledCell).toHaveAttribute("data-label", /\S+/);
+    // Ensure real metric values render (not the null "—" fallback).
+    await expect(table).toContainText("12.50");
+    await expect(table).toContainText("14.20");
+    await expect(table).toContainText("↑ 1.70");
 
     const firstRow = page.locator(".compare-table tbody tr").first();
     const display = await firstRow.evaluate((el) => getComputedStyle(el).display);
