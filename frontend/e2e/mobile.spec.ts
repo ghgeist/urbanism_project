@@ -64,6 +64,51 @@ test.describe("Mobile Explore form", () => {
       expect(submitBox.height).toBeGreaterThanOrEqual(44);
     }
   });
+
+  test("submitting Explore on a phone renders summary cards (mocked API)", async ({ page }) => {
+    // Mock the summary endpoint so we can assert the post-submit state
+    // without depending on the FastAPI backend or live geocoding.
+    // Also mock /health so the App startup gate opens immediately.
+    await page.route(/\/health/, async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+    });
+    await page.route(/\/nwi\/summary/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          origin: { lat: 42.3736, lon: -71.1097, label: "Cambridge, MA" },
+          selected_radius_miles: 0.5,
+          search_radius_miles: 1.5,
+          min_delta: 2,
+          counts: { selected_block_groups: 5, context_block_groups: 25 },
+          nwi: { mean: 13.2, min: 10.0, max: 16.0, spread: 6.0 },
+          components: {
+            employment_housing_mix_rank_mean: 12.0,
+            employment_type_diversity_rank_mean: 11.5,
+            intersection_density_rank_mean: 14.0,
+            transit_proximity_rank_mean_proxy: 13.0,
+          },
+          metrics: { everyday_convenience: 13.2, variation: 6.0, transit_viability: 13.0 },
+          upgrade_potential: { found: false, candidates: [], selected_mean_nwi: 13.2, message: "No nearby upgrade." },
+          walkable_island: { is_island: false, label: null, high_threshold: 15.26, low_threshold: 5.76 },
+          block_groups: [],
+        }),
+      });
+    });
+
+    await page.goto("/");
+    const input = page.getByPlaceholder(/addison/i);
+    await expect(input).toBeVisible({ timeout: 15_000 });
+    await input.fill("Cambridge, MA");
+    await page.getByRole("button", { name: /get summary/i }).click();
+
+    // After submit, the summary cards should appear (with our mocked metric).
+    await expect(page.getByText(/everyday convenience/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/transit viability/i)).toBeVisible();
+    await expect(page.getByText(/variation/i)).toBeVisible();
+  });
 });
 
 test.describe("Mobile map fullscreen", () => {
