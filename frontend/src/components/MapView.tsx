@@ -77,8 +77,11 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
    *  the user pan still emits. */
   const programmaticTargetRef = useRef<{ lat: number; lng: number } | null>(null);
   const onCenterChangedRef = useRef(onCenterChanged);
-  onCenterChangedRef.current = onCenterChanged;
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    onCenterChangedRef.current = onCenterChanged;
+  }, [onCenterChanged]);
 
   // Lock body scroll while the map is in fullscreen mode and ensure Leaflet
   // recalculates its size when the container dimensions change.

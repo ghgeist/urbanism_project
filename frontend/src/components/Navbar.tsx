@@ -43,6 +43,7 @@ export function Navbar() {
 
   // Close on route change.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Route transitions should always collapse the mobile drawer immediately.
     setDrawerOpen(false);
   }, [location.pathname]);
 

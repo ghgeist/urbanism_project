@@ -123,6 +123,7 @@ export function Explore() {
   // Clear any "Search this area" suggestion whenever the queried location
   // changes (e.g. user submitted a new address).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- New query origin invalidates any pending recenter suggestion.
     setPendingMapCenter(null);
   }, [summary?.origin.lat, summary?.origin.lon]);
 
@@ -130,6 +131,7 @@ export function Explore() {
   // is cheap, and the class is only consumed by mobile CSS).
   useEffect(() => {
     if (!isMobile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Ensure stale mobile scroll shadow state is reset when switching layouts.
       setPageScrolled(false);
       return;
     }

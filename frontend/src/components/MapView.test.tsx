@@ -9,8 +9,12 @@ vi.mock("leaflet", () => {
     setView: vi.fn(),
     getZoom: vi.fn(() => 13),
     getContainer: vi.fn(() => document.createElement("div")),
+    getCenter: vi.fn(() => ({ lat: 42.36, lng: -71.06 })),
+    on: vi.fn(),
+    invalidateSize: vi.fn(),
     remove: vi.fn(),
   };
+  mockMap.setView = vi.fn(() => mockMap);
   const mockMarker = {
     setLatLng: vi.fn(),
     bindTooltip: vi.fn(),
