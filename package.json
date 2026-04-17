@@ -5,5 +5,9 @@
   "description": "Root package for Replit deployment; frontend lives in frontend/",
   "scripts": {
     "build": "cd frontend && npm install && npm run build"
+  },
+  "dependencies": {
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^12.8.2"
   }
 }

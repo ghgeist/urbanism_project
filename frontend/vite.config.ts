@@ -9,6 +9,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5000,
     allowedHosts: true,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+    },
     proxy: {
       '/health': 'http://127.0.0.1:8000',
       '/geocode': 'http://127.0.0.1:8000',

@@ -14,13 +14,13 @@ test.describe("Explore page", () => {
 
   test("has search input and radius slider", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByPlaceholder(/cambridge/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/addison/i)).toBeVisible();
     await expect(page.getByLabel(/radius/i)).toBeVisible();
   });
 
   test("search yields either summary cards or error (requires API for success)", async ({ page }) => {
     await page.goto("/");
-    await page.getByPlaceholder(/cambridge/i).fill("Cambridge, MA");
+    await page.getByPlaceholder(/addison/i).fill("Cambridge, MA");
     await page.getByRole("button", { name: /get summary/i }).click();
     // Within 15s we should see either success (cards) or error (alert)
     const cards = page.getByText("Everyday Convenience");

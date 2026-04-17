@@ -26,7 +26,9 @@ export default defineConfig([
   },
   {
     files: ["e2e/**/*.ts", "playwright.config.ts", "vite.config.ts"],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
+      ecmaVersion: 2020,
       globals: { ...globals.node, ...globals.browser },
     },
   },

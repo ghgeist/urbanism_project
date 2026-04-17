@@ -3,7 +3,7 @@
  * colored by walkability relative to the area mean NWI.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { BlockGroupFeature } from "../types/api";
@@ -54,13 +54,70 @@ interface MapViewProps {
   nwiMean?: number | null;
   /** When true, container height is controlled by parent (e.g. split layout). */
   fillHeight?: boolean;
+  /** Fires after a user-driven pan/zoom finishes (not after programmatic setView). */
+  onCenterChanged?: (lat: number, lon: number) => void;
+  /** Optional overlay rendered inside the map view (e.g. "Search this area" pill). */
+  overlay?: ReactNode;
+  /** Hide the legend/caption rows (useful inside compact / map-first layouts). */
+  hideChrome?: boolean;
 }
 
-export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fillHeight }: MapViewProps) {
+export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fillHeight, onCenterChanged, overlay, hideChrome }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const blockGroupsLayerRef = useRef<L.GeoJSON | null>(null);
+  const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  /** Target center of an in-flight programmatic setView/fitBounds. The next
+   *  moveend whose center matches this target is swallowed (so we don't
+   *  treat our own setView as a user-driven move). Comparing to the target
+   *  is more robust than a single boolean flag — if the user pans before a
+   *  pending programmatic moveend has fired, the centers won't match and
+   *  the user pan still emits. */
+  const programmaticTargetRef = useRef<{ lat: number; lng: number } | null>(null);
+  const onCenterChangedRef = useRef(onCenterChanged);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    onCenterChangedRef.current = onCenterChanged;
+  }, [onCenterChanged]);
+
+  // Lock body scroll while the map is in fullscreen mode and ensure Leaflet
+  // recalculates its size when the container dimensions change.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const previousOverflow = document.body.style.overflow;
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+      // Move focus to the close button so keyboard users don't get trapped
+      // tabbing into the now-obscured background content.
+      window.setTimeout(() => fullscreenToggleRef.current?.focus(), 60);
+    }
+    // Defer invalidateSize so the new layout has been applied.
+    const id = window.setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 50);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.clearTimeout(id);
+      // Return focus to the originally-focused element when leaving fullscreen.
+      if (!isFullscreen) {
+        previouslyFocusedRef.current?.focus?.();
+      }
+    };
+  }, [isFullscreen]);
+
+  // Allow ESC to exit fullscreen.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isFullscreen]);
 
   // Create or update map when lat/lon/label change.
   useEffect(() => {
@@ -79,7 +136,14 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     }
 
     if (mapRef.current) {
-      mapRef.current.setView([lat, lon], mapRef.current.getZoom());
+      // Only call setView if the coords actually changed — avoids spurious
+      // programmatic-target tracking on no-op updates.
+      const currentCenter = mapRef.current.getCenter();
+      const COORD_EPS = 1e-6;
+      if (Math.abs(currentCenter.lat - lat) > COORD_EPS || Math.abs(currentCenter.lng - lon) > COORD_EPS) {
+        programmaticTargetRef.current = { lat, lng: lon };
+        mapRef.current.setView([lat, lon], mapRef.current.getZoom());
+      }
       const marker = markerRef.current;
       if (marker) {
         marker.setLatLng([lat, lon]);
@@ -94,7 +158,9 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
       return;
     }
 
-    const map = L.map(container).setView([lat, lon], 13);
+    programmaticTargetRef.current = { lat, lng: lon };
+    const map = L.map(container);
+    map.setView([lat, lon], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
@@ -104,6 +170,26 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     if (label) marker.bindTooltip(label, { permanent: false });
     markerRef.current = marker;
     mapRef.current = map;
+
+    // Expose the Leaflet map in dev so E2E tests can pan/zoom the map
+    // programmatically (synthetic mouse events from Playwright don't drive
+    // Leaflet's drag handler on touch device profiles like Pixel 5).
+    if (import.meta.env.DEV && typeof window !== "undefined") {
+      (window as unknown as { __leafletMap?: L.Map }).__leafletMap = map;
+    }
+
+    // Emit user-driven moves only.
+    map.on("moveend", () => {
+      const c = map.getCenter();
+      const target = programmaticTargetRef.current;
+      // Swallow the moveend that completes a pending programmatic setView,
+      // identified by the center landing on the target (within ~1m).
+      if (target && Math.abs(c.lat - target.lat) < 1e-5 && Math.abs(c.lng - target.lng) < 1e-5) {
+        programmaticTargetRef.current = null;
+        return;
+      }
+      onCenterChangedRef.current?.(c.lat, c.lng);
+    });
     // No cleanup here: reuse map on prop changes (update path above). Unmount cleanup is in the effect below.
   }, [lat, lon, label]);
 
@@ -161,13 +247,24 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
   const showLegend = blockGroups && blockGroups.length > 0;
 
   return (
-    <div className="map-view">
+    <div className={`map-view ${isFullscreen ? "map-view--fullscreen" : ""}`}>
+      <button
+        ref={fullscreenToggleRef}
+        type="button"
+        className="map-view__fullscreen-toggle"
+        onClick={() => setIsFullscreen((v) => !v)}
+        aria-label={isFullscreen ? "Exit fullscreen map" : "Expand map to fullscreen"}
+        aria-pressed={isFullscreen}
+      >
+        {isFullscreen ? "Close map" : "Expand map"}
+      </button>
       <div
         ref={containerRef}
         className="map-view__container"
-        style={fillHeight ? undefined : { height: "360px" }}
+        style={fillHeight || isFullscreen ? undefined : { height: "360px" }}
       />
-      {showLegend && (
+      {overlay && <div className="map-view__overlay">{overlay}</div>}
+      {showLegend && !hideChrome && (
         <div className="map-view__legend">
           {NWI_TIERS.map((tier) => (
             <span key={tier.color} className="map-view__legend-item">
@@ -181,9 +278,11 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
           </span>
         </div>
       )}
-      <p className="map-view__caption">
-        Center: {lat.toFixed(4)}, {lon.toFixed(4)} · Radius: {radiusMiles} mi
-      </p>
+      {!hideChrome && (
+        <p className="map-view__caption">
+          Center: {lat.toFixed(4)}, {lon.toFixed(4)} · Radius: {radiusMiles} mi
+        </p>
+      )}
     </div>
   );
 }

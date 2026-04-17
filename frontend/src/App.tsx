@@ -6,6 +6,7 @@ import { Compare } from "./pages/Compare";
 import { Method } from "./pages/Method";
 import { Dashboard } from "./pages/Dashboard";
 import "./App.css";
+import "./mobile.css";
 
 const HEALTH_POLL_INTERVAL_MS = 2000;
 const HEALTH_REQUEST_TIMEOUT_MS = 1500;

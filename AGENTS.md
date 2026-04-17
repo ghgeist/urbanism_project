@@ -86,6 +86,10 @@ A task is done when all apply:
 - Session record is updated with outcomes and file links.
 - Follow-up work is captured in `docs/sessions/backlog/` when needed.
 
+## Cloud agent environment bootstrap
+
+- For Cloud Agent runs that need frontend tooling, prefer pre-provisioning `frontend` dependencies in the environment startup flow (for example, `npm ci` in `/workspace/frontend` with caching) so agents do not repeatedly reinstall packages during CI/debug iterations.
+
 ## Canonical References
 
 - Workflow orchestration: `agents/workflow-orchestration.md`

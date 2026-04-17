@@ -1,0 +1,1327 @@
+/* ============================================================================
+   Mobile redesign overlays.
+   Mobile-first refinements layered on top of the desktop styles in App.css.
+   Imported once from App.tsx (after App.css) so the cascade resolves
+   index.css → App.css → mobile.css and these rules can override desktop.
+   Sections:
+     - Shared primitives (touch targets, app-main padding)
+     - Navbar hamburger toggle and collapsible menu
+     - Headings tightened on mobile
+     - Explore form & layout
+     - Map fullscreen toggle + overlay
+     - Summary cards
+     - Compare form + table-as-cards
+     - Dashboard sidebar/tabs/summary
+     - Method page typography
+     - Footer
+   ============================================================================ */
+
+/* ----- Shared primitives ----- */
+
+.app-main {
+  padding: 1.5rem 1rem;
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    padding: 1rem 0.85rem 5rem;  /* extra bottom space so content clears the iOS home indicator */
+  }
+}
+
+/* Larger touch targets across the app on small screens. */
+@media (max-width: 768px) {
+  button,
+  [role="button"],
+  a.app-nav__link {
+    min-height: 44px;
+  }
+
+  input[type="range"] {
+    height: 28px;
+  }
+
+  /* Make range thumb a bit larger so it's easy to drag with a thumb. */
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* ----- Navbar: hamburger toggle (left) + slide-in drawer ----- */
+
+.app-nav__toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.app-nav__toggle:hover {
+  background: #f3f4f6;
+}
+
+.app-nav__toggle:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.app-nav__toggle-bar {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #374151;
+  border-radius: 2px;
+}
+
+/* Drawer + scrim live in the DOM at all sizes (so transitions animate),
+   but are only visible on phones via the media query below. */
+.app-nav__scrim,
+.app-nav__drawer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-nav__inner {
+    padding: 0.5rem 0.85rem;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+  }
+
+  .app-nav__toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .app-nav__brand {
+    font-size: 1rem;
+    margin-right: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    justify-content: flex-start;
+  }
+
+  /* Hide the inline desktop link list on phones; the drawer + bottom tab
+     bar replace it. */
+  .app-nav__links {
+    display: none;
+  }
+
+  .app-nav__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+
+  .app-nav__scrim--open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-nav__drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(82vw, 320px);
+    background: #fff;
+    z-index: 1101;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.18);
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .app-nav__drawer--open {
+    transform: translateX(0);
+  }
+
+  .app-nav__drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .app-nav__drawer-title {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .app-nav__drawer-close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .app-nav__drawer-close:hover {
+    background: #f3f4f6;
+  }
+
+  .app-nav__drawer-links {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0.5rem 1rem;
+  }
+
+  .app-nav__drawer-link {
+    display: flex;
+    align-items: center;
+    padding: 0.85rem 0.85rem;
+    border-radius: 8px;
+    color: #1f2937;
+    text-decoration: none;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .app-nav__drawer-section {
+    padding: 0.5rem 0.85rem 0;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 0.25rem;
+  }
+
+  .app-nav__drawer-section-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6b7280;
+    padding: 0.5rem 0;
+  }
+
+  .app-nav__drawer-section .app-nav__drawer-links {
+    padding: 0;
+  }
+
+  .app-nav__drawer-attribution {
+    margin: auto 0 0;
+    padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .app-nav__drawer-link:hover {
+    background: #f3f4f6;
+  }
+
+  .app-nav__drawer-link--active {
+    background: #eef2ff;
+    color: #1e3a8a;
+    font-weight: 600;
+  }
+}
+
+/* ----- Mobile bottom tab bar ----- */
+
+.mobile-tabbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.06);
+  }
+
+  .mobile-tabbar__tab {
+    flex: 1;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0.45rem 0.25rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.72rem;
+    line-height: 1;
+    min-height: 56px;
+  }
+
+  .mobile-tabbar__tab--active {
+    color: #1e40af;
+  }
+
+  .mobile-tabbar__tab--active .mobile-tabbar__icon {
+    color: #1e40af;
+  }
+
+  .mobile-tabbar__icon {
+    color: #6b7280;
+    display: inline-flex;
+  }
+
+  .mobile-tabbar__label {
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  /* Reserve space at the bottom of the page so content isn't hidden
+     behind the tab bar. Overrides the .app-main padding from earlier. */
+  .app-main {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ----- Headings: tighten on mobile ----- */
+
+@media (max-width: 768px) {
+  .explore__header h1,
+  .compare__header h1,
+  .dashboard__header h1,
+  .method-page__header h1 {
+    font-size: 1.4rem;
+  }
+
+  .explore__tagline,
+  .compare__tagline,
+  .dashboard__tagline,
+  .method-page__tagline {
+    font-size: 0.9rem;
+  }
+
+  .explore__header,
+  .compare__header,
+  .dashboard__header {
+    margin-bottom: 1rem;
+  }
+}
+
+/* ----- Explore form & layout on mobile ----- */
+
+@media (max-width: 768px) {
+  .explore__controls {
+    padding: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .explore__form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .explore__input-group,
+  .explore__radius {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .explore__input-group input[type="text"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .explore__form button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 1rem;
+  }
+
+  .explore__nearby {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .explore__nearby table {
+    font-size: 0.85rem;
+    min-width: 480px;
+  }
+}
+
+/* ----- Map: fullscreen toggle + responsive height ----- */
+
+.map-view {
+  position: relative;
+}
+
+.map-view__fullscreen-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1000;  /* above Leaflet panes */
+  background: rgba(255, 255, 255, 0.95);
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  min-height: 36px;
+}
+
+.map-view__fullscreen-toggle:hover {
+  background: #fff;
+  color: #1e40af;
+}
+
+.map-view__fullscreen-toggle:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.map-view--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.map-view--fullscreen .map-view__container {
+  flex: 1;
+  min-height: 0;
+  height: 100% !important;
+  border-radius: 0;
+  border: none;
+}
+
+.map-view--fullscreen .map-view__legend,
+.map-view--fullscreen .map-view__caption {
+  padding: 0.5rem 0.85rem;
+  margin: 0;
+  background: #fff;
+}
+
+.map-view--fullscreen .map-view__fullscreen-toggle {
+  top: calc(env(safe-area-inset-top) + 12px);
+  right: 12px;
+}
+
+/* ----- Summary cards on mobile ----- */
+
+@media (max-width: 480px) {
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card {
+    padding: 0.85rem 1rem;
+  }
+
+  .summary-card__value {
+    font-size: 1.4rem;
+  }
+}
+
+/* ----- Compare: stack form & convert table to card list ----- */
+
+@media (max-width: 768px) {
+  .compare__controls {
+    margin-bottom: 1rem;
+  }
+
+  .compare__form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .compare__input-group,
+  .compare__radius {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .compare__input-group input[type="text"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .compare__form button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 1rem;
+  }
+}
+
+/* Compare table → stacked cards. Each row becomes a card; each numeric cell
+   shows its column header via data-label so context isn't lost. */
+@media (max-width: 720px) {
+  .compare-table-container {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow-x: visible;
+  }
+
+  .compare-table {
+    min-width: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.75rem;
+  }
+
+  .compare-table thead {
+    /* Visually hide the header row but keep it for screen readers. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .compare-table tbody tr {
+    display: block;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 0.85rem 1rem;
+  }
+
+  .compare-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f3f4f6;
+    text-align: right;
+    width: 100%;
+  }
+
+  .compare-table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .compare-table tbody td.cell-metric {
+    display: block;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .compare-table tbody td[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    max-width: 55%;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cell-val-a,
+  .cell-val-b {
+    font-size: 1rem;
+  }
+
+  /* Tooltips on touch devices misbehave in absolute positioning; let them wrap. */
+  .compare-table .tooltip-content {
+    white-space: normal;
+    max-width: 220px;
+  }
+}
+
+/* ----- Dashboard: collapsible sidebar on mobile ----- */
+
+@media (max-width: 1024px) {
+  .dashboard__workspace {
+    gap: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard__sidebar {
+    gap: 0.6rem;
+  }
+
+  .dashboard__controls {
+    padding: 0.75rem;
+  }
+
+  .dashboard__form button {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+
+  .dashboard__summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard__summary-card {
+    padding: 0.6rem 0.7rem;
+  }
+
+  .dashboard__summary-value {
+    font-size: 1.05rem;
+  }
+
+  .dashboard__summary-value--component {
+    font-size: 0.95rem;
+  }
+
+  .dashboard__tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -0.85rem 0.65rem;
+    padding: 0 0.85rem;
+    scrollbar-width: none;
+  }
+
+  .dashboard__tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard__tab {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .dashboard__section {
+    padding: 0.85rem;
+  }
+
+  .dashboard__section h2 {
+    font-size: 1.05rem;
+  }
+
+  /* Compact correlation header pieces on a phone. */
+  .correlation-header {
+    padding: 0.65rem 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .correlation-header h3 {
+    font-size: 0.95rem;
+  }
+
+  .correlation-header__metric {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .correlation-header__metric-value {
+    font-size: 1.05rem;
+  }
+
+  .correlation-chip {
+    min-height: 36px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard__summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----- Method page: roomier typography on mobile ----- */
+
+@media (max-width: 768px) {
+  .method-page__section {
+    margin-bottom: 1.25rem;
+  }
+
+  .method-page__section h2 {
+    font-size: 1.05rem;
+  }
+
+  .method-page__section p,
+  .method-page__section ul {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .method-page__section li {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* ----- Footer: comfortable layout on small screens ----- */
+
+@media (max-width: 768px) {
+  .app-footer__inner {
+    padding: 0.85rem;
+  }
+}
+
+/* ----- Visually-hidden helper (for a11y labels) ----- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----- Map "Search this area" pill (works at any breakpoint) ----- */
+
+.map-view__overlay {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.map-view__search-area {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.map-view__search-area:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.map-view__search-area:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.map-view__search-area:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ----- Mobile Explore: sticky search + chips + map-first stage ----- */
+
+@media (max-width: 768px) {
+  /* When the Explore page is in mobile mode, the page is map-first:
+     remove the standard padding around .app-main so the map can fill the
+     screen edge-to-edge and the bottom sheet floats over it. */
+  .explore--mobile {
+    margin: -1rem -0.85rem 0;  /* cancel .app-main's mobile padding */
+  }
+
+  .explore__sticky-search {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: #fff;
+    padding: 0.55rem 0.85rem 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    /* Shadow appears only after scroll. See --scrolled modifier. */
+    box-shadow: none;
+    transition: box-shadow 0.15s ease;
+  }
+
+  .explore__sticky-search--scrolled {
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  }
+
+  .explore__search-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 0.25rem 0.35rem 0.25rem 0.75rem;
+  }
+
+  .explore__search-icon {
+    color: #6b7280;
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .explore__search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 16px;  /* prevents iOS zoom-on-focus */
+    color: #111827;
+    padding: 0.5rem 0.25rem;
+    outline: none;
+  }
+
+  .explore__search-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .explore__search-go {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-width: 88px;
+    min-height: 44px;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+
+  .explore__search-go:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  .explore__search-go:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .explore__chip-row {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .explore__chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .explore__chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  .explore__chip:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  /* Map fills the area between sticky search and the bottom tab bar. The
+     bottom sheet floats above it; the map is essentially the page's
+     background. */
+  .explore__map-stage {
+    position: relative;
+    /* viewport minus: navbar (~56) + sticky search (~98) + tab bar (~72) +
+       safe areas. A min-height keeps things sane if any of those compress. */
+    height: calc(100vh - 56px - 98px - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 320px;
+    margin: 0;
+  }
+
+  .explore__map-stage .map-view,
+  .explore__map-stage .map-view__container {
+    height: 100% !important;
+    border-radius: 0;
+    border: none;
+  }
+
+  /* Hide the desktop fullscreen toggle on mobile — bottom sheet pattern
+     replaces it. */
+  .explore__map-stage .map-view__fullscreen-toggle {
+    display: none;
+  }
+
+  .explore__sheet-header h1 {
+    font-size: 1.2rem;
+    margin: 0 0 0.15rem 0;
+  }
+
+  .explore__sheet-header .explore__tagline {
+    font-size: 0.85rem;
+    margin: 0 0 0.85rem 0;
+  }
+}
+
+/* ----- Mobile bottom sheet ----- */
+
+.mobile-sheet {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-sheet {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* Sit just above the bottom tab bar. */
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    z-index: 1040;
+    background: #fff;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.18);
+    transition: height 0.18s ease;
+    overflow: hidden;
+    touch-action: none;  /* handle owns the gesture */
+  }
+
+  .mobile-sheet__handle {
+    background: none;
+    border: none;
+    width: 100%;
+    padding: 14px 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+
+  .mobile-sheet__handle:active {
+    cursor: grabbing;
+  }
+
+  .mobile-sheet__grabber {
+    display: block;
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: #cbd5e1;
+  }
+
+  .mobile-sheet__content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.25rem 1rem 1rem;
+    touch-action: auto;  /* re-enable scroll inside content */
+  }
+
+  /* Tighter cards inside the sheet so the peek state shows the first row. */
+  .mobile-sheet .summary-cards {
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .mobile-sheet .summary-card {
+    padding: 0.7rem 0.85rem;
+  }
+
+  .mobile-sheet .summary-card__value {
+    font-size: 1.25rem;
+  }
+}
+
+/* ----- Shared mobile primitives (sticky search, chips, radius sheet) -----
+   Reused by Explore, Compare, and Dashboard mobile layouts so the visual
+   language stays consistent. */
+
+.m-sticky-search,
+.m-search-row,
+.m-search-input,
+.m-search-go,
+.m-chip-row,
+.m-chip,
+.m-radius-scrim,
+.m-radius-sheet {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .m-sticky-search {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: #fff;
+    padding: 0.55rem 0.85rem 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: none;
+    transition: box-shadow 0.15s ease;
+  }
+
+  .m-sticky-search--scrolled {
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  }
+
+  .m-search-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 0.25rem 0.35rem 0.25rem 0.75rem;
+  }
+
+  .m-search-row + .m-search-row {
+    margin-top: 0.4rem;
+  }
+
+  .m-search-icon {
+    color: #6b7280;
+    display: inline-flex;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    min-width: 14px;
+    justify-content: center;
+  }
+
+  .m-search-input {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 16px; /* prevents iOS zoom-on-focus */
+    color: #111827;
+    padding: 0.5rem 0.25rem;
+    outline: none;
+  }
+
+  .m-search-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .m-search-go {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-width: 88px;
+    min-height: 44px;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+
+  .m-search-go:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  .m-search-go:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .m-chip-row {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    align-items: center;
+  }
+
+  .m-chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .m-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  .m-chip:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  .m-chip-row .m-search-go {
+    margin-left: auto;
+  }
+
+  .m-radius-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 1200;
+  }
+
+  .m-radius-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1201;
+    background: #fff;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.2);
+  }
+
+  .m-radius-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .m-radius-sheet-close {
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 44px;
+    min-width: 64px;
+  }
+
+  .m-radius-sheet input[type="range"] {
+    width: 100%;
+  }
+}
+
+/* ----- Compare mobile layout ----- */
+
+@media (max-width: 768px) {
+  .compare--mobile {
+    margin: -1rem -0.85rem 0;
+  }
+
+  .compare--mobile .compare__error {
+    margin: 0.85rem 0.85rem 0;
+  }
+
+  .compare__mobile-body {
+    padding: 0.85rem 0.85rem 0;
+  }
+
+  .compare__mobile-body .compare-placeholder {
+    margin-top: 0.5rem;
+  }
+}
+
+/* ----- Dashboard mobile layout ----- */
+
+@media (max-width: 768px) {
+  .dashboard--mobile {
+    margin: -1rem -0.85rem 0;
+  }
+
+  .dashboard--mobile .dashboard__error {
+    margin: 0.85rem 0.85rem 0;
+  }
+
+  .dashboard__mobile-body {
+    padding: 0.85rem 0.85rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .dashboard--mobile .dashboard__header {
+    padding: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .dashboard--mobile .dashboard__header h1 {
+    font-size: 1.15rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .dashboard--mobile .dashboard__tagline {
+    font-size: 0.85rem;
+  }
+
+  .dashboard--mobile .dashboard__summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .dashboard--mobile .dashboard__tabs {
+    margin: 0 -0.85rem;
+    padding: 0 0.85rem;
+  }
+
+  .dashboard--mobile .dashboard__section {
+    padding: 0.85rem;
+    min-width: 0;
+  }
+
+  /* Charts must stay inside the viewport, not overflow horizontally. */
+  .dashboard--mobile .dashboard__section svg,
+  .dashboard--mobile .dashboard__section canvas,
+  .dashboard--mobile .dashboard__section .recharts-responsive-container {
+    max-width: 100%;
+  }
+
+  /*
+   * Recharts v3 ResponsiveContainer renders an inner sizing div that, in
+   * some flex/mobile layouts, gets a stuck inline width of 0px. That collapses
+   * the .recharts-wrapper (and the SVG inside) to zero width, so no chart
+   * shows. Force the inner div and wrapper to fill the responsive container
+   * so the chart paints regardless of the upstream measurement glitch.
+   */
+  .dashboard--mobile .dashboard__section .recharts-responsive-container > div {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .dashboard--mobile .dashboard__section .recharts-wrapper {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  .dashboard--mobile .dashboard__section .recharts-wrapper > svg {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* ----- Radius sheet (small bottom popover for the slider) ----- */
+
+.explore__radius-scrim,
+.explore__radius-sheet {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .explore__radius-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 1200;
+  }
+
+  .explore__radius-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1201;
+    background: #fff;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.2);
+  }
+
+  .explore__radius-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .explore__radius-sheet-close {
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 44px;
+    min-width: 64px;
+  }
+
+  .explore__radius-sheet input[type="range"] {
+    width: 100%;
+  }
+}
