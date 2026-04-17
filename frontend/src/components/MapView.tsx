@@ -3,7 +3,7 @@
  * colored by walkability relative to the area mean NWI.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { BlockGroupFeature } from "../types/api";
@@ -54,15 +54,26 @@ interface MapViewProps {
   nwiMean?: number | null;
   /** When true, container height is controlled by parent (e.g. split layout). */
   fillHeight?: boolean;
+  /** Fires after a user-driven pan/zoom finishes (not after programmatic setView). */
+  onCenterChanged?: (lat: number, lon: number) => void;
+  /** Optional overlay rendered inside the map view (e.g. "Search this area" pill). */
+  overlay?: ReactNode;
+  /** Hide the legend/caption rows (useful inside compact / map-first layouts). */
+  hideChrome?: boolean;
 }
 
-export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fillHeight }: MapViewProps) {
+export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fillHeight, onCenterChanged, overlay, hideChrome }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const blockGroupsLayerRef = useRef<L.GeoJSON | null>(null);
   const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  /** True while a setView/fitBounds call is in flight; used to ignore the
+   *  resulting moveend so we only emit user-driven center changes. */
+  const programmaticMoveRef = useRef(false);
+  const onCenterChangedRef = useRef(onCenterChanged);
+  onCenterChangedRef.current = onCenterChanged;
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Lock body scroll while the map is in fullscreen mode and ensure Leaflet
@@ -118,6 +129,7 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     }
 
     if (mapRef.current) {
+      programmaticMoveRef.current = true;
       mapRef.current.setView([lat, lon], mapRef.current.getZoom());
       const marker = markerRef.current;
       if (marker) {
@@ -133,6 +145,7 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
       return;
     }
 
+    programmaticMoveRef.current = true;
     const map = L.map(container).setView([lat, lon], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -143,6 +156,17 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     if (label) marker.bindTooltip(label, { permanent: false });
     markerRef.current = marker;
     mapRef.current = map;
+
+    // Emit user-driven moves only. Programmatic setView calls flip the
+    // ref true beforehand and we swallow that one moveend.
+    map.on("moveend", () => {
+      if (programmaticMoveRef.current) {
+        programmaticMoveRef.current = false;
+        return;
+      }
+      const c = map.getCenter();
+      onCenterChangedRef.current?.(c.lat, c.lng);
+    });
     // No cleanup here: reuse map on prop changes (update path above). Unmount cleanup is in the effect below.
   }, [lat, lon, label]);
 
@@ -216,7 +240,8 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
         className="map-view__container"
         style={fillHeight || isFullscreen ? undefined : { height: "360px" }}
       />
-      {showLegend && (
+      {overlay && <div className="map-view__overlay">{overlay}</div>}
+      {showLegend && !hideChrome && (
         <div className="map-view__legend">
           {NWI_TIERS.map((tier) => (
             <span key={tier.color} className="map-view__legend-item">
@@ -230,9 +255,11 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
           </span>
         </div>
       )}
-      <p className="map-view__caption">
-        Center: {lat.toFixed(4)}, {lon.toFixed(4)} · Radius: {radiusMiles} mi
-      </p>
+      {!hideChrome && (
+        <p className="map-view__caption">
+          Center: {lat.toFixed(4)}, {lon.toFixed(4)} · Radius: {radiusMiles} mi
+        </p>
+      )}
     </div>
   );
 }

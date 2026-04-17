@@ -51,11 +51,10 @@
   }
 }
 
-/* ----- Navbar: hamburger toggle and collapsible menu ----- */
+/* ----- Navbar: hamburger toggle (left) + slide-in drawer ----- */
 
 .app-nav__toggle {
   display: none;
-  margin-left: auto;
   width: 44px;
   height: 44px;
   padding: 0;
@@ -86,11 +85,23 @@
   border-radius: 2px;
 }
 
+/* Drawer + scrim live in the DOM at all sizes (so transitions animate),
+   but are only visible on phones via the media query below. */
+.app-nav__scrim,
+.app-nav__drawer {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .app-nav__inner {
     padding: 0.5rem 0.85rem;
     gap: 0.5rem;
     flex-wrap: nowrap;
+  }
+
+  .app-nav__toggle {
+    display: inline-flex;
+    flex-shrink: 0;
   }
 
   .app-nav__brand {
@@ -101,36 +112,167 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    justify-content: flex-start;
   }
 
-  .app-nav__toggle {
+  /* Hide the inline desktop link list on phones; the drawer + bottom tab
+     bar replace it. */
+  .app-nav__links {
+    display: none;
+  }
+
+  .app-nav__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+
+  .app-nav__scrim--open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-nav__drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(82vw, 320px);
+    background: #fff;
+    z-index: 1101;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.18);
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .app-nav__drawer--open {
+    transform: translateX(0);
+  }
+
+  .app-nav__drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .app-nav__drawer-title {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .app-nav__drawer-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .app-nav__drawer-close:hover {
+    background: #f3f4f6;
+  }
+
+  .app-nav__drawer-links {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0.5rem 1rem;
+  }
+
+  .app-nav__drawer-link {
+    display: block;
+    padding: 0.85rem 0.85rem;
+    border-radius: 8px;
+    color: #1f2937;
+    text-decoration: none;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .app-nav__drawer-link:hover {
+    background: #f3f4f6;
+  }
+
+  .app-nav__drawer-link--active {
+    background: #eef2ff;
+    color: #1e3a8a;
+    font-weight: 600;
+  }
+}
+
+/* ----- Mobile bottom tab bar ----- */
+
+.mobile-tabbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.06);
+  }
+
+  .mobile-tabbar__tab {
+    flex: 1;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0.45rem 0.25rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.72rem;
+    line-height: 1;
+    min-height: 56px;
+  }
+
+  .mobile-tabbar__tab--active {
+    color: #1e40af;
+  }
+
+  .mobile-tabbar__tab--active .mobile-tabbar__icon {
+    color: #1e40af;
+  }
+
+  .mobile-tabbar__icon {
+    color: #6b7280;
     display: inline-flex;
   }
 
-  .app-nav__links {
-    display: none;
-    flex-basis: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding: 0.5rem 0 0.25rem;
-    border-top: 1px solid #f3f4f6;
-    margin-top: 0.5rem;
+  .mobile-tabbar__label {
+    font-weight: 500;
+    letter-spacing: 0.01em;
   }
 
-  .app-nav__links--open {
-    display: flex;
-  }
-
-  .app-nav__links li {
-    width: 100%;
-  }
-
-  .app-nav__link {
-    display: block;
-    padding: 0.75rem 0.5rem;
-    font-size: 1rem;
-    border-radius: 6px;
+  /* Reserve space at the bottom of the page so content isn't hidden
+     behind the tab bar. Overrides the .app-main padding from earlier. */
+  .app-main {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 }
 
@@ -524,5 +666,334 @@
 @media (max-width: 768px) {
   .app-footer__inner {
     padding: 0.85rem;
+  }
+}
+
+/* ----- Visually-hidden helper (for a11y labels) ----- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----- Map "Search this area" pill (works at any breakpoint) ----- */
+
+.map-view__overlay {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.map-view__search-area {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 38px;
+}
+
+.map-view__search-area:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.map-view__search-area:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.map-view__search-area:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ----- Mobile Explore: sticky search + chips + map-first stage ----- */
+
+@media (max-width: 768px) {
+  /* When the Explore page is in mobile mode, the page is map-first:
+     remove the standard padding around .app-main so the map can fill the
+     screen edge-to-edge and the bottom sheet floats over it. */
+  .explore--mobile {
+    margin: -1rem -0.85rem 0;  /* cancel .app-main's mobile padding */
+  }
+
+  .explore__sticky-search {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: #fff;
+    padding: 0.55rem 0.85rem 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  }
+
+  .explore__search-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 0.25rem 0.35rem 0.25rem 0.75rem;
+  }
+
+  .explore__search-icon {
+    color: #6b7280;
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .explore__search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 16px;  /* prevents iOS zoom-on-focus */
+    color: #111827;
+    padding: 0.5rem 0.25rem;
+    outline: none;
+  }
+
+  .explore__search-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .explore__search-go {
+    flex-shrink: 0;
+    min-width: 56px;
+    min-height: 38px;
+    border-radius: 999px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .explore__search-go:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  .explore__search-go:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .explore__chip-row {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .explore__chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .explore__chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 36px;
+  }
+
+  .explore__chip:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  /* Map fills the area between sticky search and the bottom tab bar. The
+     bottom sheet floats above it; the map is essentially the page's
+     background. */
+  .explore__map-stage {
+    position: relative;
+    /* viewport minus: navbar (~56) + sticky search (~98) + tab bar (~72) +
+       safe areas. A min-height keeps things sane if any of those compress. */
+    height: calc(100vh - 56px - 98px - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 320px;
+    margin: 0;
+  }
+
+  .explore__map-stage .map-view,
+  .explore__map-stage .map-view__container {
+    height: 100% !important;
+    border-radius: 0;
+    border: none;
+  }
+
+  /* Hide the desktop fullscreen toggle on mobile — bottom sheet pattern
+     replaces it. */
+  .explore__map-stage .map-view__fullscreen-toggle {
+    display: none;
+  }
+
+  .explore__sheet-header h1 {
+    font-size: 1.2rem;
+    margin: 0 0 0.15rem 0;
+  }
+
+  .explore__sheet-header .explore__tagline {
+    font-size: 0.85rem;
+    margin: 0 0 0.85rem 0;
+  }
+}
+
+/* ----- Mobile bottom sheet ----- */
+
+.mobile-sheet {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-sheet {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* Sit just above the bottom tab bar. */
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    z-index: 1040;
+    background: #fff;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.18);
+    transition: height 0.18s ease;
+    overflow: hidden;
+    touch-action: none;  /* handle owns the gesture */
+  }
+
+  .mobile-sheet__handle {
+    background: none;
+    border: none;
+    width: 100%;
+    padding: 8px 0 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    flex-shrink: 0;
+    min-height: 28px;
+  }
+
+  .mobile-sheet__handle:active {
+    cursor: grabbing;
+  }
+
+  .mobile-sheet__grabber {
+    display: block;
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: #cbd5e1;
+  }
+
+  .mobile-sheet__content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.25rem 1rem 1rem;
+    touch-action: auto;  /* re-enable scroll inside content */
+  }
+
+  /* Tighter cards inside the sheet so the peek state shows the first row. */
+  .mobile-sheet .summary-cards {
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .mobile-sheet .summary-card {
+    padding: 0.7rem 0.85rem;
+  }
+
+  .mobile-sheet .summary-card__value {
+    font-size: 1.25rem;
+  }
+}
+
+/* ----- Radius sheet (small bottom popover for the slider) ----- */
+
+.explore__radius-scrim,
+.explore__radius-sheet {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .explore__radius-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 1200;
+  }
+
+  .explore__radius-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1201;
+    background: #fff;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.2);
+  }
+
+  .explore__radius-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .explore__radius-sheet-close {
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 8px;
+    padding: 0.4rem 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 36px;
+  }
+
+  .explore__radius-sheet input[type="range"] {
+    width: 100%;
   }
 }
