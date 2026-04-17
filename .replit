@@ -68,6 +68,10 @@ build = ["bash", "-c", "cd frontend && npm install && npm run build"]
 [userenv]
 
 [userenv.shared]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 180000
 # WALKABILITY_CSV_URL removed - CSV is only needed for initial database setup
 # Once the database is populated, the CSV file is no longer required
 # If you need to reload the database, set this temporarily with a direct HTTPS download link
