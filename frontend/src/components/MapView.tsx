@@ -156,7 +156,8 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     }
 
     programmaticTargetRef.current = { lat, lng: lon };
-    const map = L.map(container).setView([lat, lon], 13);
+    const map = L.map(container);
+    map.setView([lat, lon], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);

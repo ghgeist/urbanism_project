@@ -66,6 +66,7 @@ export function Navbar() {
     if (!drawerOpen) return;
 
     const previousOverflow = document.body.style.overflow;
+    const toggleEl = toggleRef.current;
     document.body.style.overflow = "hidden";
     previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
 
@@ -105,7 +106,7 @@ export function Navbar() {
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
       // Return focus to the toggle (or whatever was focused before opening).
-      const fallback = previouslyFocusedRef.current ?? toggleRef.current;
+      const fallback = previouslyFocusedRef.current ?? toggleEl;
       fallback?.focus?.();
     };
   }, [drawerOpen]);
