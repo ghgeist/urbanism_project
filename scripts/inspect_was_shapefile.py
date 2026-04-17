@@ -115,24 +115,51 @@ def _infer_geoid_vintage(sample_values: list[str]) -> str:
 
 
 def _probe_join_rate(geoid_values: list[str]) -> dict:
-    """Compute naive string-join rate against national_walkability_index.geoid20."""
-    sample = [str(v) for v in geoid_values[:10000] if v is not None]
-    if not sample:
+    """Compute the full string-join rate against national_walkability_index.geoid20.
+
+    Loads every distinct GEOID from the shapefile into a temporary table and
+    counts how many have a matching row in national_walkability_index.geoid20.
+    We probe the full set (rather than the first N rows) because the shapefile
+    is sorted geographically -- slicing the head produces a sample that is
+    biased to a single state and reports a wildly misleading match rate.
+    """
+    distinct = sorted({str(v) for v in geoid_values if v is not None and str(v).strip()})
+    if not distinct:
         return {"probed": 0, "matched": 0, "rate": None, "error": "no non-null GEOIDs"}
     conn = None
     cursor = None
     try:
+        from psycopg2.extras import execute_values
+
         conn = get_db_connection()
-        conn.set_session(readonly=True)
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT COUNT(DISTINCT geoid20) FROM national_walkability_index WHERE geoid20 = ANY(%s);",
-            (sample,),
+            "CREATE TEMP TABLE _was_geoid_probe (geoid text PRIMARY KEY) ON COMMIT DROP;"
+        )
+        execute_values(
+            cursor,
+            "INSERT INTO _was_geoid_probe (geoid) VALUES %s ON CONFLICT DO NOTHING;",
+            [(g,) for g in distinct],
+            page_size=5000,
+        )
+        cursor.execute(
+            "SELECT COUNT(*) FROM _was_geoid_probe w "
+            "WHERE EXISTS ("
+            "  SELECT 1 FROM national_walkability_index n WHERE n.geoid20 = w.geoid"
+            ");"
         )
         matched = cursor.fetchone()[0] or 0
-        return {"probed": len(sample), "matched": matched, "rate": matched / len(sample)}
+        # No writes are committed; rollback drops the temp table and keeps
+        # this script truly read-only.
+        conn.rollback()
+        return {"probed": len(distinct), "matched": matched, "rate": matched / len(distinct)}
     except Exception as exc:
-        return {"probed": len(sample), "matched": 0, "rate": None, "error": str(exc)}
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return {"probed": len(distinct), "matched": 0, "rate": None, "error": str(exc)}
     finally:
         if cursor:
             cursor.close()
@@ -185,13 +212,21 @@ def main() -> int:
 
         if geoid_col:
             log.info("\n-- Join-rate probe against national_walkability_index.geoid20 --")
+            log.info(
+                "Naive join rate = fraction of distinct WAS shapefile GEOIDs that\n"
+                "exactly match a national_walkability_index.geoid20 row by string\n"
+                "equality (no crosswalk, no padding). A high rate (~98%%) means the\n"
+                "loader can use a direct GEOID join; a low rate suggests a vintage\n"
+                "mismatch or a normalization bug worth investigating before loading."
+            )
             result = _probe_join_rate(gdf[geoid_col].tolist())
             if result.get("error"):
                 log.error("Probe failed: %s", result["error"])
             else:
                 rate_pct = (result["rate"] or 0) * 100
                 log.info(
-                    "Probed %d sample GEOIDs; %d matched (%.2f%% naive join rate)",
+                    "Probed %d distinct GEOIDs (full shapefile); %d matched "
+                    "(%.2f%% naive join rate).",
                     result["probed"],
                     result["matched"],
                     rate_pct,
