@@ -44,10 +44,12 @@ The Vite dev server proxies API requests (`/health`, `/geocode`, `/nwi`) to the 
 
 ## Database Requirements
 The app requires a PostgreSQL database with PostGIS extension and a `national_walkability_index` table. Table structure:
-- geoid20: Census block group ID
+- geoid20: Census block group ID — **must be exactly 12 chars** (zero-padded). Enforced by the `geoid20_len_chk` CHECK constraint so future loaders can't regress to 11-char values for single-digit-FIPS states (AL, AK, AZ, AR, CA, CO, CT) and silently break the WAS join.
 - d2a_ranked, d2b_ranked, d3b_ranked, d4a_ranked: Component scores
 - natwalkind: Composite walkability index (1-20)
 - geometry: PostGIS geometry (EPSG:4326)
+
+The `walkable_accessibility_score.geoid` column is also 12-char zero-padded; the natural join `was.geoid = nwi.geoid20` covers ~97.9% of NWI rows (remainder is genuine territory/shapefile gaps).
 
 ## Data Loading
 To populate the database (one-time setup):
