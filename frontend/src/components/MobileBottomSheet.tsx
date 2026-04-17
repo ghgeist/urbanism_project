@@ -1,16 +1,17 @@
 /**
  * Map-first bottom sheet for the mobile Explore page.
- * Three snap points: peek (just the handle + summary teaser visible),
- * half (~50vh), and full (everything but the sticky search bar).
+ * Two snap points: peek (just the handle + summary teaser visible)
+ * and half (~50vh, results visible above the map).
  *
- * Drag the handle to resize; release snaps to the nearest point.
- * When at "full", inner content scrolls. When dragging starts on the
- * handle, body scroll is suppressed via pointer capture.
+ * Tap the handle to toggle between peek and half. Drag the handle to
+ * resize; release snaps to the nearest of the two points. There is no
+ * full-screen snap on purpose — taking over the whole screen makes the
+ * map disappear, which defeats the map-first layout.
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-export type SheetSnap = "peek" | "half" | "full";
+export type SheetSnap = "peek" | "half";
 
 interface MobileBottomSheetProps {
   children: ReactNode;
@@ -24,10 +25,9 @@ interface MobileBottomSheetProps {
 const SNAP_FRACTIONS: Record<SheetSnap, number> = {
   peek: 0.18,
   half: 0.5,
-  full: 0.88,
 };
 
-const SNAP_ORDER: SheetSnap[] = ["peek", "half", "full"];
+const SNAP_ORDER: SheetSnap[] = ["peek", "half"];
 
 function pickNearestSnap(heightPx: number, viewportPx: number): SheetSnap {
   const frac = heightPx / Math.max(1, viewportPx);
@@ -113,8 +113,7 @@ export function MobileBottomSheet({
       suppressNextClickRef.current = false;
       return;
     }
-    const order: SheetSnap[] = ["peek", "half", "full"];
-    setSnap((prev) => order[(order.indexOf(prev) + 1) % order.length]);
+    setSnap((prev) => (prev === "peek" ? "half" : "peek"));
   }, []);
 
   // Keep snap height in sync with viewport size changes (rotate, etc.).

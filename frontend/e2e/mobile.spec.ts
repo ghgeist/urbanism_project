@@ -167,17 +167,17 @@ test.describe("Mobile Explore search", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("Mobile bottom sheet", () => {
-  /** Returns the snap modifier ("peek" | "half" | "full") currently on the sheet. */
+  /** Returns the snap modifier ("peek" | "half") currently on the sheet. */
   async function currentSnap(page: Page): Promise<string | null> {
     return page.evaluate(() => {
       const el = document.querySelector(".mobile-sheet");
       if (!el) return null;
-      const m = el.className.match(/mobile-sheet--(peek|half|full)/);
+      const m = el.className.match(/mobile-sheet--(peek|half)/);
       return m ? m[1] : null;
     });
   }
 
-  test("tapping the handle cycles snap; dragging the handle does not also cycle", async ({ page }) => {
+  test("tapping the handle toggles peek <-> half; dragging snaps to nearest and does not also toggle", async ({ page }) => {
     await installApiMocks(page);
     await page.goto("/");
 
@@ -189,16 +189,17 @@ test.describe("Mobile bottom sheet", () => {
 
     const handle = page.locator(".mobile-sheet__handle");
 
-    // Tap (no movement) → cycle peek → half.
+    // Tap (no movement) → toggle peek → half.
     await handle.click();
     expect(await currentSnap(page)).toBe("half");
     // Wait for the height transition (CSS 0.18s) to finish so the handle's
     // bounding box reflects the post-snap position before we drag from it.
     await page.waitForTimeout(250);
 
-    // Drag the handle upward by ~250px → should snap to "full". The
-    // synthetic click that fires after a drag should NOT cycle snap on
-    // top of the drag result.
+    // Drag the handle upward by ~250px. There is no longer a "full" snap, so
+    // the closest snap point is still "half" — the sheet should stay at half
+    // and, importantly, the synthetic click after the drag must NOT toggle
+    // it back to peek.
     const box = await handle.boundingBox();
     expect(box).not.toBeNull();
     const startX = box!.x + box!.width / 2;
@@ -210,7 +211,12 @@ test.describe("Mobile bottom sheet", () => {
     await page.mouse.move(startX, startY - 250, { steps: 10 });
     await page.mouse.up();
 
-    expect(await currentSnap(page)).toBe("full");
+    expect(await currentSnap(page)).toBe("half");
+
+    // A second tap should toggle back to peek.
+    await page.waitForTimeout(250);
+    await handle.click();
+    expect(await currentSnap(page)).toBe("peek");
   });
 });
 
