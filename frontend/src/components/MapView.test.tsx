@@ -96,6 +96,7 @@ describe("MapView", () => {
         d2b_ranked: null,
         d3b_ranked: null,
         d4a_ranked: null,
+        was_2019: null,
         geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
       },
     ];
@@ -140,6 +141,7 @@ describe("MapView", () => {
         d2b_ranked: null,
         d3b_ranked: null,
         d4a_ranked: null,
+        was_2019: null,
         geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
       },
     ];
@@ -157,6 +159,7 @@ describe("MapView", () => {
         d2b_ranked: null,
         d3b_ranked: null,
         d4a_ranked: null,
+        was_2019: null,
         geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
       },
     ];
