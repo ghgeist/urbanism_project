@@ -76,6 +76,26 @@ describe("MapView", () => {
     radiusMiles: 1.0,
   };
 
+  const testPolygon: BlockGroupFeature["geometry"] = {
+    type: "Polygon",
+    coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]],
+  };
+
+  /** Keeps tests aligned with `BlockGroupFeature` when new fields are added. */
+  function mockBlockGroup(overrides: Partial<BlockGroupFeature> = {}): BlockGroupFeature {
+    return {
+      geoid20: "123",
+      natwalkind: 12.0,
+      d2a_ranked: null,
+      d2b_ranked: null,
+      d3b_ranked: null,
+      d4a_ranked: null,
+      was_2019: null,
+      geometry: testPolygon,
+      ...overrides,
+    };
+  }
+
   it("renders map container", () => {
     const { container } = render(<MapView {...defaultProps} />);
     expect(container.querySelector(".map-view__container")).toBeInTheDocument();
@@ -88,18 +108,7 @@ describe("MapView", () => {
   });
 
   it("shows legend when block groups are provided", () => {
-    const blockGroups: BlockGroupFeature[] = [
-      {
-        geoid20: "123",
-        natwalkind: 12.0,
-        d2a_ranked: null,
-        d2b_ranked: null,
-        d3b_ranked: null,
-        d4a_ranked: null,
-        was_2019: null,
-        geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
-      },
-    ];
+    const blockGroups: BlockGroupFeature[] = [mockBlockGroup()];
     render(<MapView {...defaultProps} blockGroups={blockGroups} nwiMean={10.0} />);
     expect(screen.getByText(/Well above avg/)).toBeInTheDocument();
     expect(screen.getByText(/No data/)).toBeInTheDocument();
@@ -133,36 +142,14 @@ describe("MapView", () => {
   });
 
   it("handles missing nwiMean", () => {
-    const blockGroups: BlockGroupFeature[] = [
-      {
-        geoid20: "123",
-        natwalkind: 12.0,
-        d2a_ranked: null,
-        d2b_ranked: null,
-        d3b_ranked: null,
-        d4a_ranked: null,
-        was_2019: null,
-        geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
-      },
-    ];
+    const blockGroups: BlockGroupFeature[] = [mockBlockGroup()];
     render(<MapView {...defaultProps} blockGroups={blockGroups} nwiMean={null} />);
     // Should render but use "No data" color since nwiMean is null
     expect(screen.getByText(/No data/)).toBeInTheDocument();
   });
 
   it("handles block groups with null natwalkind", () => {
-    const blockGroups: BlockGroupFeature[] = [
-      {
-        geoid20: "123",
-        natwalkind: null,
-        d2a_ranked: null,
-        d2b_ranked: null,
-        d3b_ranked: null,
-        d4a_ranked: null,
-        was_2019: null,
-        geometry: { type: "Polygon", coordinates: [[[-71, 42], [-71, 43], [-70, 43], [-70, 42], [-71, 42]]] },
-      },
-    ];
+    const blockGroups: BlockGroupFeature[] = [mockBlockGroup({ natwalkind: null })];
     render(<MapView {...defaultProps} blockGroups={blockGroups} nwiMean={10.0} />);
     // Should render with "No data" color
     expect(screen.getByText(/No data/)).toBeInTheDocument();
