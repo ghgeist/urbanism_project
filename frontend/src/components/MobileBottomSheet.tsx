@@ -50,22 +50,6 @@ export function MobileBottomSheet({
 }: MobileBottomSheetProps) {
   const [snap, setSnap] = useState<SheetSnap>(initialSnap);
   const [dragHeightPx, setDragHeightPx] = useState<number | null>(null);
-
-  /*
-   * Auto-promote the sheet to "half" the first time the parent signals
-   * that results are ready (initialSnap transitions peek -> half). Without
-   * this, the sheet stays at "peek" because `initialSnap` only seeds the
-   * `useState` once; the user would have to tap the handle just to see the
-   * metrics that just loaded. We never auto-collapse back to peek so we
-   * don't fight the user's manual choices.
-   */
-  const lastInitialSnap = useRef(initialSnap);
-  useEffect(() => {
-    if (lastInitialSnap.current === "peek" && initialSnap === "half" && snap === "peek") {
-      setSnap("half");
-    }
-    lastInitialSnap.current = initialSnap;
-  }, [initialSnap, snap]);
   const dragRef = useRef<{ startY: number; startHeight: number; pointerId: number; didMove: boolean } | null>(null);
   /** Set true at the end of a drag so the synthetic click that fires after
    *  pointerup doesn't also cycle the snap. Reset on the next click. */
