@@ -1,17 +1,37 @@
 /**
  * Top navigation: hamburger (left), brand (center), and a slide-in drawer
  * on phones with scrim, body-scroll lock, focus management, and
- * Escape-to-close. On tablet/desktop the inline link list is shown instead.
+ * Escape-to-close.
+ *
+ * Information architecture on phones:
+ *   - Primary destinations (Explore / Compare / Dashboard) live in the
+ *     bottom tab bar (see MobileTabBar).
+ *   - This drawer holds *secondary* and *utility* items: the Method
+ *     reference page, external links (GitHub, Substack, personal site),
+ *     and data attribution.
+ * On tablet/desktop the inline link list is shown instead.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
+/** Inline (desktop) primary nav. */
 const navLinks = [
   { to: "/", label: "Explore", end: true },
   { to: "/compare", label: "Compare", end: false },
   { to: "/dashboard", label: "Dashboard", end: false },
   { to: "/method", label: "Method", end: false },
+] as const;
+
+/** Drawer = secondary + utility links only (NOT the primary tab routes). */
+const drawerSecondary = [
+  { to: "/method", label: "Method & methodology", end: false },
+] as const;
+
+const drawerExternal = [
+  { href: "https://github.com/ghgeist", label: "GitHub" },
+  { href: "https://thedonkeyaxiom.substack.com/", label: "Substack" },
+  { href: "https://granthgeist.com", label: "Author site" },
 ] as const;
 
 export function Navbar() {
@@ -157,7 +177,7 @@ export function Navbar() {
           </button>
         </div>
         <ul className="app-nav__drawer-links">
-          {navLinks.map(({ to, label, end }) => (
+          {drawerSecondary.map(({ to, label, end }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -172,6 +192,27 @@ export function Navbar() {
             </li>
           ))}
         </ul>
+        <div className="app-nav__drawer-section" aria-label="External links">
+          <span className="app-nav__drawer-section-label">More</span>
+          <ul className="app-nav__drawer-links">
+            {drawerExternal.map(({ href, label }) => (
+              <li key={href}>
+                <a
+                  href={href}
+                  className="app-nav__drawer-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  tabIndex={drawerOpen ? 0 : -1}
+                >
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="app-nav__drawer-attribution">
+          Data: EPA National Walkability Index · © Grant Geist
+        </p>
       </aside>
     </nav>
   );

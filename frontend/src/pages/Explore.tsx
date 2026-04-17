@@ -43,6 +43,10 @@ const SEARCH_AREA_THRESHOLD_DEG = 0.001;
 export function Explore() {
   const isMobile = useIsMobile();
   const [defaultSummary, setDefaultSummary] = useState<NwiSummaryResponse | null>(null);
+  /** Drives the subtle elevation under the sticky search row. The shadow
+   *  only appears once the user has scrolled past a small threshold so the
+   *  bar sits flush at the very top of the page. */
+  const [pageScrolled, setPageScrolled] = useState(false);
   const [preloadRetryTick, setPreloadRetryTick] = useState(0);
   const preloadStatusRef = useRef<"idle" | "loading" | "success">("idle");
   const preloadRetryCountRef = useRef(0);
@@ -121,6 +125,22 @@ export function Explore() {
   useEffect(() => {
     setPendingMapCenter(null);
   }, [summary?.origin.lat, summary?.origin.lon]);
+
+  // Track page scroll for the sticky search shadow (mobile only — listener
+  // is cheap, and the class is only consumed by mobile CSS).
+  useEffect(() => {
+    if (!isMobile) {
+      setPageScrolled(false);
+      return;
+    }
+    const SCROLL_SHADOW_THRESHOLD = 4;
+    function onScroll() {
+      setPageScrolled(window.scrollY > SCROLL_SHADOW_THRESHOLD);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isMobile]);
 
   const mapSummary = summary ?? (params.q.trim() === "" ? defaultSummary : null);
   const mapLat = mapSummary?.origin.lat ?? WRIGLEY_FIELD_LAT;
@@ -230,7 +250,7 @@ export function Explore() {
   if (isMobile) {
     return (
       <div className="explore explore--mobile">
-        <div className="explore__sticky-search">
+        <div className={`explore__sticky-search ${pageScrolled ? "explore__sticky-search--scrolled" : ""}`}>
           <form onSubmit={handleSearch} className="explore__search-row">
             <label htmlFor="search-mobile" className="visually-hidden">
               Address, ZIP, or city
@@ -255,9 +275,13 @@ export function Explore() {
               type="submit"
               className="explore__search-go"
               disabled={loading}
-              aria-label="Get summary"
+              aria-label="Search this address"
             >
-              {loading ? "…" : "Go"}
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <span>{loading ? "…" : "Search"}</span>
             </button>
           </form>
           <div className="explore__chip-row">
