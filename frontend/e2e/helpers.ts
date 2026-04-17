@@ -171,14 +171,19 @@ export async function currentSheetSnap(page: Page): Promise<string | null> {
  * post-snap position of the handle.
  *
  * Replaces ``waitForTimeout(250)`` (CSS transition is 0.18s): we listen to
- * the actual ``transitionend`` event, with a short safety timeout in case
- * the element was already at the target height (no transition fires).
+ * the actual ``transitionend`` event, with a safety timeout in case the
+ * element was already at the target height (no transition fires). The
+ * timeout must exceed the transition duration so it cannot resolve while
+ * the sheet is still mid-animation ahead of ``transitionend``.
  */
 export async function waitForSheetSnap(page: Page, snap: "peek" | "half"): Promise<void> {
   const sheet = page.locator(".mobile-sheet");
   await expect(sheet).toHaveClass(new RegExp(`mobile-sheet--${snap}`));
 
-  await page.evaluate(() => {
+  // `.mobile-sheet` uses `transition: height 0.18s ease` (mobile.css).
+  const sheetSnapSafetyMs = 200;
+
+  await page.evaluate((safetyMs) => {
     return new Promise<void>((resolve) => {
       const el = document.querySelector(".mobile-sheet");
       if (!el) {
@@ -193,9 +198,9 @@ export async function waitForSheetSnap(page: Page, snap: "peek" | "half"): Promi
       };
       el.addEventListener("transitionend", onEnd);
       // Safety net: if the sheet was already at the target height no
-      // transition will fire. Resolve after one animation frame + a small
-      // slack so the test still makes progress.
-      requestAnimationFrame(() => setTimeout(resolve, 50));
+      // transition will fire. Wait one frame plus slack >= transition
+      // duration so we never resolve before `transitionend` during a real snap.
+      requestAnimationFrame(() => setTimeout(resolve, safetyMs));
     });
-  });
+  }, sheetSnapSafetyMs);
 }
