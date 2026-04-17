@@ -63,7 +63,9 @@ class Reference:
     # Expected flags for this reference point; `None` means "don't check".
     expect_any_was: bool | None = True  # at least one block_group returns non-null was_2019
     expect_any_zero_was: bool | None = None  # at least one BG has was_2019 == 0
-    expect_hollow_possible: bool | None = None  # hollow_neighborhood block present (high NWI + low WAS)
+    # When True/False, ``_diff_one`` asserts ``hollow_neighborhood.is_hollow`` matches.
+    # ``None`` skips (the harness still requires the hollow block and keys below).
+    expect_hollow_possible: bool | None = None
     expect_missing_was_row: bool | None = None  # at least one BG returns was_2019 = null
     notes: str = ""
 
@@ -77,18 +79,21 @@ REFERENCES: tuple[Reference, ...] = (
         label="Bronx, NY (high-WAS urban)",
         lat=40.8207, lon=-73.8599,
         expect_any_was=True,
+        expect_hollow_possible=False,
         notes="Expect mean WAS well above moderate threshold (~20+).",
     ),
     Reference(
         label="Chicago North Side (high-WAS urban)",
         lat=41.9484, lon=-87.6553,
         expect_any_was=True,
+        expect_hollow_possible=False,
         notes="Wrigley Field area; dense retail.",
     ),
     Reference(
         label="Cambridge, MA (mixed suburban)",
         lat=42.3736, lon=-71.1097,
         expect_any_was=True,
+        expect_hollow_possible=False,
         notes="Mix of tract-level values; good sanity for moderate band.",
     ),
     Reference(
@@ -119,6 +124,7 @@ REFERENCES: tuple[Reference, ...] = (
         label="Anchorage, AK (outside WAS coverage)",
         lat=61.2181, lon=-149.9003,
         expect_any_was=False,
+        expect_hollow_possible=False,
         notes="WAS is continental US only; every BG should return was_2019=null.",
     ),
 )
@@ -250,6 +256,20 @@ def _diff_one(ref: Reference, payload: dict[str, Any], shapefile_lookup: dict[st
         messages.append(
             f"  FAIL: expected at least one BG with missing WAS row (was_2019=null); "
             f"got {len(nonnull_was)} non-null out of {len(block_groups)}."
+        )
+
+    if ref.expect_hollow_possible is True:
+        if not hollow or not hollow.get("is_hollow"):
+            passed = False
+            messages.append(
+                "  FAIL: expected hollow_neighborhood.is_hollow true (aggregate NWI/WAS "
+                f"per check_hollow_neighborhood); got hollow={hollow!r}."
+            )
+    if ref.expect_hollow_possible is False and hollow and hollow.get("is_hollow"):
+        passed = False
+        messages.append(
+            "  FAIL: expected hollow_neighborhood.is_hollow false; got true "
+            f"(hollow={hollow!r})."
         )
 
     # Per-row diff vs the shapefile source.
