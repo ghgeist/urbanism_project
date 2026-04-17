@@ -203,16 +203,6 @@ For fuller testing notes, see [`docs/TESTING.md`](docs/TESTING.md).
 
 ---
 
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the normal development workflow.
-
-If you use coding agents in this repo, the project-specific guidance lives in [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md).
-
-Before committing, run `./scripts/quick_check.sh` on Unix/macOS or `.\scripts\quick_check.ps1` on Windows. CI also runs checks on push and pull request.
-
----
-
 This project is part of a broader geospatial full-stack portfolio. More background is available at [grantgeist.com](https://grantgeist.com/).
 
 ## License

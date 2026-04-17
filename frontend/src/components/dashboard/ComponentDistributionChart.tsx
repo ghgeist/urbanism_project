@@ -87,8 +87,8 @@ export function ComponentDistributionChart({ blockGroups }: ComponentDistributio
                 tick={{ fontSize: 11, fill: "#6b7280", fontFamily: "inherit" }}
               />
               <Tooltip
-                formatter={(value: number | undefined, name: string) => [`${value ?? 0}`, name]}
-                labelFormatter={(label: number | string) => `Score bucket: ${String(label)}`}
+                formatter={(value, name) => [`${value ?? 0}`, name ?? ""]}
+                labelFormatter={(label) => `Score bucket: ${String(label ?? "")}`}
               />
               <Bar
                 dataKey="d2a"
