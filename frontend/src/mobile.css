@@ -1244,8 +1244,27 @@
   /* Charts must stay inside the viewport, not overflow horizontally. */
   .dashboard--mobile .dashboard__section svg,
   .dashboard--mobile .dashboard__section canvas,
-  .dashboard--mobile .dashboard__section .recharts-wrapper,
   .dashboard--mobile .dashboard__section .recharts-responsive-container {
+    max-width: 100%;
+  }
+
+  /*
+   * Recharts v3 ResponsiveContainer renders an inner sizing div that, in
+   * some flex/mobile layouts, gets a stuck inline width of 0px. That collapses
+   * the .recharts-wrapper (and the SVG inside) to zero width, so no chart
+   * shows. Force the inner div and wrapper to fill the responsive container
+   * so the chart paints regardless of the upstream measurement glitch.
+   */
+  .dashboard--mobile .dashboard__section .recharts-responsive-container > div {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .dashboard--mobile .dashboard__section .recharts-wrapper {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  .dashboard--mobile .dashboard__section .recharts-wrapper > svg {
+    width: 100%;
     max-width: 100%;
   }
 }
