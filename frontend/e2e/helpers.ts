@@ -10,9 +10,6 @@ import { expect, type Page, type Route } from "@playwright/test";
  * (``tests/test_schema_contract.py``) catches renames across the wire.
  */
 
-/** Partial override type for the mocked summary payload. */
-export type SummaryOverrides = Partial<ReturnType<typeof fakeSummary>>;
-
 /** Canonical stable summary used by every mocked search. */
 export function fakeSummary(label: string, lat: number, lon: number) {
   return {
@@ -121,25 +118,33 @@ export async function waitForMapReady(page: Page): Promise<void> {
     return Boolean((window as unknown as { __leafletMap?: unknown }).__leafletMap);
   });
 
-  // Two consecutive identical centre reads means no animation is running.
+  // Two consecutive identical center reads means no animation is running.
+  let previousCenter: string | null = null;
   await expect
     .poll(
       async () => {
-        return page.evaluate(() => {
+        const center = await page.evaluate(() => {
           const map = (window as unknown as { __leafletMap?: LeafletMapHandle }).__leafletMap;
           if (!map) return null;
           const c = map.getCenter();
           return `${c.lat.toFixed(6)},${c.lng.toFixed(6)}`;
         });
+
+        if (!center) {
+          previousCenter = null;
+          return false;
+        }
+
+        const isStable = center === previousCenter;
+        previousCenter = center;
+        return isStable;
       },
       {
-        message: "Waiting for Leaflet map centre to stabilize (no in-flight setView)",
+        message: "Waiting for Leaflet map center to stabilize (no in-flight setView)",
         timeout: 5_000,
       },
     )
-    // Second read: by the time poll sees the same value twice, Leaflet has
-    // finished animating. ``.toBeTruthy()`` is our fallback (non-null).
-    .toBeTruthy();
+    .toBe(true);
 }
 
 // ---------------------------------------------------------------------------
