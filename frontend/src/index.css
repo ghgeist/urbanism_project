@@ -12,6 +12,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
 }
 
 a {
@@ -23,12 +25,23 @@ a:hover {
   color: #1d4ed8;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Account for iOS safe area at top so the navbar isn't covered by the notch. */
+  padding-top: env(safe-area-inset-top);
+}
+
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  /* Prevent horizontal scroll when iframes / wide elements briefly overflow on rotate. */
+  overflow-x: hidden;
 }
 
 #root {
@@ -36,8 +49,8 @@ body {
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 2rem;
+  line-height: 1.15;
 }
 
 button {
@@ -58,4 +71,29 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Prevent iOS Safari from auto-zooming on focus by enforcing min 16px on inputs. */
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  font-size: 16px;
+}
+
+@media (min-width: 769px) {
+  input[type="text"],
+  input[type="search"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 0.95rem;
+  }
 }

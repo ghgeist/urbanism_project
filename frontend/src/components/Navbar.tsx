@@ -1,9 +1,10 @@
 /**
- * Minimal top navigation: product name, Explore / Compare / Method.
- * Civic, neutral tone; active route highlighted subtly.
+ * Top navigation: brand + links. On narrow screens the links collapse
+ * behind a hamburger toggle, then expand into a stacked menu.
  */
 
-import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 
 const navLinks = [
   { to: "/", label: "Explore", end: true },
@@ -13,6 +14,14 @@ const navLinks = [
 ] as const;
 
 export function Navbar() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Close the mobile menu whenever the user navigates.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <nav className="app-nav" role="navigation" aria-label="Main">
       <div className="app-nav__inner">
@@ -25,7 +34,24 @@ export function Navbar() {
           </span>
           Walkability Explorer
         </NavLink>
-        <ul className="app-nav__links">
+
+        <button
+          type="button"
+          className="app-nav__toggle"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+          aria-controls="primary-nav-links"
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <span className="app-nav__toggle-bar" aria-hidden />
+          <span className="app-nav__toggle-bar" aria-hidden />
+          <span className="app-nav__toggle-bar" aria-hidden />
+        </button>
+
+        <ul
+          id="primary-nav-links"
+          className={`app-nav__links ${menuOpen ? "app-nav__links--open" : ""}`}
+        >
           {navLinks.map(({ to, label, end }) => (
             <li key={to}>
               <NavLink

@@ -1,0 +1,19 @@
+{
+  "name": "Walkability Explorer",
+  "short_name": "Walkability",
+  "description": "Explore EPA National Walkability Index scores across the U.S.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f5",
+  "theme_color": "#1e40af",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

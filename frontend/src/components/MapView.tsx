@@ -3,7 +3,7 @@
  * colored by walkability relative to the area mean NWI.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { BlockGroupFeature } from "../types/api";
@@ -61,6 +61,45 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const blockGroupsLayerRef = useRef<L.GeoJSON | null>(null);
+  const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Lock body scroll while the map is in fullscreen mode and ensure Leaflet
+  // recalculates its size when the container dimensions change.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const previousOverflow = document.body.style.overflow;
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+      // Move focus to the close button so keyboard users don't get trapped
+      // tabbing into the now-obscured background content.
+      window.setTimeout(() => fullscreenToggleRef.current?.focus(), 60);
+    }
+    // Defer invalidateSize so the new layout has been applied.
+    const id = window.setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 50);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.clearTimeout(id);
+      // Return focus to the originally-focused element when leaving fullscreen.
+      if (!isFullscreen) {
+        previouslyFocusedRef.current?.focus?.();
+      }
+    };
+  }, [isFullscreen]);
+
+  // Allow ESC to exit fullscreen.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isFullscreen]);
 
   // Create or update map when lat/lon/label change.
   useEffect(() => {
@@ -161,11 +200,21 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
   const showLegend = blockGroups && blockGroups.length > 0;
 
   return (
-    <div className="map-view">
+    <div className={`map-view ${isFullscreen ? "map-view--fullscreen" : ""}`}>
+      <button
+        ref={fullscreenToggleRef}
+        type="button"
+        className="map-view__fullscreen-toggle"
+        onClick={() => setIsFullscreen((v) => !v)}
+        aria-label={isFullscreen ? "Exit fullscreen map" : "Expand map to fullscreen"}
+        aria-pressed={isFullscreen}
+      >
+        {isFullscreen ? "Close map" : "Expand map"}
+      </button>
       <div
         ref={containerRef}
         className="map-view__container"
-        style={fillHeight ? undefined : { height: "360px" }}
+        style={fillHeight || isFullscreen ? undefined : { height: "360px" }}
       />
       {showLegend && (
         <div className="map-view__legend">

@@ -52,14 +52,17 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
   const upgradeB = getUpgradeText(summaryB);
   const upgradeDiff = upgradeA === upgradeB ? "Same" : "—";
 
+  const labelA = summaryA.origin.label || "Location A";
+  const labelB = summaryB.origin.label || "Location B";
+
   return (
     <div className="compare-table-container">
       <table className="compare-table">
         <thead>
           <tr>
             <th className="col-metric">Metric</th>
-            <th className="col-val-a">{summaryA.origin.label || "Location A"}</th>
-            <th className="col-val-b">{summaryB.origin.label || "Location B"}</th>
+            <th className="col-val-a">{labelA}</th>
+            <th className="col-val-b">{labelB}</th>
             <th className="col-diff">Difference</th>
           </tr>
         </thead>
@@ -78,9 +81,9 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
                 </div>
                 <div className="metric-desc">{row.desc}</div>
               </td>
-              <td className="cell-val-a">{formatMetricValue(row.valA)}</td>
-              <td className="cell-val-b">{formatMetricValue(row.valB)}</td>
-              <td className="cell-diff">{formatDiff(row.valA, row.valB)}</td>
+              <td className="cell-val-a" data-label={labelA}>{formatMetricValue(row.valA)}</td>
+              <td className="cell-val-b" data-label={labelB}>{formatMetricValue(row.valB)}</td>
+              <td className="cell-diff" data-label="Difference">{formatDiff(row.valA, row.valB)}</td>
             </tr>
           ))}
           {/* Upgrade Potential is special because it's not a direct numeric comparison in the same way */}
@@ -89,9 +92,9 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
                 <div className="metric-label">Upgrade Potential</div>
                 <div className="metric-desc">Best nearby improvement</div>
             </td>
-            <td className="cell-val-a">{upgradeA}</td>
-            <td className="cell-val-b">{upgradeB}</td>
-            <td className="cell-diff">
+            <td className="cell-val-a" data-label={labelA}>{upgradeA}</td>
+            <td className="cell-val-b" data-label={labelB}>{upgradeB}</td>
+            <td className="cell-diff" data-label="Difference">
               <span className={upgradeDiff === "Same" ? "diff-neutral" : ""}>
                 {upgradeDiff}
               </span>
