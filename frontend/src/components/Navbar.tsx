@@ -46,6 +46,20 @@ export function Navbar() {
     setDrawerOpen(false);
   }, [location.pathname]);
 
+  // Manage the `inert` attribute imperatively. React's prop normalization
+  // around boolean attributes is inconsistent across versions, so we set
+  // and remove the attribute directly to guarantee descendants are removed
+  // from the tab order / hit testing / a11y tree when the drawer is closed.
+  useEffect(() => {
+    const el = drawerRef.current;
+    if (!el) return;
+    if (drawerOpen) {
+      el.removeAttribute("inert");
+    } else {
+      el.setAttribute("inert", "");
+    }
+  }, [drawerOpen]);
+
   // Body scroll lock + focus management while drawer is open.
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -156,10 +170,6 @@ export function Navbar() {
         aria-modal={drawerOpen}
         aria-label="Main menu"
         aria-hidden={!drawerOpen}
-        // `inert` removes all descendants (including the close button) from
-        // tab order, hit testing, and the a11y tree while the drawer is
-        // off-canvas — preventing keyboard focus from landing in hidden UI.
-        {...(drawerOpen ? {} : { inert: "" as unknown as boolean })}
       >
         <div className="app-nav__drawer-header">
           <span className="app-nav__drawer-title">Menu</span>

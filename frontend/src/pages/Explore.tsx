@@ -177,10 +177,12 @@ export function Explore() {
     if (!pendingMapCenter) return;
     // Backend geocoder accepts "lat, lon" strings; submit as a fresh query.
     const coordQuery = `${pendingMapCenter.lat.toFixed(5)}, ${pendingMapCenter.lon.toFixed(5)}`;
+    const next = { q: coordQuery, radius: canonicalRadius(params.radius) };
     setPendingMapCenter(null);
-    updateDraft({ q: coordQuery, radius: canonicalRadius(params.radius) });
-    // Defer submit to next tick so updateDraft's setState has propagated.
-    window.setTimeout(() => submit(), 0);
+    updateDraft(next);
+    // Pass the fresh params explicitly so submit doesn't see stale state
+    // from its own captured closure.
+    submit(next);
   }
 
   // Shared form pieces -------------------------------------------------------

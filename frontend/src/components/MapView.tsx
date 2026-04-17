@@ -69,9 +69,13 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
   const blockGroupsLayerRef = useRef<L.GeoJSON | null>(null);
   const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
-  /** True while a setView/fitBounds call is in flight; used to ignore the
-   *  resulting moveend so we only emit user-driven center changes. */
-  const programmaticMoveRef = useRef(false);
+  /** Target center of an in-flight programmatic setView/fitBounds. The next
+   *  moveend whose center matches this target is swallowed (so we don't
+   *  treat our own setView as a user-driven move). Comparing to the target
+   *  is more robust than a single boolean flag — if the user pans before a
+   *  pending programmatic moveend has fired, the centers won't match and
+   *  the user pan still emits. */
+  const programmaticTargetRef = useRef<{ lat: number; lng: number } | null>(null);
   const onCenterChangedRef = useRef(onCenterChanged);
   onCenterChangedRef.current = onCenterChanged;
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -129,8 +133,14 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     }
 
     if (mapRef.current) {
-      programmaticMoveRef.current = true;
-      mapRef.current.setView([lat, lon], mapRef.current.getZoom());
+      // Only call setView if the coords actually changed — avoids spurious
+      // programmatic-target tracking on no-op updates.
+      const currentCenter = mapRef.current.getCenter();
+      const COORD_EPS = 1e-6;
+      if (Math.abs(currentCenter.lat - lat) > COORD_EPS || Math.abs(currentCenter.lng - lon) > COORD_EPS) {
+        programmaticTargetRef.current = { lat, lng: lon };
+        mapRef.current.setView([lat, lon], mapRef.current.getZoom());
+      }
       const marker = markerRef.current;
       if (marker) {
         marker.setLatLng([lat, lon]);
@@ -145,7 +155,7 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
       return;
     }
 
-    programmaticMoveRef.current = true;
+    programmaticTargetRef.current = { lat, lng: lon };
     const map = L.map(container).setView([lat, lon], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -157,14 +167,23 @@ export function MapView({ lat, lon, radiusMiles, label, blockGroups, nwiMean, fi
     markerRef.current = marker;
     mapRef.current = map;
 
-    // Emit user-driven moves only. Programmatic setView calls flip the
-    // ref true beforehand and we swallow that one moveend.
+    // Expose the Leaflet map in dev so E2E tests can pan/zoom the map
+    // programmatically (synthetic mouse events from Playwright don't drive
+    // Leaflet's drag handler on touch device profiles like Pixel 5).
+    if (import.meta.env.DEV && typeof window !== "undefined") {
+      (window as unknown as { __leafletMap?: L.Map }).__leafletMap = map;
+    }
+
+    // Emit user-driven moves only.
     map.on("moveend", () => {
-      if (programmaticMoveRef.current) {
-        programmaticMoveRef.current = false;
+      const c = map.getCenter();
+      const target = programmaticTargetRef.current;
+      // Swallow the moveend that completes a pending programmatic setView,
+      // identified by the center landing on the target (within ~1m).
+      if (target && Math.abs(c.lat - target.lat) < 1e-5 && Math.abs(c.lng - target.lng) < 1e-5) {
+        programmaticTargetRef.current = null;
         return;
       }
-      const c = map.getCenter();
       onCenterChangedRef.current?.(c.lat, c.lng);
     });
     // No cleanup here: reuse map on prop changes (update path above). Unmount cleanup is in the effect below.

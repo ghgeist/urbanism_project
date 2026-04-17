@@ -25,7 +25,7 @@ export interface UseUrlDrivenSearchResult<TParams, TResult> {
   error: string | null;
   validationMessage: string | null;
   updateDraft: (params: TParams) => void;
-  submit: () => Promise<void>;
+  submit: (override?: TParams) => Promise<void>;
 }
 
 /**
@@ -100,9 +100,13 @@ export function useUrlDrivenSearch<TParams, TResult>(
     setSearchParams(built, { replace: true });
   }
 
-  async function submit() {
+  async function submit(override?: TParams) {
     const { parse, build, canFetch, fetch: doFetch, emptyFetchMessage, trimParams } = optionsRef.current;
-    const toSubmit = trimParams ? trimParams(params) : params;
+    // Allow callers to pass freshly-computed params, avoiding the React
+    // stale-closure problem when submit is invoked right after updateDraft
+    // (the closure here captures the previous render's `params`).
+    const base = override ?? params;
+    const toSubmit = trimParams ? trimParams(base) : base;
     const { validationError } = parse(build(toSubmit));
     if (validationError) {
       setValidationMessage(validationError);
