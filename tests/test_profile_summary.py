@@ -79,6 +79,26 @@ class TestBuildSummaryFromCoords:
         assert "type" in bg0["geometry"]
         assert "coordinates" in bg0["geometry"]
 
+    def test_upgrade_potential_includes_was_when_available(self):
+        full_gdf = _sample_gdf(include_dist=True, include_was=True)
+        with patch("services.profile_summary.query_walkability_by_coords", return_value=full_gdf):
+            result = build_summary_from_coords(
+                lat=35.96,
+                lon=-83.92,
+                selected_radius_miles=1.0,
+                search_radius_miles=2.0,
+                min_delta=2.0,
+            )
+
+        upgrade = result["upgrade_potential"]
+        assert upgrade["found"] is True
+        assert upgrade["mode"] == "nwi_and_was"
+        assert upgrade["selected_mean_was"] == pytest.approx(9.0)
+        assert upgrade["min_delta_was"] == pytest.approx(2.0)
+        assert upgrade["candidates"][0]["geoid20"] == "C"
+        assert upgrade["candidates"][0]["was_2019"] == pytest.approx(24.0)
+        assert upgrade["candidates"][0]["delta_was"] == pytest.approx(15.0)
+
     def test_defaults_search_radius_to_selected_radius(self):
         full_gdf = _sample_gdf(include_dist=True)
         with patch("services.profile_summary.query_walkability_by_coords", return_value=full_gdf) as mock_query:

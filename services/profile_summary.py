@@ -21,9 +21,10 @@ _log = logging.getLogger(__name__)
 # Bumped again when component scores (d2a, d2b, d3b, d4a) were added to block_groups.
 # Bumped again when WAS 2019 fields (was, amenity_richness, hollow_neighborhood,
 # and per-block-group was_2019) were added.
+# Bumped again when Upgrade Potential added WAS-aware mode and candidate deltas.
 # The API is always forward-compatible (new fields have defaults), so this
 # string is documentary only — the frontend does not gate on it.
-SCHEMA_VERSION = "2026-04-17-was-integration"
+SCHEMA_VERSION = "2026-04-26-was-aware-upgrade-potential"
 
 
 def _validate_coordinates(lat: float, lon: float) -> tuple[float, float]:

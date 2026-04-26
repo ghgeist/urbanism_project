@@ -93,7 +93,7 @@ and the [GitHub repo](https://github.com/kcredit/Walkable-Accessibility-Score):
 
 From `docs/sessions/backlog/2026-02-14-adding-in-walkability-accessibility-score.md`:
 - Task 4: Historical Stability Trend (requires loading 1997+ years)
-- Task 5: Update Upgrade Potential logic to require WAS improvement
+- Task 5: Update Upgrade Potential logic to require WAS improvement — completed on branch `feature/was-aware-upgrade-potential`
 - Plus the deferred "fun" visualizations: Hollow Neighborhood scatter view, temporal before/after swipe, radar chart for Compare.
 
 ### 2026-04-26 — WAS analytics follow-up
@@ -107,3 +107,13 @@ From `docs/sessions/backlog/2026-02-14-adding-in-walkability-accessibility-score
 - Added a Dashboard `NWI vs WAS` tab that visualizes per-block-group agreement/divergence between NWI and WAS, including Hollow Neighborhood quadrant counts.
 - Pinned frontend `jsdom` to `26.1.0` because the current Node runtime (`v20.18.2`) cannot run `jsdom@28`'s transitive `require(ESM)` dependency path.
 - Verification: `python -m ruff check --no-cache api services scripts tests`, `pytest` (137 passed), `cd frontend && npm run typecheck`, `cd frontend && npm run lint`, `cd frontend && npm run test:run` (92 passed), `npm audit --omit=dev` (0 production vulnerabilities).
+
+### 2026-04-26 — WAS-aware Upgrade Potential
+
+- Created branch `feature/was-aware-upgrade-potential`.
+- Task 5 direction: Upgrade Potential should prefer nearby candidates that improve both EPA walkability (NWI) and amenities (WAS).
+- Product decision: keep the existing NWI delta threshold and require at least +2.0 WAS points when WAS data is available.
+- Fallback decision: when WAS cannot be evaluated, keep the legacy NWI-only behavior but label the result as `nwi_only` so the UI does not imply amenity improvement.
+- Implementation: `upgrade_potential.mode` now reports `nwi_and_was` or `nwi_only`; candidates include `was_2019` and `delta_was` when available.
+- Review refinements: mixed candidate WAS coverage now falls back to `nwi_only` instead of silently dropping null-WAS candidates; `UpgradePotentialMode` is covered by the Python/TypeScript literal contract test; schema marker bumped to `2026-04-26-was-aware-upgrade-potential`; Explore table copy has direct test coverage.
+- Verification: `python -m ruff check --no-cache api services scripts tests`, `pytest` (143 passed), `cd frontend && npm run typecheck`, `cd frontend && npm run lint`, `cd frontend && npm run test:run` (95 passed).

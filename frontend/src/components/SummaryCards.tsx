@@ -16,18 +16,22 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
 
   let upgradeVal: string;
   let upgradeCaption: string | null = null;
+  const upgradeMode = upgrade_potential?.mode ?? "nwi_only";
   if (upgrade_potential?.found && upgrade_potential.candidates?.length) {
     const best = upgrade_potential.candidates[0];
     const delta = best?.delta_nwi;
+    const deltaWas = best?.delta_was;
     const dist = best?.dist_miles;
     if (delta != null && dist != null) {
       upgradeVal = delta > 0 ? `+${delta.toFixed(1)}` : `${delta.toFixed(1)}`;
-      upgradeCaption =
-        upgrade_potential.candidates.length > 1
-          ? `Best nearby (${dist.toFixed(1)} mi)`
-          : `${dist.toFixed(1)} mi away`;
+      const modeLabel =
+        upgradeMode === "nwi_and_was" && deltaWas != null
+          ? `NWI + amenities (+${deltaWas.toFixed(1)} WAS)`
+          : "NWI-only";
+      upgradeCaption = `${modeLabel} · ${dist.toFixed(1)} mi away`;
     } else {
       upgradeVal = "Found";
+      upgradeCaption = upgradeMode === "nwi_and_was" ? "NWI + amenities" : "NWI-only";
     }
   } else {
     upgradeVal = upgrade_potential?.message ?? "None found";
@@ -64,7 +68,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
         <div className="summary-card__hint">{amenityCaption}</div>
       </div>
 
-      <div className="summary-card" title="Best nearby candidate meeting minimum NWI improvement threshold (default: 2.0 points).">
+      <div className="summary-card" title="Best nearby candidate meeting the minimum EPA walkability (NWI) improvement threshold and, when available, at least +2.0 Walkable Accessibility Score (WAS) points. Falls back to NWI-only when WAS data is unavailable.">
         <div
           className={
             upgradeVal.length > 12

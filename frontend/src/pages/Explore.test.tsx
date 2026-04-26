@@ -33,7 +33,7 @@ const baseHookState = {
   submit: vi.fn(),
 };
 
-function makeSummary(): NwiSummaryResponse {
+function makeSummary(overrides: Partial<NwiSummaryResponse> = {}): NwiSummaryResponse {
   return {
     schema_version: "1",
     origin: { lat: 41.9484, lon: -87.6553, label: WRIGLEY_FIELD_ADDRESS },
@@ -52,6 +52,7 @@ function makeSummary(): NwiSummaryResponse {
     upgrade_potential: { found: false, candidates: [], selected_mean_nwi: 10, message: "" },
     walkable_island: { is_island: false, label: null, high_threshold: 15.26, low_threshold: 10.51 },
     block_groups: [],
+    ...overrides,
   };
 }
 
@@ -107,5 +108,41 @@ describe("Explore page default preload", () => {
     render(<Explore />);
     await waitFor(() => expect(nwiSummaryByQuery).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(nwiSummaryByQuery).toHaveBeenCalledTimes(2), { timeout: 2500 });
+  });
+
+  it("renders WAS-aware nearby candidate table copy", () => {
+    const summary = makeSummary({
+      upgrade_potential: {
+        found: true,
+        mode: "nwi_and_was",
+        selected_mean_nwi: 10,
+        selected_mean_was: 8,
+        min_delta_was: 2,
+        message: "Found 1 candidate improving NWI and WAS.",
+        candidates: [
+          {
+            geoid20: "170318238011",
+            natwalkind: 14,
+            was_2019: 13,
+            dist_miles: 0.8,
+            delta_nwi: 4,
+            delta_was: 5,
+          },
+        ],
+      },
+    });
+    vi.mocked(useUrlDrivenSearch).mockReturnValue({
+      ...baseHookState,
+      params: { q: WRIGLEY_FIELD_ADDRESS, radius: 0.5 },
+      result: summary,
+    } as never);
+
+    render(<Explore />);
+
+    expect(screen.getByText("Nearby places with better walkability and amenities")).toBeInTheDocument();
+    expect(screen.getByText(/improve both the EPA National Walkability Index/)).toBeInTheDocument();
+    expect(screen.getByText("Amenities (WAS)")).toBeInTheDocument();
+    expect(screen.getByText("WAS Improvement")).toBeInTheDocument();
+    expect(screen.getByText("+5.00")).toBeInTheDocument();
   });
 });

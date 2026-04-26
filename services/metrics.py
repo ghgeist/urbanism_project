@@ -44,6 +44,12 @@ HOLLOW_NEIGHBORHOOD_LABEL = "Hollow Neighborhood"
 DEFAULT_HOLLOW_NWI_THRESHOLD = 13.0
 DEFAULT_HOLLOW_WAS_THRESHOLD = 10.0
 
+# Upgrade Potential keeps the existing NWI threshold from API params, then
+# requires a material WAS gain when WAS data is available for comparison.
+DEFAULT_UPGRADE_WAS_DELTA = 2.0
+UPGRADE_MODE_NWI_AND_WAS = "nwi_and_was"
+UPGRADE_MODE_NWI_ONLY = "nwi_only"
+
 
 def _numeric_series(gdf, column_name: str) -> pd.Series:
     """Return a numeric, NaN-dropped series for a GeoDataFrame column.
@@ -176,19 +182,26 @@ def compute_upgrade_potential(
     min_delta: float,
     top_n: int = 3,
     search_radius_miles: float | None = None,
+    min_delta_was: float = DEFAULT_UPGRADE_WAS_DELTA,
 ) -> dict[str, Any]:
-    """Find nearby block groups with material NWI improvement over selected mean."""
+    """Find nearby block groups with material NWI and, when available, WAS improvement."""
     if top_n <= 0:
         raise ValueError("top_n must be positive")
     if min_delta < 0:
         raise ValueError("min_delta must be non-negative")
+    if min_delta_was < 0:
+        raise ValueError("min_delta_was must be non-negative")
 
     selected_mean_nwi = compute_everyday_convenience(selected_gdf)
+    selected_mean_was = compute_amenity_richness(selected_gdf)
     if selected_mean_nwi is None:
         return {
             "found": False,
             "candidates": [],
             "selected_mean_nwi": None,
+            "selected_mean_was": selected_mean_was,
+            "min_delta_was": float(min_delta_was),
+            "mode": UPGRADE_MODE_NWI_ONLY,
             "message": "No improvement found: selected area has no valid NWI values.",
         }
 
@@ -197,6 +210,9 @@ def compute_upgrade_potential(
             "found": False,
             "candidates": [],
             "selected_mean_nwi": selected_mean_nwi,
+            "selected_mean_was": selected_mean_was,
+            "min_delta_was": float(min_delta_was),
+            "mode": UPGRADE_MODE_NWI_ONLY,
             "message": _no_improvement_message(search_radius_miles),
         }
 
@@ -211,6 +227,9 @@ def compute_upgrade_potential(
             "found": False,
             "candidates": [],
             "selected_mean_nwi": selected_mean_nwi,
+            "selected_mean_was": selected_mean_was,
+            "min_delta_was": float(min_delta_was),
+            "mode": UPGRADE_MODE_NWI_ONLY,
             "message": _no_improvement_message(search_radius_miles),
         }
 
@@ -233,11 +252,41 @@ def compute_upgrade_potential(
             "found": False,
             "candidates": [],
             "selected_mean_nwi": selected_mean_nwi,
+            "selected_mean_was": selected_mean_was,
+            "min_delta_was": float(min_delta_was),
+            "mode": UPGRADE_MODE_NWI_AND_WAS if selected_mean_was is not None else UPGRADE_MODE_NWI_ONLY,
             "message": _no_improvement_message(search_radius_miles),
+        }
+
+    mode = UPGRADE_MODE_NWI_ONLY
+    if selected_mean_was is not None and "was_2019" in candidates.columns:
+        if not pd.api.types.is_numeric_dtype(candidates["was_2019"]):
+            candidates["was_2019"] = pd.to_numeric(candidates["was_2019"], errors="coerce")
+        if candidates["was_2019"].notna().all():
+            mode = UPGRADE_MODE_NWI_AND_WAS
+            candidates["delta_was"] = candidates["was_2019"] - selected_mean_was
+            candidates = candidates[candidates["delta_was"] >= float(min_delta_was)]
+
+    if candidates.empty:
+        return {
+            "found": False,
+            "candidates": [],
+            "selected_mean_nwi": selected_mean_nwi,
+            "selected_mean_was": selected_mean_was,
+            "min_delta_was": float(min_delta_was),
+            "mode": mode,
+            "message": (
+                _no_nwi_was_improvement_message(search_radius_miles)
+                if mode == UPGRADE_MODE_NWI_AND_WAS
+                else _no_improvement_message(search_radius_miles)
+            ),
         }
 
     sort_columns = ["delta_nwi"]
     ascending = [False]
+    if mode == UPGRADE_MODE_NWI_AND_WAS:
+        sort_columns.append("delta_was")
+        ascending.append(False)
     if has_distance:
         sort_columns.append("dist_miles")
         ascending.append(True)
@@ -253,8 +302,10 @@ def compute_upgrade_potential(
             {
                 "geoid20": str(row["geoid20"]) if "geoid20" in row and pd.notna(row["geoid20"]) else None,
                 "natwalkind": _safe_float(row.get("natwalkind")),
+                "was_2019": _safe_float(row.get("was_2019")),
                 "dist_miles": _safe_float(row.get("dist_miles")),
                 "delta_nwi": _safe_float(row.get("delta_nwi")),
+                "delta_was": _safe_float(row.get("delta_was")),
             }
         )
 
@@ -262,7 +313,14 @@ def compute_upgrade_potential(
         "found": True,
         "candidates": candidate_rows,
         "selected_mean_nwi": selected_mean_nwi,
-        "message": f"Found {len(candidate_rows)} improvement candidate(s).",
+        "selected_mean_was": selected_mean_was,
+        "min_delta_was": float(min_delta_was),
+        "mode": mode,
+        "message": (
+            f"Found {len(candidate_rows)} candidate(s) improving NWI and WAS."
+            if mode == UPGRADE_MODE_NWI_AND_WAS
+            else f"Found {len(candidate_rows)} NWI-only improvement candidate(s); WAS data unavailable."
+        ),
     }
 
 
@@ -270,6 +328,12 @@ def _no_improvement_message(search_radius_miles: float | None) -> str:
     if search_radius_miles is None:
         return "No improvement found within the search radius."
     return f"No improvement found within {search_radius_miles:.1f} miles."
+
+
+def _no_nwi_was_improvement_message(search_radius_miles: float | None) -> str:
+    if search_radius_miles is None:
+        return "No candidate improves both EPA walkability (NWI) and amenities (WAS) within the search radius."
+    return f"No candidate improves both EPA walkability (NWI) and amenities (WAS) within {search_radius_miles:.1f} miles."
 
 
 def check_walkable_island(

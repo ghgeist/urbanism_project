@@ -16,6 +16,7 @@ AmenityRichnessLabel = Literal[
     "Unavailable",
 ]
 HollowNeighborhoodLabel = Literal["Hollow Neighborhood"]
+UpgradePotentialMode = Literal["nwi_and_was", "nwi_only"]
 
 
 class HealthResponse(BaseModel):
@@ -96,14 +97,19 @@ class BlockGroupFeature(BaseModel):
 class UpgradeCandidate(BaseModel):
     geoid20: str | None
     natwalkind: float | None
+    was_2019: float | None = None
     dist_miles: float | None
     delta_nwi: float | None
+    delta_was: float | None = None
 
 
 class UpgradePotential(BaseModel):
     found: bool
     candidates: list[UpgradeCandidate]
     selected_mean_nwi: float | None
+    selected_mean_was: float | None = None
+    min_delta_was: float = 2.0
+    mode: UpgradePotentialMode = "nwi_only"
     message: str
 
 

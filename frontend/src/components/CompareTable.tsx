@@ -32,8 +32,11 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
     if (upgrade_potential?.found && upgrade_potential.candidates?.length) {
         const best = upgrade_potential.candidates[0];
         if (best.delta_nwi != null) {
-            const d = best.delta_nwi;
-            return `${d > 0 ? '+' : ''}${d.toFixed(1)} available`;
+            const nwiDelta = `${best.delta_nwi > 0 ? '+' : ''}${best.delta_nwi.toFixed(1)} NWI`;
+            if (upgrade_potential.mode === "nwi_and_was" && best.delta_was != null) {
+              return `${nwiDelta}, +${best.delta_was.toFixed(1)} WAS`;
+            }
+            return `${nwiDelta} (NWI-only)`;
         }
         return "Found";
     }
@@ -90,7 +93,7 @@ export function CompareTable({ summaryA, summaryB }: CompareTableProps) {
           <tr className="row-upgrade">
             <td className="cell-metric">
                 <div className="metric-label">Upgrade Potential</div>
-                <div className="metric-desc">Best nearby improvement</div>
+                <div className="metric-desc">Best nearby NWI + amenity improvement when WAS is available</div>
             </td>
             <td className="cell-val-a" data-label={labelA}>{upgradeA}</td>
             <td className="cell-val-b" data-label={labelB}>{upgradeB}</td>
