@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { Explore } from "./pages/Explore";
@@ -89,17 +89,15 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<main className="startup-gate" role="status" aria-live="polite">Loading page...</main>}>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route index element={<Explore />} />
-            <Route path="compare" element={<Compare />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="method" element={<Method />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </Suspense>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<Explore />} />
+          <Route path="compare" element={<Compare />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="method" element={<Method />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

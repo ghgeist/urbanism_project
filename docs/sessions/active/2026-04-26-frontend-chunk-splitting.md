@@ -30,3 +30,8 @@ Reduce Vite chunk-size warnings by splitting route and visualization code withou
 - Final build: warning remained clear; `Dashboard` shell dropped to 13.76 kB minified, chart code split into focused lazy chunks, and `index` stayed at 414.97 kB minified / 128.81 kB gzip.
 - Verification: `npm run typecheck`, `npm run lint`, `npm run test:run`, and `npm run build` pass. Browser smoke test passed for `/`, `/compare`, `/dashboard`, and `/method`.
 - Note: build currently prints the existing Node version advisory (`20.18.2`; Vite asks for `20.19+` or `22.12+`) but completes successfully.
+
+### 2026-04-26 — Review Fix
+
+- Moved the route-level `Suspense` boundary out of `App.tsx` and into `AppLayout` around `Outlet` so the persistent app shell stays visible during lazy route navigation.
+- Added a lesson documenting this route-splitting boundary placement rule.
