@@ -33,4 +33,4 @@
 
 ## 2026-04-26
 
-- When lazy-loading route elements, place the `Suspense` boundary inside the persistent layout (around `Outlet`) or around the individual route element, not around the whole `Routes` tree. A top-level route boundary can hide navigation chrome, footers, and mobile tabs during lazy route transitions.
+- When lazy-loading route elements, place the `Suspense` boundary inside the persistent layout (around `Outlet`) or around the individual route element, not around the whole `Routes` tree. A top-level route boundary can hide navigation chrome, footers, and mobile tabs during lazy route transitions. Use route-scoped fallback styles rather than full-screen startup/loading classes inside layouts.

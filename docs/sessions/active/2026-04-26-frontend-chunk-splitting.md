@@ -35,3 +35,7 @@ Reduce Vite chunk-size warnings by splitting route and visualization code withou
 
 - Moved the route-level `Suspense` boundary out of `App.tsx` and into `AppLayout` around `Outlet` so the persistent app shell stays visible during lazy route navigation.
 - Added a lesson documenting this route-splitting boundary placement rule.
+
+### 2026-04-26 — Fallback Styling Fix
+
+- Replaced the in-layout route fallback's reused `startup-gate` class with a compact `route-fallback` class so lazy route loading does not add a full viewport-height block inside `AppLayout`.

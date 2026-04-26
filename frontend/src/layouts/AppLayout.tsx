@@ -11,7 +11,7 @@ import { MobileTabBar } from "../components/MobileTabBar";
 
 function RouteFallback() {
   return (
-    <div className="startup-gate" role="status" aria-live="polite">
+    <div className="route-fallback" role="status" aria-live="polite">
       Loading page...
     </div>
   );

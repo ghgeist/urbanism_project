@@ -39,6 +39,15 @@
   color: #4b5563;
 }
 
+.route-fallback {
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  text-align: center;
+}
+
 /* Navbar: minimal, keyboard navigable, wraps on small screens. */
 
 .app-nav {
