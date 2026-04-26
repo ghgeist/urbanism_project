@@ -23,10 +23,11 @@ import { COMPONENT_INFO, formatComponentLabel } from "../lib/componentLabels";
 import { ComponentDistributionChart } from "../components/dashboard/ComponentDistributionChart";
 import { ComponentCorrelationChart } from "../components/dashboard/ComponentCorrelationChart";
 import { ComponentContributionChart } from "../components/dashboard/ComponentContributionChart";
+import { NwiWasScatterChart } from "../components/dashboard/NwiWasScatterChart";
 import { useMemo, useState, type ReactNode } from "react";
 
 const { MIN_RADIUS, MAX_RADIUS, STEP } = EXPLORE_PARAMS;
-type DashboardView = "overview" | "distribution" | "correlation";
+type DashboardView = "overview" | "distribution" | "correlation" | "nwiWas";
 
 function formatScore(value: number | null): string {
   return value == null ? "—" : value.toFixed(2);
@@ -180,6 +181,15 @@ export function Dashboard() {
       >
         Correlation
       </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeView === "nwiWas"}
+        className={`dashboard__tab ${activeView === "nwiWas" ? "dashboard__tab--active" : ""}`}
+        onClick={() => setActiveView("nwiWas")}
+      >
+        NWI vs WAS
+      </button>
     </div>
   );
 
@@ -252,6 +262,34 @@ export function Dashboard() {
           <ComponentCorrelationChart blockGroups={summary.block_groups} />
         </section>
       )}
+
+      {hasData && activeView === "nwiWas" && (
+        <section className="dashboard__section" role="tabpanel" aria-label="NWI versus WAS panel">
+          <h2>NWI vs Amenity Access</h2>
+          <p className="dashboard__section-description">
+            Compare EPA built-form walkability with WAS destination access to spot places where the two signals agree
+            or diverge.
+          </p>
+          <NwiWasScatterChart summary={summary} />
+          <div className="dashboard__chart-help" aria-label="How to read NWI versus WAS">
+            <h3>How to read this chart</h3>
+            <ul>
+              <li>
+                <strong>Upper right:</strong> higher NWI and stronger destination access.
+              </li>
+              <li>
+                <strong>Lower right:</strong> Hollow Neighborhood candidates with walkable form but sparse destinations.
+              </li>
+              <li>
+                <strong>Upper left:</strong> destination-rich areas with lower NWI scores.
+              </li>
+              <li>
+                <strong>Lower left:</strong> lower NWI and sparse destination access.
+              </li>
+            </ul>
+          </div>
+        </section>
+      )}
     </>
   );
 
@@ -261,7 +299,7 @@ export function Dashboard() {
       <p className="dashboard__empty-hint">
         You will see distributions, correlations, and contributions for the four NWI components:
         Employment &amp; Household Mix (D2A), Employment Mix (D2B), Intersection Density (D3B), and Transit
-        Proximity (D4A).
+        Proximity (D4A), plus a WAS comparison when amenity data is available.
       </p>
     </div>
   );

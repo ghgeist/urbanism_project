@@ -95,3 +95,15 @@ From `docs/sessions/backlog/2026-02-14-adding-in-walkability-accessibility-score
 - Task 4: Historical Stability Trend (requires loading 1997+ years)
 - Task 5: Update Upgrade Potential logic to require WAS improvement
 - Plus the deferred "fun" visualizations: Hollow Neighborhood scatter view, temporal before/after swipe, radar chart for Compare.
+
+### 2026-04-26 — WAS analytics follow-up
+
+- Created branch `feature/was-analytics-followup`.
+- Real database validation is complete: `python scripts/validate_schema.py` passes with both `national_walkability_index` and `walkable_accessibility_score` present.
+- Added `scripts/summarize_was_distribution.py` for repeatable read-only checks after WAS loads.
+- Current shared DB summary: 215,831 WAS rows, 215,831 distinct GEOIDs, 199,388 direct NWI matches, 92.38% naive join rate.
+- Observed WAS 2019 distribution: min 0.00, p25 0.50, median 8.45, p75 21.19, p90 26.87, max 29.62.
+- Amenity Richness thresholds remain at 10 and 20. Those cutoffs are rounded interpretation breakpoints near the live median / upper quartile, not exact quartiles.
+- Added a Dashboard `NWI vs WAS` tab that visualizes per-block-group agreement/divergence between NWI and WAS, including Hollow Neighborhood quadrant counts.
+- Pinned frontend `jsdom` to `26.1.0` because the current Node runtime (`v20.18.2`) cannot run `jsdom@28`'s transitive `require(ESM)` dependency path.
+- Verification: `python -m ruff check --no-cache api services scripts tests`, `pytest` (137 passed), `cd frontend && npm run typecheck`, `cd frontend && npm run lint`, `cd frontend && npm run test:run` (92 passed), `npm audit --omit=dev` (0 production vulnerabilities).

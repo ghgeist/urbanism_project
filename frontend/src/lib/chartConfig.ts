@@ -49,12 +49,18 @@ export const CHART_AXIS = {
 export const NWI_DOMAIN = [0, 20] as const;
 
 /**
+ * WAS score domain (0-30 scale).
+ */
+export const WAS_DOMAIN = [0, 30] as const;
+
+/**
  * Common chart height configurations.
  */
 export const CHART_HEIGHTS = {
   distribution: 320,
   correlation: 300,
   contribution: 280,
+  nwiWas: 320,
 } as const;
 
 export const CHART_LAYOUT_PRESETS = {
@@ -86,6 +92,19 @@ export const CHART_LAYOUT_PRESETS = {
       ...CHART_AXIS,
       yAxisWidth: 64,
       xAxisHeight: 46,
+    },
+  },
+  nwiWas: {
+    margin: {
+      ...CHART_MARGINS,
+      right: 16,
+      left: 54,
+      bottom: 34,
+    },
+    axis: {
+      ...CHART_AXIS,
+      yAxisWidth: 64,
+      xAxisHeight: 52,
     },
   },
 } as const;

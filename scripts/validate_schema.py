@@ -10,8 +10,14 @@ The WAS table is treated as optional: if missing, we print a warning but exit 0
 so developers can run the app before the WAS loader has been invoked.
 """
 import sys
+from pathlib import Path
 
-from services.db import get_db_connection
+# Allow running as a standalone script from the repo root.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from services.db import get_db_connection  # noqa: E402
 
 NWI_TABLE = "national_walkability_index"
 NWI_COLUMNS = {

@@ -100,10 +100,17 @@ The Walkable Accessibility Score (WAS) 2019 snapshot is loaded into a second tab
    ```bash
    python scripts/load_walkable_accessibility_score.py
    ```
-4. Validate both tables:
+4. Validate both tables and summarize WAS coverage / bucket distribution:
    ```bash
    python scripts/validate_schema.py
+   python scripts/summarize_was_distribution.py
    ```
+
+The 2019 load observed in the shared database contains 215,831 WAS rows, with
+199,388 direct matches to `national_walkability_index.geoid20` (92.38% naive
+join rate). Amenity Richness uses rounded WAS cutoffs of 10 and 20: the live
+distribution has median 8.45 and upper quartile 21.19, so these are practical
+interpretation breakpoints rather than exact quartiles.
 
 **Connecting from your laptop vs. a managed runtime:** if your Postgres is hosted on Replit or Neon, the "internal" hostname (e.g. `helium`) does not resolve off-platform. Use the external/public URL from the Neon console or Replit's "External URL" setting when running the loader locally, or run the loader from within the Replit environment where the internal hostname does resolve.
 
