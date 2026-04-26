@@ -100,10 +100,17 @@ The Walkable Accessibility Score (WAS) 2019 snapshot is loaded into a second tab
    ```bash
    python scripts/load_walkable_accessibility_score.py
    ```
-4. Validate both tables:
+4. Validate both tables and summarize WAS coverage / bucket distribution:
    ```bash
    python scripts/validate_schema.py
+   python scripts/summarize_was_distribution.py
    ```
+
+The summary script reports the current WAS row count, direct NWI join rate,
+score distribution, and Amenity Richness bucket counts for the connected
+database. Amenity Richness uses rounded WAS cutoffs of 10 and 20 as practical
+interpretation breakpoints; see `docs/sessions/active/2026-04-17-was-integration.md`
+for the shared database values observed during the WAS analytics follow-up.
 
 **Connecting from your laptop vs. a managed runtime:** if your Postgres is hosted on Replit or Neon, the "internal" hostname (e.g. `helium`) does not resolve off-platform. Use the external/public URL from the Neon console or Replit's "External URL" setting when running the loader locally, or run the loader from within the Replit environment where the internal hostname does resolve.
 
@@ -219,6 +226,7 @@ For fuller testing notes, see [`docs/TESTING.md`](docs/TESTING.md).
 
 - Backend tests: run `pytest`. The Python tests use mocks and do not require a live database connection. See `tests/README.md` for backend details.
 - Frontend tests: run `cd frontend && npm run test:run` for unit tests and `npm run e2e:run` for Playwright coverage.
+  `jsdom` is pinned to `26.1.0` because the current Node `20.18.2` runtime cannot run `jsdom@28`'s transitive `require(ESM)` path.
 - Python lint: run `python -m ruff check --no-cache api services scripts tests`.
 - Frontend typecheck and lint: run `cd frontend && npx tsc --noEmit && npm run lint`.
 - Schema validation: run `python scripts/validate_schema.py`.

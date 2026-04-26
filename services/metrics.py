@@ -19,8 +19,9 @@ import pandas as pd
 DEFAULT_ISLAND_HIGH_THRESHOLD = 15.26
 DEFAULT_ISLAND_LOW_THRESHOLD = 10.51
 
-# Amenity Richness labels derived from the WAS 0-30 scale. Rough quartiles;
-# may be refined after we see the real distribution in production data.
+# Amenity Richness labels derived from the WAS 0-30 scale. After the 2019
+# production load, 10 sits just above the median (8.45) and 20 sits near the
+# upper quartile (21.19), giving rounded, interpretable breakpoints.
 AMENITY_FULL_THRESHOLD = 20.0
 AMENITY_MODERATE_THRESHOLD = 10.0
 
