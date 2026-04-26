@@ -42,6 +42,12 @@ For `NwiSummaryResponse`:
 - Non-core endpoints may be added/removed during internal development.
 - Internal implementation details are free to change if stable items above hold.
 
+### Upgrade Potential semantics
+
+`upgrade_potential` is evolving while WAS analytics are internal. Current semantics:
+- `mode="nwi_and_was"` means candidates cleared the NWI delta threshold and improved `was_2019` by at least `min_delta_was` points.
+- `mode="nwi_only"` means WAS could not be evaluated for the comparison, so candidates use the legacy NWI-only rule and clients should label that fallback explicitly.
+
 ## Change Policy (Shipping Mode)
 
 - Small additive changes: proceed directly.

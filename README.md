@@ -141,7 +141,8 @@ The app has four main routes:
 The main controls are:
 - `Radius`: the area shown around the selected location.
 - `Search radius`: the optional surrounding area used to look for nearby better-scoring block groups.
-- `Minimum NWI improvement delta`: the threshold for flagging better nearby candidates.
+- `Minimum NWI improvement delta`: the threshold for flagging nearby candidates with better EPA walkability.
+- `Upgrade Potential`: candidates must improve both EPA walkability (NWI) and amenities (WAS) by at least +2.0 WAS points when WAS data is available. If WAS is unavailable for that comparison, the app falls back to the older NWI-only rule and labels the result as NWI-only.
 
 ## API (FastAPI)
 ### Run locally

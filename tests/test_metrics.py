@@ -12,7 +12,10 @@ from services.metrics import (
     DEFAULT_HOLLOW_WAS_THRESHOLD,
     DEFAULT_ISLAND_HIGH_THRESHOLD,
     DEFAULT_ISLAND_LOW_THRESHOLD,
+    DEFAULT_UPGRADE_WAS_DELTA,
     HOLLOW_NEIGHBORHOOD_LABEL,
+    UPGRADE_MODE_NWI_AND_WAS,
+    UPGRADE_MODE_NWI_ONLY,
     amenity_richness_label,
     check_hollow_neighborhood,
     check_walkable_island,
@@ -74,17 +77,17 @@ class TestUpgradePotential:
     def test_compute_upgrade_potential_filters_and_sorts(self):
         selected = _gdf(
             [
-                {"geoid20": "A", "natwalkind": 8.0, "dist_miles": 0.2},
-                {"geoid20": "B", "natwalkind": 10.0, "dist_miles": 0.7},
+                {"geoid20": "A", "natwalkind": 8.0, "was_2019": 8.0, "dist_miles": 0.2},
+                {"geoid20": "B", "natwalkind": 10.0, "was_2019": 10.0, "dist_miles": 0.7},
             ]
         )
         search = _gdf(
             [
-                {"geoid20": "A", "natwalkind": 18.0, "dist_miles": 1.2},  # excluded by geoid
-                {"geoid20": "C", "natwalkind": 11.5, "dist_miles": 1.0},  # delta 2.5
-                {"geoid20": "D", "natwalkind": 13.0, "dist_miles": 2.0},  # delta 4.0
-                {"geoid20": "E", "natwalkind": 15.0, "dist_miles": 6.0},  # outside radius
-                {"geoid20": "F", "natwalkind": 10.1, "dist_miles": 1.5},  # below min_delta
+                {"geoid20": "A", "natwalkind": 18.0, "was_2019": 30.0, "dist_miles": 1.2},  # excluded
+                {"geoid20": "C", "natwalkind": 11.5, "was_2019": 12.0, "dist_miles": 1.0},  # both pass
+                {"geoid20": "D", "natwalkind": 13.0, "was_2019": 14.0, "dist_miles": 2.0},  # both pass
+                {"geoid20": "E", "natwalkind": 15.0, "was_2019": 20.0, "dist_miles": 6.0},  # outside radius
+                {"geoid20": "F", "natwalkind": 10.1, "was_2019": 20.0, "dist_miles": 1.5},  # below NWI
             ]
         )
         result = compute_upgrade_potential(
@@ -97,9 +100,86 @@ class TestUpgradePotential:
 
         assert result["found"] is True
         assert result["selected_mean_nwi"] == 9.0
+        assert result["selected_mean_was"] == 9.0
+        assert result["min_delta_was"] == DEFAULT_UPGRADE_WAS_DELTA
+        assert result["mode"] == UPGRADE_MODE_NWI_AND_WAS
         assert [candidate["geoid20"] for candidate in result["candidates"]] == ["D", "C"]
         assert result["candidates"][0]["delta_nwi"] == 4.0
+        assert result["candidates"][0]["delta_was"] == 5.0
         assert result["candidates"][0]["dist_miles"] == 2.0
+
+    def test_compute_upgrade_potential_rejects_high_nwi_without_was_gain(self):
+        selected = _gdf([{"geoid20": "A", "natwalkind": 10.0, "was_2019": 10.0, "dist_miles": 0.2}])
+        search = _gdf([{"geoid20": "B", "natwalkind": 15.0, "was_2019": 11.0, "dist_miles": 1.0}])
+
+        result = compute_upgrade_potential(
+            selected,
+            search,
+            min_delta=2.0,
+            search_radius_miles=3.0,
+        )
+
+        assert result["found"] is False
+        assert result["mode"] == UPGRADE_MODE_NWI_AND_WAS
+        assert result["candidates"] == []
+        assert result["message"] == (
+            "No candidate improves both EPA walkability (NWI) and amenities (WAS) within 3.0 miles."
+        )
+
+    def test_compute_upgrade_potential_falls_back_to_nwi_only_without_was(self):
+        selected = _gdf([{"geoid20": "A", "natwalkind": 10.0, "dist_miles": 0.2}])
+        search = _gdf([{"geoid20": "B", "natwalkind": 15.0, "dist_miles": 1.0}])
+
+        result = compute_upgrade_potential(
+            selected,
+            search,
+            min_delta=2.0,
+            search_radius_miles=3.0,
+        )
+
+        assert result["found"] is True
+        assert result["mode"] == UPGRADE_MODE_NWI_ONLY
+        assert result["selected_mean_was"] is None
+        assert result["candidates"][0]["geoid20"] == "B"
+        assert result["candidates"][0]["delta_was"] is None
+        assert result["message"] == "Found 1 NWI-only improvement candidate(s); WAS data unavailable."
+
+    def test_compute_upgrade_potential_falls_back_to_nwi_only_for_partial_was_coverage(self):
+        selected = _gdf([{"geoid20": "A", "natwalkind": 10.0, "was_2019": 10.0, "dist_miles": 0.2}])
+        search = _gdf(
+            [
+                {"geoid20": "B", "natwalkind": 15.0, "was_2019": 13.0, "dist_miles": 1.0},
+                {"geoid20": "C", "natwalkind": 14.0, "was_2019": None, "dist_miles": 1.5},
+            ]
+        )
+
+        result = compute_upgrade_potential(
+            selected,
+            search,
+            min_delta=2.0,
+            search_radius_miles=3.0,
+        )
+
+        assert result["found"] is True
+        assert result["mode"] == UPGRADE_MODE_NWI_ONLY
+        assert [candidate["geoid20"] for candidate in result["candidates"]] == ["B", "C"]
+        assert all(candidate["delta_was"] is None for candidate in result["candidates"])
+
+    def test_compute_upgrade_potential_treats_zero_was_as_valid_score(self):
+        selected = _gdf([{"geoid20": "A", "natwalkind": 10.0, "was_2019": 0.0, "dist_miles": 0.2}])
+        search = _gdf([{"geoid20": "B", "natwalkind": 15.0, "was_2019": 2.0, "dist_miles": 1.0}])
+
+        result = compute_upgrade_potential(
+            selected,
+            search,
+            min_delta=2.0,
+            search_radius_miles=3.0,
+        )
+
+        assert result["found"] is True
+        assert result["mode"] == UPGRADE_MODE_NWI_AND_WAS
+        assert result["selected_mean_was"] == 0.0
+        assert result["candidates"][0]["delta_was"] == 2.0
 
     def test_compute_upgrade_potential_none_found_message(self):
         selected = _gdf([{"geoid20": "A", "natwalkind": 12.0, "dist_miles": 0.3}])

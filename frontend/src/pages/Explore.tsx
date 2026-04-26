@@ -232,13 +232,28 @@ export function Explore() {
           {summary.upgrade_potential?.found &&
             summary.upgrade_potential.candidates?.length > 0 && (
               <section className="explore__nearby">
-                <h2>Nearby-better candidates</h2>
+                <h2>
+                  {summary.upgrade_potential.mode === "nwi_and_was"
+                    ? "Nearby places with better walkability and amenities"
+                    : "Nearby places with better EPA walkability (NWI only)"}
+                </h2>
+                <p>
+                  {summary.upgrade_potential.mode === "nwi_and_was"
+                    ? "These block groups improve both the EPA National Walkability Index (NWI) and Walkable Accessibility Score (WAS)."
+                    : "WAS amenity data is unavailable for this comparison, so these candidates use the older NWI-only rule."}
+                </p>
                 <table>
                   <thead>
                     <tr>
                       <th>Block Group ID</th>
-                      <th>NWI Score</th>
+                      <th>EPA Walkability (NWI)</th>
                       <th>NWI Improvement</th>
+                      {summary.upgrade_potential.mode === "nwi_and_was" && (
+                        <>
+                          <th>Amenities (WAS)</th>
+                          <th>WAS Improvement</th>
+                        </>
+                      )}
                       <th>Distance (mi)</th>
                     </tr>
                   </thead>
@@ -248,6 +263,12 @@ export function Explore() {
                         <td>{c.geoid20 ?? "—"}</td>
                         <td>{c.natwalkind != null ? c.natwalkind.toFixed(2) : "—"}</td>
                         <td>{c.delta_nwi != null ? `+${c.delta_nwi.toFixed(2)}` : "—"}</td>
+                        {summary.upgrade_potential.mode === "nwi_and_was" && (
+                          <>
+                            <td>{c.was_2019 != null ? c.was_2019.toFixed(2) : "—"}</td>
+                            <td>{c.delta_was != null ? `+${c.delta_was.toFixed(2)}` : "—"}</td>
+                          </>
+                        )}
                         <td>{c.dist_miles != null ? c.dist_miles.toFixed(2) : "—"}</td>
                       </tr>
                     ))}

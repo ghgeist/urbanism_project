@@ -32,7 +32,7 @@ from typing import Any, get_args, get_origin
 from pydantic import BaseModel
 
 from api import schemas as api_schemas
-from api.schemas import AmenityRichnessLabel, HollowNeighborhoodLabel
+from api.schemas import AmenityRichnessLabel, HollowNeighborhoodLabel, UpgradePotentialMode
 
 TYPES_TS_PATH = Path(__file__).parent.parent / "frontend" / "src" / "types" / "api.ts"
 
@@ -49,6 +49,7 @@ _PYDANTIC_MODELS_WITHOUT_TS_COUNTERPART: set[str] = {
 _LITERAL_PAIRS: list[tuple[str, Any]] = [
     ("AmenityRichnessLabel", AmenityRichnessLabel),
     ("HollowNeighborhoodLabel", HollowNeighborhoodLabel),
+    ("UpgradePotentialMode", UpgradePotentialMode),
 ]
 
 

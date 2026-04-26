@@ -91,10 +91,34 @@ describe("CompareTable", () => {
     rerender(<CompareTable summaryA={summaryA} summaryB={summaryBWithUpgrade} />);
     
     expect(screen.getByText("None")).toBeInTheDocument(); // A
-    expect(screen.getByText("+2.5 available")).toBeInTheDocument(); // B
+    expect(screen.getByText("+2.5 NWI (NWI-only)")).toBeInTheDocument(); // B
     
     // Should NOT say "Same"
     expect(screen.queryByText("Same")).not.toBeInTheDocument();
+  });
+
+  it("shows both NWI and WAS gains for WAS-aware upgrade potential", () => {
+    const summaryBWithUpgrade = createMockSummary("City B", { everyday: 12, transit: 5, variation: 1.5 }, true);
+    summaryBWithUpgrade.upgrade_potential = {
+      ...summaryBWithUpgrade.upgrade_potential,
+      mode: "nwi_and_was",
+      selected_mean_was: 10,
+      min_delta_was: 2,
+      candidates: [
+        {
+          geoid20: "123",
+          natwalkind: 15,
+          was_2019: 13,
+          dist_miles: 1.5,
+          delta_nwi: 2.5,
+          delta_was: 3,
+        },
+      ],
+    };
+
+    render(<CompareTable summaryA={summaryA} summaryB={summaryBWithUpgrade} />);
+
+    expect(screen.getByText("+2.5 NWI, +3.0 WAS")).toBeInTheDocument();
   });
 
   it("renders null when props are missing", () => {

@@ -72,6 +72,31 @@ describe("SummaryCards", () => {
     expect(screen.getByText("+2.5")).toBeInTheDocument();
   });
 
+  it("labels WAS-aware upgrade candidates with amenity improvement", () => {
+    const summary = minimalSummary({
+      upgrade_potential: {
+        found: true,
+        mode: "nwi_and_was",
+        selected_mean_nwi: 12.5,
+        selected_mean_was: 10,
+        min_delta_was: 2,
+        candidates: [
+          {
+            geoid20: "123",
+            natwalkind: 15,
+            was_2019: 13,
+            dist_miles: 0.3,
+            delta_nwi: 2.5,
+            delta_was: 3,
+          },
+        ],
+        message: "",
+      },
+    });
+    render(<SummaryCards summary={summary} />);
+    expect(screen.getByText("NWI + amenities (+3.0 WAS) · 0.3 mi away")).toBeInTheDocument();
+  });
+
   it("shows amenity richness value and label when WAS data is available", () => {
     const summary = minimalSummary({
       amenity_richness: { value: 17.5, label: "Moderate Amenity Access" },

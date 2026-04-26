@@ -43,6 +43,7 @@ export type AmenityRichnessLabel =
 
 /** Hollow Neighborhood banner label (singleton). */
 export type HollowNeighborhoodLabel = "Hollow Neighborhood";
+export type UpgradePotentialMode = "nwi_and_was" | "nwi_only";
 
 /** Human-readable interpretation of the mean WAS score. */
 export interface AmenityRichness {
@@ -85,14 +86,19 @@ export interface BlockGroupFeature {
 export interface UpgradeCandidate {
   geoid20: string | null;
   natwalkind: number | null;
+  was_2019?: number | null;
   dist_miles: number | null;
   delta_nwi: number | null;
+  delta_was?: number | null;
 }
 
 export interface UpgradePotential {
   found: boolean;
   candidates: UpgradeCandidate[];
   selected_mean_nwi: number | null;
+  selected_mean_was?: number | null;
+  min_delta_was?: number;
+  mode?: UpgradePotentialMode;
   message: string;
 }
 
