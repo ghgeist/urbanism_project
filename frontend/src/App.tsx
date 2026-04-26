@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { lazy, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { Explore } from "./pages/Explore";
-import { Compare } from "./pages/Compare";
-import { Method } from "./pages/Method";
-import { Dashboard } from "./pages/Dashboard";
 import "./App.css";
 import "./mobile.css";
+
+const Compare = lazy(() => import("./pages/Compare").then((module) => ({ default: module.Compare })));
+const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
+const Method = lazy(() => import("./pages/Method").then((module) => ({ default: module.Method })));
 
 const HEALTH_POLL_INTERVAL_MS = 2000;
 const HEALTH_REQUEST_TIMEOUT_MS = 1500;

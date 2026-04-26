@@ -39,6 +39,15 @@
   color: #4b5563;
 }
 
+.route-fallback {
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  text-align: center;
+}
+
 /* Navbar: minimal, keyboard navigable, wraps on small screens. */
 
 .app-nav {
@@ -1075,6 +1084,19 @@
   margin: 0 0 0.75rem 0;
   color: #6b7280;
   font-size: 0.85rem;
+}
+
+.dashboard__chart-loading {
+  min-height: 14rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .dashboard__overview-notes {
