@@ -20,17 +20,42 @@ import {
 import { useUrlDrivenSearch } from "../hooks/useUrlDrivenSearch";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { COMPONENT_INFO, formatComponentLabel } from "../lib/componentLabels";
-import { ComponentDistributionChart } from "../components/dashboard/ComponentDistributionChart";
-import { ComponentCorrelationChart } from "../components/dashboard/ComponentCorrelationChart";
-import { ComponentContributionChart } from "../components/dashboard/ComponentContributionChart";
-import { NwiWasScatterChart } from "../components/dashboard/NwiWasScatterChart";
-import { useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
+
+const ComponentContributionChart = lazy(() =>
+  import("../components/dashboard/ComponentContributionChart").then((module) => ({
+    default: module.ComponentContributionChart,
+  }))
+);
+const ComponentDistributionChart = lazy(() =>
+  import("../components/dashboard/ComponentDistributionChart").then((module) => ({
+    default: module.ComponentDistributionChart,
+  }))
+);
+const ComponentCorrelationChart = lazy(() =>
+  import("../components/dashboard/ComponentCorrelationChart").then((module) => ({
+    default: module.ComponentCorrelationChart,
+  }))
+);
+const NwiWasScatterChart = lazy(() =>
+  import("../components/dashboard/NwiWasScatterChart").then((module) => ({
+    default: module.NwiWasScatterChart,
+  }))
+);
 
 const { MIN_RADIUS, MAX_RADIUS, STEP } = EXPLORE_PARAMS;
 type DashboardView = "overview" | "distribution" | "correlation" | "nwiWas";
 
 function formatScore(value: number | null): string {
   return value == null ? "—" : value.toFixed(2);
+}
+
+function ChartFallback() {
+  return (
+    <div className="dashboard__chart-loading" role="status" aria-live="polite">
+      Loading chart...
+    </div>
+  );
 }
 
 export function Dashboard() {
@@ -201,7 +226,9 @@ export function Dashboard() {
           <p className="dashboard__section-description">
             Compare component averages with the overall NWI average to spot the strongest and weakest factors.
           </p>
-          <ComponentContributionChart summary={summary} />
+          <Suspense fallback={<ChartFallback />}>
+            <ComponentContributionChart summary={summary} />
+          </Suspense>
           <div className="dashboard__overview-notes">
             <h3>Quick read</h3>
             {hasComponentSummary && strongestComponent && weakestComponent ? (
@@ -232,7 +259,9 @@ export function Dashboard() {
           <p className="dashboard__section-description">
             How component scores (1 to 20) are distributed across block groups in this area.
           </p>
-          <ComponentDistributionChart blockGroups={summary.block_groups} />
+          <Suspense fallback={<ChartFallback />}>
+            <ComponentDistributionChart blockGroups={summary.block_groups} />
+          </Suspense>
           <div className="dashboard__chart-help" aria-label="How to read component distributions">
             <h3>How to read this chart</h3>
             <ul>
@@ -259,7 +288,9 @@ export function Dashboard() {
           <p className="dashboard__section-description">
             Compare how each component moves with NWI in one view.
           </p>
-          <ComponentCorrelationChart blockGroups={summary.block_groups} />
+          <Suspense fallback={<ChartFallback />}>
+            <ComponentCorrelationChart blockGroups={summary.block_groups} />
+          </Suspense>
         </section>
       )}
 
@@ -270,7 +301,9 @@ export function Dashboard() {
             Compare the EPA National Walkability Index (NWI) with the Walkable Accessibility Score (WAS) to see where
             street form and nearby amenities tell the same or different stories.
           </p>
-          <NwiWasScatterChart summary={summary} />
+          <Suspense fallback={<ChartFallback />}>
+            <NwiWasScatterChart summary={summary} />
+          </Suspense>
           <div className="dashboard__chart-help" aria-label="How to read NWI versus WAS">
             <h3>How to read this chart</h3>
             <ul>

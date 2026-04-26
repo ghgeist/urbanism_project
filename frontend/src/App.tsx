@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { Explore } from "./pages/Explore";
-import { Compare } from "./pages/Compare";
-import { Method } from "./pages/Method";
-import { Dashboard } from "./pages/Dashboard";
 import "./App.css";
 import "./mobile.css";
+
+const Compare = lazy(() => import("./pages/Compare").then((module) => ({ default: module.Compare })));
+const Dashboard = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })));
+const Method = lazy(() => import("./pages/Method").then((module) => ({ default: module.Method })));
 
 const HEALTH_POLL_INTERVAL_MS = 2000;
 const HEALTH_REQUEST_TIMEOUT_MS = 1500;
@@ -88,15 +89,17 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route index element={<Explore />} />
-          <Route path="compare" element={<Compare />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="method" element={<Method />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<main className="startup-gate" role="status" aria-live="polite">Loading page...</main>}>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route index element={<Explore />} />
+            <Route path="compare" element={<Compare />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="method" element={<Method />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
