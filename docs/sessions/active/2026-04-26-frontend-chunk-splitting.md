@@ -39,3 +39,7 @@ Reduce Vite chunk-size warnings by splitting route and visualization code withou
 ### 2026-04-26 — Fallback Styling Fix
 
 - Replaced the in-layout route fallback's reused `startup-gate` class with a compact `route-fallback` class so lazy route loading does not add a full viewport-height block inside `AppLayout`.
+
+### 2026-04-26 — Chart Fallback Styling Fix
+
+- Added the missing `dashboard__chart-loading` CSS rule so Dashboard chart `Suspense` fallbacks render with centered, card-like placeholder styling.
