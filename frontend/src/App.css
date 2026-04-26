@@ -1396,6 +1396,14 @@
   font-size: 0.85rem;
 }
 
+.nwi-was-color-note {
+  margin: -0.2rem 0 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 @media (max-width: 900px) {
   .correlation-header {
     flex-direction: column;

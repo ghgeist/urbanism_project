@@ -23,8 +23,8 @@ export interface NwiWasPoint {
 
 export const NWI_WAS_QUADRANT_INFO: Record<NwiWasQuadrant, { label: string; shortLabel: string; color: string }> = {
   walkableDestinations: {
-    label: "Walkable form + destinations",
-    shortLabel: "Form + destinations",
+    label: "Higher NWI + more amenities",
+    shortLabel: "Higher NWI, more amenities",
     color: "#2563eb",
   },
   hollowNeighborhood: {
@@ -33,12 +33,12 @@ export const NWI_WAS_QUADRANT_INFO: Record<NwiWasQuadrant, { label: string; shor
     color: "#d97706",
   },
   destinationRichLowerNwi: {
-    label: "Destination-rich, lower NWI",
-    shortLabel: "Destinations, lower NWI",
+    label: "More amenities, lower NWI",
+    shortLabel: "More amenities, lower NWI",
     color: "#16a34a",
   },
   sparseLowerNwi: {
-    label: "Low NWI + sparse destinations",
+    label: "Lower NWI + sparse amenities",
     shortLabel: "Sparse, lower NWI",
     color: "#64748b",
   },

@@ -83,13 +83,15 @@ describe("NwiWasScatterChart", () => {
       />
     );
 
-    expect(screen.getByText("NWI vs Walkable Accessibility Score")).toBeInTheDocument();
+    expect(screen.getByText("Walkability vs Amenities")).toBeInTheDocument();
+    expect(screen.getByText(/National Walkability Index \(NWI\) measures built form/)).toBeInTheDocument();
     expect(screen.getByText("Hollow candidates")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("Form + destinations: 1")).toBeInTheDocument();
+    expect(screen.getByText("Higher NWI, more amenities: 1")).toBeInTheDocument();
     expect(screen.getByText("Hollow: 1")).toBeInTheDocument();
-    expect(screen.getByText("Destinations, lower NWI: 1")).toBeInTheDocument();
+    expect(screen.getByText("More amenities, lower NWI: 1")).toBeInTheDocument();
     expect(screen.getByText("Sparse, lower NWI: 1")).toBeInTheDocument();
+    expect(screen.getByText(/Colors group block groups/)).toBeInTheDocument();
   });
 
   it("renders an unavailable state when block groups lack WAS coverage", () => {

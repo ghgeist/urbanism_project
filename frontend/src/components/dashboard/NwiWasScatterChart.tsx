@@ -1,5 +1,5 @@
 /**
- * NWI vs WAS scatter plot: compares built-form walkability with destination access.
+ * Walkability vs amenities scatter plot.
  */
 
 import { useMemo } from "react";
@@ -59,8 +59,8 @@ function NwiWasTooltip({ active, payload }: ScatterTooltipProps) {
     <div className="nwi-was-tooltip">
       <strong>{point.geoid20 ?? "Block group"}</strong>
       <span>{info.label}</span>
-      <span>NWI: {point.nwi.toFixed(2)}</span>
-      <span>WAS: {point.was.toFixed(2)}</span>
+      <span>National Walkability Index: {point.nwi.toFixed(2)}</span>
+      <span>Amenity access score: {point.was.toFixed(2)}</span>
     </div>
   );
 }
@@ -94,14 +94,15 @@ export function NwiWasScatterChart({ summary }: NwiWasScatterChartProps) {
   }
 
   return (
-    <ChartErrorBoundary chartName="NWI vs WAS Scatter Chart">
+    <ChartErrorBoundary chartName="Walkability vs Amenities Chart">
       <div className="nwi-was-chart">
         <div className="correlation-header">
           <div className="correlation-header__title-group">
             <p className="correlation-header__eyebrow">Integration analytics</p>
-            <h3>NWI vs Walkable Accessibility Score</h3>
+            <h3>Walkability vs Amenities</h3>
             <p className="correlation-header__hint">
-              Each point is a selected-radius block group with both NWI and WAS coverage.
+              Each point is a block group. National Walkability Index (NWI) measures built form; Walkable
+              Accessibility Score (WAS) measures reachable destinations.
             </p>
           </div>
           <div className="correlation-header__metric" aria-live="polite">
@@ -118,7 +119,7 @@ export function NwiWasScatterChart({ summary }: NwiWasScatterChartProps) {
           <ResponsiveContainer
             width="100%"
             height={CHART_HEIGHTS.nwiWas}
-            aria-label="Scatter chart comparing NWI and Walkable Accessibility Score"
+            aria-label="Scatter chart comparing National Walkability Index and Walkable Accessibility Score"
           >
             <ScatterChart margin={NWI_WAS_CHART_MARGINS}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -131,7 +132,7 @@ export function NwiWasScatterChart({ summary }: NwiWasScatterChartProps) {
                 tickMargin={4}
                 tick={{ fontSize: 11, fill: "#6b7280", fontFamily: "inherit" }}
                 label={{
-                  value: "National Walkability Index (1-20)",
+                  value: "National Walkability Index, NWI (1-20)",
                   position: "insideBottom",
                   offset: -4,
                   style: { fontSize: NWI_WAS_AXIS.axisLabelFontSize, fill: "#6b7280", fontFamily: "inherit" },
@@ -145,7 +146,7 @@ export function NwiWasScatterChart({ summary }: NwiWasScatterChartProps) {
                 width={NWI_WAS_AXIS.yAxisWidth}
                 tick={{ fontSize: 11, fill: "#6b7280", fontFamily: "inherit" }}
                 label={{
-                  value: "WAS 2019 (0-30)",
+                  value: "Walkable Accessibility Score, WAS (0-30)",
                   angle: -90,
                   position: "insideLeft",
                   offset: NWI_WAS_AXIS.yAxisLabelOffset,
@@ -183,6 +184,10 @@ export function NwiWasScatterChart({ summary }: NwiWasScatterChartProps) {
             );
           })}
         </div>
+        <p className="nwi-was-color-note">
+          Colors group block groups by whether they are above or below the NWI and WAS guide lines. The amber group is
+          the Hollow Neighborhood pattern: walkable form with sparse nearby amenities.
+        </p>
       </div>
     </ChartErrorBoundary>
   );

@@ -188,7 +188,7 @@ export function Dashboard() {
         className={`dashboard__tab ${activeView === "nwiWas" ? "dashboard__tab--active" : ""}`}
         onClick={() => setActiveView("nwiWas")}
       >
-        NWI vs WAS
+        Walkability vs Amenities
       </button>
     </div>
   );
@@ -265,23 +265,23 @@ export function Dashboard() {
 
       {hasData && activeView === "nwiWas" && (
         <section className="dashboard__section" role="tabpanel" aria-label="NWI versus WAS panel">
-          <h2>NWI vs Amenity Access</h2>
+          <h2>Walkability vs Amenities</h2>
           <p className="dashboard__section-description">
-            Compare EPA built-form walkability with WAS destination access to spot places where the two signals agree
-            or diverge.
+            Compare the EPA National Walkability Index (NWI) with the Walkable Accessibility Score (WAS) to see where
+            street form and nearby amenities tell the same or different stories.
           </p>
           <NwiWasScatterChart summary={summary} />
           <div className="dashboard__chart-help" aria-label="How to read NWI versus WAS">
             <h3>How to read this chart</h3>
             <ul>
               <li>
-                <strong>Upper right:</strong> higher NWI and stronger destination access.
+                <strong>Upper right:</strong> higher NWI and more reachable amenities.
               </li>
               <li>
-                <strong>Lower right:</strong> Hollow Neighborhood candidates with walkable form but sparse destinations.
+                <strong>Lower right:</strong> Hollow Neighborhood candidates with walkable form but sparse amenities.
               </li>
               <li>
-                <strong>Upper left:</strong> destination-rich areas with lower NWI scores.
+                <strong>Upper left:</strong> more amenities with lower NWI scores.
               </li>
               <li>
                 <strong>Lower left:</strong> lower NWI and sparse destination access.
