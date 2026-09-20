@@ -1,5 +1,6 @@
 ---
 created: 2026-02-14
+status: Parked in backlog 2026-09-20 (product vision / future direction)
 ---
 # Slack Surface Explorer – Product Plan
 

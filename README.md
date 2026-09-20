@@ -109,7 +109,7 @@ The Walkable Accessibility Score (WAS) 2019 snapshot is loaded into a second tab
 The summary script reports the current WAS row count, direct NWI join rate,
 score distribution, and Amenity Richness bucket counts for the connected
 database. Amenity Richness uses rounded WAS cutoffs of 10 and 20 as practical
-interpretation breakpoints; see `docs/sessions/active/2026-04-17-was-integration.md`
+interpretation breakpoints; see `docs/sessions/completed/2026-04-17-was-integration.md`
 for the shared database values observed during the WAS analytics follow-up.
 
 **Connecting from your laptop vs. a managed runtime:** if your Postgres is hosted on Replit or Neon, the "internal" hostname (e.g. `helium`) does not resolve off-platform. Use the external/public URL from the Neon console or Replit's "External URL" setting when running the loader locally, or run the loader from within the Replit environment where the internal hostname does resolve.
