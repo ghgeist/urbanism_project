@@ -1,5 +1,7 @@
 # WAS Integration: Backend + Minimal UI
 
+**Status:** Completed 2026-09-20 (shipped; remaining ideas tracked in backlog)
+
 **Started:** 2026-04-17
 **Plan:** `c:\Users\grant\.cursor\plans\was_integration_backend_+_minimal_ui_423dbf5f.plan.md`
 **Predecessor:** `docs/sessions/backlog/2026-02-14-adding-in-walkability-accessibility-score.md`
